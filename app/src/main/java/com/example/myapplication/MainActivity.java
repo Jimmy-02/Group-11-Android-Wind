@@ -1,24 +1,43 @@
+
 package com.example.myapplication;
 
 import android.os.Bundle;
+import android.widget.TextView;
 
-import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.graphics.Insets;
-import androidx.core.view.ViewCompat;
-import androidx.core.view.WindowInsetsCompat;
+
+import com.google.android.material.bottomnavigation.BottomNavigationView;
 
 public class MainActivity extends AppCompatActivity {
+
+    private TextView tvPageTitle;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
-            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
-            return insets;
+
+        tvPageTitle = findViewById(R.id.tv_page_title);
+
+        BottomNavigationView bottomNavigation =
+                findViewById(R.id.bottom_navigation);
+
+        bottomNavigation.setOnItemSelectedListener(item -> {
+            int id = item.getItemId();
+
+            if (id == R.id.nav_home) {
+                tvPageTitle.setText("Home");
+            } else if (id == R.id.nav_discuss) {
+                tvPageTitle.setText("Discuss");
+            } else if (id == R.id.nav_qna) {
+                tvPageTitle.setText("Q&A");
+            } else if (id == R.id.nav_account) {
+                tvPageTitle.setText("Account");
+            } else {
+                return false;
+            }
+
+            return true;
         });
     }
 }
