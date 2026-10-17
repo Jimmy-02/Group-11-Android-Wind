@@ -5,12 +5,13 @@ import android.os.Bundle;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
-
+import android.widget.FrameLayout;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 
 public class MainActivity extends AppCompatActivity {
 
     private TextView tvPageTitle;
+    private FrameLayout contentContainer;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -18,6 +19,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         tvPageTitle = findViewById(R.id.tv_page_title);
+        contentContainer = findViewById(R.id.content_container);
 
         BottomNavigationView bottomNavigation =
                 findViewById(R.id.bottom_navigation);
@@ -32,7 +34,10 @@ public class MainActivity extends AppCompatActivity {
             } else if (id == R.id.nav_qna) {
                 tvPageTitle.setText("Q&A");
             } else if (id == R.id.nav_account) {
-                tvPageTitle.setText("Account");
+                contentContainer.removeAllViews();
+
+                contentContainer.addView(getLayoutInflater().inflate(
+                        R.layout.activity_account,contentContainer,false));
             } else {
                 return false;
             }
