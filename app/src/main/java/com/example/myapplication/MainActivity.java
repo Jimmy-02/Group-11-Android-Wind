@@ -1,48 +1,48 @@
-
 package com.example.myapplication;
 
 import android.os.Bundle;
-import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
-import android.widget.FrameLayout;
+import androidx.fragment.app.Fragment;
+
+import com.example.myapplication.account.AccountActivity;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 
 public class MainActivity extends AppCompatActivity {
-
-    private TextView tvPageTitle;
-    private FrameLayout contentContainer;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        tvPageTitle = findViewById(R.id.tv_page_title);
-        contentContainer = findViewById(R.id.content_container);
-
         BottomNavigationView bottomNavigation =
                 findViewById(R.id.bottom_navigation);
+
+        if (savedInstanceState == null) {
+            openFragment(new HomeFragment());
+        }
 
         bottomNavigation.setOnItemSelectedListener(item -> {
             int id = item.getItemId();
 
             if (id == R.id.nav_home) {
-                tvPageTitle.setText("Home");
-            } else if (id == R.id.nav_discuss) {
-                tvPageTitle.setText("Discuss");
+                openFragment(new HomeFragment());
             } else if (id == R.id.nav_qna) {
-                tvPageTitle.setText("Q&A");
+                openFragment(new QnaFragment());
             } else if (id == R.id.nav_account) {
-                contentContainer.removeAllViews();
-
-                contentContainer.addView(getLayoutInflater().inflate(
-                        R.layout.activity_account,contentContainer,false));
+                openFragment(new AccountActivity());
             } else {
                 return false;
             }
 
             return true;
         });
+    }
+
+    private void openFragment(Fragment fragment) {
+        getSupportFragmentManager()
+                .beginTransaction()
+                .replace(R.id.content_container, fragment)
+                .commit();
     }
 }
