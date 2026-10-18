@@ -14,12 +14,9 @@
         <activity
             android:name=".MainActivity"
             android:exported="false" />
-
-
-
-<!--        <activity-->
-<!--            android:name=".authentication.forgotpassword.ForgotPasswordActivity"-->
-<!--            android:exported="false" />-->
+        <activity
+            android:name=".authentication.forgotpassword.ForgotPasswordActivity"
+            android:exported="false" />
         <activity
             android:name=".authentication.register.RegisterActivity"
             android:exported="false"/>
@@ -31,11 +28,6 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
-
-
-
-
     </application>
 
 </manifest>
