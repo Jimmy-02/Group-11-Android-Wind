@@ -56,7 +56,7 @@
                     android:id="@+id/tvFullName"
                     android:layout_width="match_parent"
                     android:layout_height="27dp"
-                    android:text="Nguyễn Văn A"
+                    android:text=""
                     android:textSize="18sp"
                     android:textStyle="bold" />
 
@@ -64,13 +64,13 @@
                     android:id="@+id/tvEmail"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="nguyenvana@example.com" />
+                    android:text="" />
 
                 <TextView
                     android:id="@+id/tvRole"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="USER" />
+                    android:text="" />
             </LinearLayout>
         </LinearLayout>
     </androidx.cardview.widget.CardView>

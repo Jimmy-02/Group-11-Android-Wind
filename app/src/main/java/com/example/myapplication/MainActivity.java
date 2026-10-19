@@ -1,36 +1,66 @@
+
 package com.example.myapplication;
 
 import android.os.Bundle;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentManager;
 
 import com.example.myapplication.account.AccountActivity;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 
 public class MainActivity extends AppCompatActivity {
 
+    private Fragment homeFragment;
+    private Fragment qnaFragment;
+    private Fragment accountFragment;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        BottomNavigationView bottomNavigation =
-                findViewById(R.id.bottom_navigation);
+        FragmentManager fm = getSupportFragmentManager();
+
+        homeFragment = fm.findFragmentByTag("HOME");
+        qnaFragment = fm.findFragmentByTag("QNA");
+        accountFragment = fm.findFragmentByTag("ACCOUNT");
+
+        if (homeFragment == null) {
+            homeFragment = new HomeFragment();
+        }
+
+        if (qnaFragment == null) {
+            qnaFragment = new QnaFragment();
+        }
+
+        if (accountFragment == null) {
+            accountFragment = new AccountActivity();
+        }
 
         if (savedInstanceState == null) {
-            openFragment(new HomeFragment());
+            fm.beginTransaction()
+                    .add(R.id.content_container, homeFragment, "HOME")
+                    .add(R.id.content_container, qnaFragment, "QNA")
+                    .hide(qnaFragment)
+                    .add(R.id.content_container, accountFragment, "ACCOUNT")
+                    .hide(accountFragment)
+                    .commit();
         }
+
+        BottomNavigationView bottomNavigation =
+                findViewById(R.id.bottom_navigation);
 
         bottomNavigation.setOnItemSelectedListener(item -> {
             int id = item.getItemId();
 
             if (id == R.id.nav_home) {
-                openFragment(new HomeFragment());
+                showFragment(homeFragment);
             } else if (id == R.id.nav_qna) {
-                openFragment(new QnaFragment());
+                showFragment(qnaFragment);
             } else if (id == R.id.nav_account) {
-                openFragment(new AccountActivity());
+                showFragment(accountFragment);
             } else {
                 return false;
             }
@@ -39,10 +69,14 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    private void openFragment(Fragment fragment) {
-        getSupportFragmentManager()
-                .beginTransaction()
-                .replace(R.id.content_container, fragment)
+    private void showFragment(Fragment target) {
+        FragmentManager fm = getSupportFragmentManager();
+
+        fm.beginTransaction()
+                .hide(homeFragment)
+                .hide(qnaFragment)
+                .hide(accountFragment)
+                .show(target)
                 .commit();
     }
 }
