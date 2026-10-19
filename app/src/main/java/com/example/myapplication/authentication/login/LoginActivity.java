@@ -32,7 +32,6 @@ public class LoginActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
-
         auth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();
 
@@ -54,7 +53,6 @@ public class LoginActivity extends AppCompatActivity {
             startActivity(intent);
         });
     }
-
     private void login() {
         String email = etEmail.getText().toString().trim();
         String password = etPassword.getText().toString();

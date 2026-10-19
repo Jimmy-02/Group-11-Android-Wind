@@ -11,6 +11,9 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.example.myapplication.R;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.example.myapplication.authentication.AuthSessionManager;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.app.AlertDialog;
 public class AccountActivity extends Fragment {
 
     public AccountActivity() {
@@ -35,6 +38,18 @@ public class AccountActivity extends Fragment {
         TextView tvDiscussionCount = view.findViewById(R.id.tvDiscussionCount);
         TextView tvQuestionCount = view.findViewById(R.id.tvQuestionCount);
         TextView tvAnswerCount = view.findViewById(R.id.tvAnswerCount);
+        view.findViewById(R.id.layoutLogout).setOnClickListener(v -> {
+            new AlertDialog.Builder(requireContext())
+                    .setTitle("Xác nhận đăng xuất")
+                    .setMessage("Bạn có chắc chắn muốn đăng xuất?")
+                    .setNegativeButton("Hủy", (dialog, which) -> dialog.dismiss())
+                    .setPositiveButton("Đăng xuất", (dialog, which) -> {
+                        AuthSessionManager.logout(
+                                (AppCompatActivity) requireActivity()
+                        );
+                    })
+                    .show();
+        });
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         if (user == null) {
             tvFullName.setText("Chưa đăng nhập");
@@ -67,7 +82,6 @@ public class AccountActivity extends Fragment {
                         }
                     })
                     .addOnFailureListener(e -> {
-                        //Lỗi khi lấy thông tin tài khoản)
             });
 
         }
