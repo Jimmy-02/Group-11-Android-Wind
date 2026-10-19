@@ -168,6 +168,7 @@ public class RegisterActivity extends AppCompatActivity {
 
             // Create user profile in Firestore
             Map<String, Object> user = new HashMap<>();
+            user.put("authProvider", "EMAIL_PASSWORD");
             user.put("fullName", fullName);
             user.put("username", username);
             user.put("email", email);
