@@ -283,6 +283,7 @@ public class LoginActivity extends AppCompatActivity {
             }
 
             Map<String, Object> profile = new HashMap<>();
+            profile.put("authProvider", "GOOGLE");
             profile.put("email", user.getEmail() == null ? "" : user.getEmail());
             profile.put("fullName", user.getDisplayName() == null ? "" : user.getDisplayName());
             profile.put("avatar", user.getPhotoUrl() == null ? "" : user.getPhotoUrl().toString());
