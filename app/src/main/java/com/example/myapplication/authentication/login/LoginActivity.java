@@ -21,15 +21,12 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
-import androidx.annotation.NonNull;
 import androidx.credentials.CredentialManager;
 import androidx.credentials.CustomCredential;
 import androidx.credentials.GetCredentialRequest;
 import androidx.credentials.GetCredentialResponse;
 import androidx.credentials.exceptions.GetCredentialException;
 import androidx.credentials.Credential;
-import androidx.credentials.CredentialManagerCallback;
-import com.google.android.libraries.identity.googleid.GetGoogleIdOption;
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential;
 import com.google.firebase.auth.AuthCredential;
 import com.google.firebase.auth.GoogleAuthProvider;
@@ -72,6 +69,8 @@ public class LoginActivity extends AppCompatActivity {
             Intent intent = new Intent(LoginActivity.this, ForgotPasswordActivity.class);
             startActivity(intent);
         });
+
+        checkExistingSession();
     }
     private void login() {
         String email = etEmail.getText().toString().trim();
@@ -305,6 +304,41 @@ public class LoginActivity extends AppCompatActivity {
             });
         });
     }
+
+    private void checkExistingSession() {
+        FirebaseUser user = auth.getCurrentUser();
+
+        // Chưa đăng nhập thì giữ nguyên màn hình Login.
+        if (user == null) {
+            return;
+        }
+
+        // Tạm khóa nút trong lúc kiểm tra phiên đăng nhập.
+        btnLogin.setEnabled(false);
+        btnGoogleSignIn.setEnabled(false);
+
+        db.collection("users").document(user.getUid()).get()
+                .addOnCompleteListener(this, task -> {
+                    if (isFinishing() || isDestroyed()) {
+                        return;
+                    }
+
+                    if (!task.isSuccessful()) {
+                        rejectLogin("Không thể kiểm tra tài khoản. Vui lòng thử lại.");
+                        return;
+                    }
+
+                    DocumentSnapshot document = task.getResult();
+
+                    if (document == null || !document.exists()) {
+                        rejectLogin("Không tìm thấy hồ sơ người dùng.");
+                        return;
+                    }
+
+                    checkUserStatus(document);
+                });
+    }
+
     private void rejectGoogleLogin(String message) {
         auth.signOut();
         btnLogin.setEnabled(true);
