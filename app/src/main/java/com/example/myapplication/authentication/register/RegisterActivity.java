@@ -6,6 +6,15 @@ import android.util.Patterns;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.FieldValue;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.WriteBatch;
+
+import java.util.HashMap;
+import java.util.Locale;
+import java.util.Map;
+
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.myapplication.R;
@@ -178,27 +187,125 @@ public class RegisterActivity extends AppCompatActivity {
             user.put("createdAt", FieldValue.serverTimestamp());
             user.put("updatedAt", FieldValue.serverTimestamp());
 
-            firestore.collection("users")
-                .document(uid)
-                .set(user)
-                .addOnSuccessListener(unused -> {
-                    Toast.makeText(this, "Account created successfully!", Toast.LENGTH_SHORT).show();
+            // Tạo emailIndex với email viết thường
+            String emailKey = email.trim().toLowerCase(Locale.ROOT);
 
-                    // Return to Login screen
-                    firebaseAuth.signOut();
+            Map<String, Object> emailData = new HashMap<>();
+            emailData.put("uid", uid);
 
-                    finish();
-                }).addOnFailureListener(e -> {
-                    btnRegister.setEnabled(true);
-                    btnRegister.setText("Create Account");
+            // Lưu users và emailIndex trong cùng một batch
+            WriteBatch batch = firestore.batch();
 
-                    Toast.makeText(this, "Account was created, but saving the profile failed: " + e.getLocalizedMessage(), Toast.LENGTH_LONG).show();
-                });
-            });
+            batch.set(
+                    firestore.collection("users").document(uid),
+                    user
+            );
+
+            batch.set(
+                    firestore.collection("emailIndex").document(emailKey),
+                    emailData
+            );
+
+            batch.commit()
+                    .addOnSuccessListener(unused -> {
+                        Toast.makeText(
+                                this,
+                                "Account created successfully!",
+                                Toast.LENGTH_SHORT
+                        ).show();
+
+                        // Quay lại màn hình Login
+                        firebaseAuth.signOut();
+                        finish();
+                    })
+                    .addOnFailureListener(e -> {
+                        btnRegister.setEnabled(true);
+                        btnRegister.setText("Create Account");
+
+                        Toast.makeText(
+                                this,
+                                "Account was created, but saving the profile failed: "
+                                        + e.getLocalizedMessage(),
+                                Toast.LENGTH_LONG
+                        ).show();
+                    });
+        });
     }
 
     private String getText(TextInputEditText editText) {
         return editText.getText() == null ? "" : editText.getText().toString().trim();
+    }
+
+    private void saveNewUserProfile(
+            FirebaseUser user,
+            String fullName,
+            String username
+    ) {
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+
+        String uid = user.getUid();
+        String email = user.getEmail();
+
+        if (email == null || email.trim().isEmpty()) {
+            Toast.makeText(this,
+                    "Email không hợp lệ.",
+                    Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        // Giữ email gốc trong hồ sơ người dùng
+        // và dùng email chữ thường làm emailIndex Document ID
+        String emailKey = email.trim().toLowerCase(Locale.ROOT);
+
+        Map<String, Object> profile = new HashMap<>();
+        profile.put("fullName", fullName.trim());
+        profile.put("username", username.trim());
+        profile.put("email", email);
+        profile.put("avatar", "");
+        profile.put("role", "USER");
+        profile.put("status", "ACTIVE");
+        profile.put("authProvider", "EMAIL_PASSWORD");
+        profile.put("createdAt", FieldValue.serverTimestamp());
+        profile.put("updatedAt", FieldValue.serverTimestamp());
+
+        Map<String, Object> emailData = new HashMap<>();
+        emailData.put("uid", uid);
+
+        // Ghi cả hai document trong cùng một batch
+        WriteBatch batch = db.batch();
+
+        batch.set(
+                db.collection("users").document(uid),
+                profile
+        );
+
+        batch.set(
+                db.collection("emailIndex").document(emailKey),
+                emailData
+        );
+
+        batch.commit()
+                .addOnSuccessListener(unused -> {
+                    Toast.makeText(
+                            RegisterActivity.this,
+                            "Account created successfully!",
+                            Toast.LENGTH_SHORT
+                    ).show();
+
+                    firebaseAuth.signOut();
+                    finish();
+                })
+                .addOnFailureListener(e -> {
+                    btnRegister.setEnabled(true);
+                    btnRegister.setText("Create Account");
+
+                    Toast.makeText(
+                            RegisterActivity.this,
+                            "Account was created, but saving the profile failed: "
+                                    + e.getLocalizedMessage(),
+                            Toast.LENGTH_LONG
+                    ).show();
+                });
     }
 
     private void clearErrors() {

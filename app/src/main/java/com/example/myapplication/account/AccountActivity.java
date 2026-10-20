@@ -1,11 +1,13 @@
 package com.example.myapplication.account;
-
+import android.content.Intent;
+import com.example.myapplication.account.profile.EditProfileActivity;
 import android.os.Bundle;
 import androidx.fragment.app.Fragment;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.view.LayoutInflater;
 import android.view.View;
+import com.example.myapplication.ImageLoader;
 import android.view.ViewGroup;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -14,8 +16,10 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.example.myapplication.authentication.AuthSessionManager;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AlertDialog;
+import com.google.firebase.firestore.ListenerRegistration;
 public class AccountActivity extends Fragment {
 
+    private ListenerRegistration profileListener;
     public AccountActivity() {
         // Required empty public constructor
     }
@@ -38,6 +42,18 @@ public class AccountActivity extends Fragment {
         TextView tvDiscussionCount = view.findViewById(R.id.tvDiscussionCount);
         TextView tvQuestionCount = view.findViewById(R.id.tvQuestionCount);
         TextView tvAnswerCount = view.findViewById(R.id.tvAnswerCount);
+        // Chỉ mở Edit Profile khi người dùng nhấn
+        view.findViewById(R.id.layoutEditProfile).setOnClickListener(v -> {
+            Intent intent = new Intent(
+                    requireContext(),
+                    EditProfileActivity.class
+            );
+
+            intent.putExtra("fullName", tvFullName.getText().toString());
+            intent.putExtra("email", tvEmail.getText().toString());
+
+            startActivity(intent);
+        });
         view.findViewById(R.id.layoutLogout).setOnClickListener(v -> {
             new AlertDialog.Builder(requireContext())
                     .setTitle("Xác nhận đăng xuất")
@@ -55,36 +71,64 @@ public class AccountActivity extends Fragment {
             tvFullName.setText("Chưa đăng nhập");
             tvEmail.setText("");
             tvRole.setText("");
-/**
-            (SẼ KHÔNG HIỆN THỊ CÁC CHỨC NĂNG ACCOUNT KHI CHƯA ĐĂNG NHẬP)
+
             view.findViewById(R.id.layoutAccountMenu)
                     .setVisibility(View.GONE);
- */
         } else {
-            /**
-             (SẼ HIỆN THỊ CÁC CHỨC NĂNG ACCOUNT KHI ĐĂNG NHẬP)
             view.findViewById(R.id.layoutAccountMenu)
                     .setVisibility(View.VISIBLE);
-             */
+
             String userID = user.getUid();
 
             FirebaseFirestore db = FirebaseFirestore.getInstance();
-            db.collection("users").document(userID).get()
-                    .addOnSuccessListener(document -> {
-                        if (document.exists()) {
-                            String fullName = document.getString("fullName");
-                            String email = document.getString("email");
-                            String role = document.getString("role");
 
-                            tvFullName.setText(fullName != null ? fullName : "");
-                            tvEmail.setText(email != null ? email : "");
-                            tvRole.setText(role != null ? role : "USER");
+            profileListener = db.collection("users")
+                    .document(userID)
+                    .addSnapshotListener((document, error) -> {
+
+                        if (error != null) {
+                            android.util.Log.e(
+                                    "AccountActivity",
+                                    "Không thể theo dõi hồ sơ",
+                                    error
+                            );
+                            return;
                         }
-                    })
-                    .addOnFailureListener(e -> {
-            });
 
+                        if (document == null || !document.exists()) {
+                            return;
+                        }
+
+                        String fullName = document.getString("fullName");
+                        String email = document.getString("email");
+                        String role = document.getString("role");
+                        String avatar = document.getString("avatar");
+
+                        tvFullName.setText(
+                                fullName != null ? fullName : ""
+                        );
+
+                        tvEmail.setText(
+                                email != null ? email : ""
+                        );
+
+                        tvRole.setText(
+                                role != null ? role : "USER"
+                        );
+                        ImageLoader.load(avatar, imgAvatar);
+                    });
         }
+
         return view;
+    }
+
+    @Override
+    public void onDestroyView() {
+        if (profileListener != null) {
+            profileListener.remove();
+            profileListener = null;
+        }
+
+        super.onDestroyView();
     }
 }
