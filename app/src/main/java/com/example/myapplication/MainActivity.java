@@ -21,11 +21,13 @@ import com.google.android.material.bottomnavigation.BottomNavigationView;
 public class MainActivity extends AppCompatActivity {
 
     private Fragment homeFragment;
+    private Fragment discussionFragment;
     private Fragment qnaFragment;
     private Fragment accountFragment;
     private boolean isCheckingAccount = false;
     private ListenerRegistration accountListener;
     private boolean isRedirectingToLogin = false;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -34,11 +36,16 @@ public class MainActivity extends AppCompatActivity {
         FragmentManager fm = getSupportFragmentManager();
 
         homeFragment = fm.findFragmentByTag("HOME");
+        discussionFragment = fm.findFragmentByTag("DISCUSSION");
         qnaFragment = fm.findFragmentByTag("QNA");
         accountFragment = fm.findFragmentByTag("ACCOUNT");
 
         if (homeFragment == null) {
             homeFragment = new HomeFragment();
+        }
+
+        if (discussionFragment == null) {
+            discussionFragment = new DiscussionFragment();
         }
 
         if (qnaFragment == null) {
@@ -52,6 +59,8 @@ public class MainActivity extends AppCompatActivity {
         if (savedInstanceState == null) {
             fm.beginTransaction()
                     .add(R.id.content_container, homeFragment, "HOME")
+                    .add(R.id.content_container, discussionFragment, "DISCUSS")
+                    .hide(discussionFragment)
                     .add(R.id.content_container, qnaFragment, "QNA")
                     .hide(qnaFragment)
                     .add(R.id.content_container, accountFragment, "ACCOUNT")
@@ -59,14 +68,15 @@ public class MainActivity extends AppCompatActivity {
                     .commit();
         }
 
-        BottomNavigationView bottomNavigation =
-                findViewById(R.id.bottom_navigation);
+        BottomNavigationView bottomNavigation = findViewById(R.id.bottom_navigation);
 
         bottomNavigation.setOnItemSelectedListener(item -> {
             int id = item.getItemId();
 
             if (id == R.id.nav_home) {
                 showFragment(homeFragment);
+            } else if (id == R.id.nav_discuss) {
+                showFragment(discussionFragment);
             } else if (id == R.id.nav_qna) {
                 showFragment(qnaFragment);
             } else if (id == R.id.nav_account) {
@@ -203,6 +213,7 @@ public class MainActivity extends AppCompatActivity {
 
         fm.beginTransaction()
                 .hide(homeFragment)
+                .hide(discussionFragment)
                 .hide(qnaFragment)
                 .hide(accountFragment)
                 .show(target)
