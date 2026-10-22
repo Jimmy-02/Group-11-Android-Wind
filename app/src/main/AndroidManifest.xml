@@ -30,6 +30,9 @@
         </activity>
         <activity
             android:name=".account.profile.EditProfileActivity"
+            android:exported="false" />
+        <activity
+            android:name=".admin.AdminActivity"
             android:exported="false" />
     </application>
 
