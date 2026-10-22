@@ -236,26 +236,8 @@ public class LoginActivity extends AppCompatActivity {
 
         role = role.trim().toUpperCase(Locale.ROOT);
 
-        if ("USER".equals(role)) {
+        if ("USER".equals(role) || "ADMIN".equals(role)) {
             openMainScreen();
-            return;
-        }
-
-        if ("ADMIN".equals(role)) {
-            // TODO: Bỏ comment khi AdminActivity sẵn sàng.
-            //
-            // Intent intent = new Intent(
-            //         LoginActivity.this,
-            //         AdminActivity.class
-            // );
-            // intent.setFlags(
-            //         Intent.FLAG_ACTIVITY_NEW_TASK
-            //                 | Intent.FLAG_ACTIVITY_CLEAR_TASK
-            // );
-            // startActivity(intent);
-            // finish();
-
-            rejectLogin("Đăng nhập Admin hiện chưa được hỗ trợ.");
             return;
         }
 
