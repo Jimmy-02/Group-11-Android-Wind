@@ -1,6 +1,7 @@
 package com.example.myapplication;
 
 import android.content.Intent;
+import java.util.Locale;
 import android.os.Bundle;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -245,7 +246,8 @@ public class MainActivity extends AppCompatActivity {
                         return;
                     }
 
-                    if (!"USER".equalsIgnoreCase(role == null ? "" : role.trim())) {
+                    String normalizedRole = role == null ? "" : role.trim().toUpperCase(Locale.ROOT);
+                    if (!"USER".equals(normalizedRole) && !"ADMIN".equals(normalizedRole)) {
                         redirectToLogin("Tài khoản không được phép truy cập màn hình này.");
                     }
                 });
@@ -289,7 +291,8 @@ public class MainActivity extends AppCompatActivity {
                         return;
                     }
 
-                    if (!"USER".equalsIgnoreCase(role == null ? "" : role.trim())) {
+                    String normalizedRole = role == null ? "" : role.trim().toUpperCase(Locale.ROOT);
+                    if (!"USER".equals(normalizedRole) && !"ADMIN".equals(normalizedRole)) {
                         redirectToLogin("Tài khoản không được phép truy cập màn hình này.");
                     }
                 });
