@@ -7,7 +7,6 @@
     android:orientation="vertical"
     android:background="#F8FAFC">
 
-    <!-- Header Section -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -34,7 +33,6 @@
             android:textColor="#64748B"
             android:textSize="13sp" />
 
-        <!-- Tab Bar (Câu hỏi / Câu trả lời) -->
         <com.google.android.material.tabs.TabLayout
             android:id="@+id/tab_admin_qna"
             android:layout_width="match_parent"
@@ -51,7 +49,6 @@
 
     </LinearLayout>
 
-    <!-- Search Bar -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -99,7 +96,6 @@
 
     </LinearLayout>
 
-    <!-- Filter Chips (Horizontal Scroll) -->
     <HorizontalScrollView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -174,7 +170,6 @@
         </LinearLayout>
     </HorizontalScrollView>
 
-    <!-- Main List Container -->
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
@@ -187,7 +182,6 @@
             android:clipToPadding="false"
             android:paddingBottom="16dp" />
 
-        <!-- Loading ProgressBar -->
         <ProgressBar
             android:id="@+id/pb_admin_loading"
             android:layout_width="wrap_content"
@@ -195,7 +189,6 @@
             android:layout_gravity="center"
             android:visibility="gone" />
 
-        <!-- Empty State View -->
         <LinearLayout
             android:id="@+id/layout_empty_state"
             android:layout_width="match_parent"

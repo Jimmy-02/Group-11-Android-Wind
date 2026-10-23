@@ -9,7 +9,6 @@
     android:fitsSystemWindows="true"
     android:orientation="vertical">
 
-    <!-- Top App Bar -->
     <LinearLayout
         android:id="@+id/topBar"
         android:layout_width="match_parent"
@@ -56,7 +55,6 @@
             android:textStyle="bold" />
     </LinearLayout>
 
-    <!-- Scrollable Content -->
     <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
@@ -69,7 +67,6 @@
             android:orientation="vertical"
             android:padding="16dp">
 
-            <!-- Section 1: Nội dung bài viết bị báo cáo (~35%) -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -85,7 +82,6 @@
                     android:orientation="vertical"
                     android:padding="16dp">
 
-                    <!-- Tags hoặc Parent Question Reference -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -119,7 +115,6 @@
                             tools:visibility="visible" />
                     </LinearLayout>
 
-                    <!-- Title -->
                     <TextView
                         android:id="@+id/tvDetailTitle"
                         android:layout_width="match_parent"
@@ -131,7 +126,6 @@
                         android:textStyle="bold"
                         tools:text="Làm thế nào để ứng dụng Deep Learning trong phân tích tế bào ung thư?" />
 
-                    <!-- Author Info -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -166,7 +160,6 @@
                             tools:text="• 2 ngày trước" />
                     </LinearLayout>
 
-                    <!-- Content body -->
                     <TextView
                         android:id="@+id/tvDetailContent"
                         android:layout_width="match_parent"
@@ -179,7 +172,6 @@
                         android:textSize="14sp"
                         tools:text="Tôi đang nghiên cứu đề tài về nhận diện tế bào ác tính qua ảnh nhuộm H&amp;E. Tôi muốn hỏi cấu trúc mạng CNN nào hiện nay đạt hiệu năng tốt nhất..." />
 
-                    <!-- Xem thêm / Thu gọn -->
                     <TextView
                         android:id="@+id/btnToggleExpandContent"
                         android:layout_width="wrap_content"
@@ -197,7 +189,6 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Section 2: Danh sách báo cáo của người dùng (~65%) -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -213,7 +204,6 @@
                     android:layout_height="wrap_content"
                     android:orientation="vertical">
 
-                    <!-- Header Danh sách báo cáo -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="48dp"
@@ -245,7 +235,6 @@
                         android:layout_height="1dp"
                         android:background="#E2E8F0" />
 
-                    <!-- Loading bar for reports -->
                     <ProgressBar
                         android:id="@+id/pbReportsLoading"
                         android:layout_width="32dp"
@@ -255,7 +244,6 @@
                         android:indeterminateTint="#6750A4"
                         android:visibility="gone" />
 
-                    <!-- Empty state -->
                     <TextView
                         android:id="@+id/tvEmptyReports"
                         android:layout_width="match_parent"
@@ -267,7 +255,6 @@
                         android:textSize="13sp"
                         android:visibility="gone" />
 
-                    <!-- RecyclerView -->
                     <androidx.recyclerview.widget.RecyclerView
                         android:id="@+id/rvUserReports"
                         android:layout_width="match_parent"
@@ -280,7 +267,6 @@
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 
-    <!-- Bottom Actions Bar -->
     <LinearLayout
         android:id="@+id/layoutBottomActions"
         android:layout_width="match_parent"
@@ -291,7 +277,6 @@
         android:paddingHorizontal="16dp"
         android:paddingVertical="12dp">
 
-        <!-- Bỏ qua báo cáo -->
         <LinearLayout
             android:id="@+id/btnDismissReport"
             android:layout_width="0dp"
@@ -320,7 +305,6 @@
                 android:textStyle="bold" />
         </LinearLayout>
 
-        <!-- Xóa nội dung -->
         <LinearLayout
             android:id="@+id/btnDeleteContent"
             android:layout_width="0dp"
