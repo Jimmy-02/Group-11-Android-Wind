@@ -44,6 +44,32 @@ public class ArticleRepository {
                 })
                 .addOnFailureListener(listener::onError);
     }
+    public void getArticlesByCategory(String categoryId, OnArticlesLoadedListener listener) {
+        firestore.collection("articles")
+                .whereEqualTo("status", "APPROVED")
+                .whereEqualTo("categoryId", categoryId)
+                .orderBy("createdAt", Query.Direction.DESCENDING)
+                .get()
+                .addOnSuccessListener(querySnapshot -> {
+                    List<Article> articles = new ArrayList<>();
+
+                    for (DocumentSnapshot document : querySnapshot.getDocuments()) {
+                        if (document.contains("deletedAt") && document.get("deletedAt") != null) {
+                            continue;
+                        }
+
+                        Article article = document.toObject(Article.class);
+
+                        if (article != null) {
+                            article.setId(document.getId());
+                            articles.add(article);
+                        }
+                    }
+
+                    listener.onSuccess(articles);
+                })
+                .addOnFailureListener(listener::onError);
+    }
 
     public interface OnArticlesLoadedListener {
         void onSuccess(List<Article> articles);
