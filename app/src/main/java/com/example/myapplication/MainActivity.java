@@ -117,6 +117,9 @@ public class MainActivity extends AppCompatActivity {
                 bottomNavigation.setSelectedItemId(R.id.nav_qna);
             } else if (id == R.id.drawer_account) {
                 bottomNavigation.setSelectedItemId(R.id.nav_account);
+            } else if (id == R.id.drawer_admin) {
+                Intent intent = new Intent(MainActivity.this, com.example.myapplication.admin.AdminActivity.class);
+                startActivity(intent);
             } else if (id == R.id.drawer_about) {
                 showAboutDialog();
             } else if (id == R.id.drawer_logout) {
@@ -143,6 +146,7 @@ public class MainActivity extends AppCompatActivity {
 
         bottomNavigation.setSelectedItemId(selectedItem);
     }
+
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
@@ -167,8 +171,6 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-
-
     private void showFragment(Fragment target, String title) {
         FragmentManager fm = getSupportFragmentManager();
 
@@ -183,7 +185,6 @@ public class MainActivity extends AppCompatActivity {
         findViewById(R.id.toolbar).setVisibility(View.VISIBLE);
         tvToolbarTitle.setText(title);
 
-
         if (target == homeFragment) {
             navigationView.setCheckedItem(R.id.drawer_home);
         } else if (target == discussionFragment) {
@@ -193,7 +194,6 @@ public class MainActivity extends AppCompatActivity {
         } else if (target == accountFragment) {
             navigationView.setCheckedItem(R.id.drawer_account);
         }
-
 
         if (target == accountFragment && drawerLayout.isDrawerOpen(navigationView)) {
             drawerLayout.closeDrawer(navigationView);
@@ -219,6 +219,16 @@ public class MainActivity extends AppCompatActivity {
         if (accountListener != null) {
             accountListener.remove();
             accountListener = null;
+        }
+    }
+
+    private void updateAdminDrawerVisibility(String role) {
+        if (navigationView != null) {
+            android.view.MenuItem adminItem = navigationView.getMenu().findItem(R.id.drawer_admin);
+            if (adminItem != null) {
+                boolean isAdmin = "ADMIN".equalsIgnoreCase(role != null ? role.trim() : "");
+                adminItem.setVisible(isAdmin);
+            }
         }
     }
 
@@ -256,6 +266,8 @@ public class MainActivity extends AppCompatActivity {
                     DocumentSnapshot document = task.getResult();
                     String status = document.getString("status");
                     String role = document.getString("role");
+
+                    updateAdminDrawerVisibility(role);
 
                     if (!"ACTIVE".equalsIgnoreCase(status == null ? "" : status.trim())) {
                         redirectToLogin("Tài khoản của bạn đã bị khóa hoặc không được phép truy cập.");
@@ -302,6 +314,8 @@ public class MainActivity extends AppCompatActivity {
                     String status = document.getString("status");
                     String role = document.getString("role");
 
+                    updateAdminDrawerVisibility(role);
+
                     if (!"ACTIVE".equalsIgnoreCase(status == null ? "" : status.trim())) {
                         redirectToLogin("Tài khoản đã bị khóa hoặc không được phép truy cập.");
                         return;
@@ -313,6 +327,7 @@ public class MainActivity extends AppCompatActivity {
                     }
                 });
     }
+
     private void showAboutDialog() {
         String members = "Nguyễn Anh Trường Tài\n"
                 + "Phan Nhựt Đăng Khoa\n"
@@ -325,6 +340,7 @@ public class MainActivity extends AppCompatActivity {
                 .setPositiveButton("Close", (dialog, which) -> dialog.dismiss())
                 .show();
     }
+
     private void redirectToLogin(String message) {
         if (isRedirectingToLogin) {
             return;
@@ -336,6 +352,8 @@ public class MainActivity extends AppCompatActivity {
             accountListener.remove();
             accountListener = null;
         }
+
+        updateAdminDrawerVisibility(null);
 
         FirebaseAuth.getInstance().signOut();
 

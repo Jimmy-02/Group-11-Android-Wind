@@ -21,6 +21,11 @@
             android:icon="@drawable/ic_account"
             android:title="Account" />
         <item
+            android:id="@+id/drawer_admin"
+            android:icon="@drawable/ic_admin_space"
+            android:title="Admin"
+            android:visible="false" />
+        <item
             android:id="@+id/drawer_about"
             android:icon="@drawable/ic_about"
             android:title="About SciShare" />

@@ -60,14 +60,6 @@ public class AccountActivity extends Fragment {
 
             startActivity(intent);
         });
-        View cardAdminSpace = view.findViewById(R.id.cardAdminSpace);
-        cardAdminSpace.setOnClickListener(v -> {
-            Intent intent = new Intent(
-                    requireContext(),
-                    com.example.myapplication.admin.AdminActivity.class
-            );
-            startActivity(intent);
-        });
 
         view.findViewById(R.id.layoutChangePassword).setOnClickListener(v -> {
             Intent intent = new Intent(
@@ -95,7 +87,6 @@ public class AccountActivity extends Fragment {
             tvFullName.setText("Chưa đăng nhập");
             tvEmail.setText("");
             tvRole.setText("");
-            cardAdminSpace.setVisibility(View.GONE);
 
             view.findViewById(R.id.layoutAccountMenu)
                     .setVisibility(View.GONE);
@@ -140,8 +131,6 @@ public class AccountActivity extends Fragment {
                         tvRole.setText(
                                 role != null ? role : "USER"
                         );
-                        boolean isAdmin = "ADMIN".equalsIgnoreCase(role != null ? role.trim() : "");
-                        cardAdminSpace.setVisibility(isAdmin ? View.VISIBLE : View.GONE);
                         ImageLoader.load(avatar, imgAvatar);
                     });
         }
