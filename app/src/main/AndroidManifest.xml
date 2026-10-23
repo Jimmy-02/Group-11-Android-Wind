@@ -41,6 +41,9 @@
         <activity
             android:name=".admin.AdminActivity"
             android:exported="false" />
+        <activity
+            android:name=".admin.AdminReportDetailActivity"
+            android:exported="false" />
     </application>
 
 </manifest>

@@ -1,5 +1,6 @@
 package com.example.myapplication.admin;
 
+import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.text.Editable;
@@ -10,7 +11,6 @@ import android.view.ViewGroup;
 import android.widget.EditText;
 import android.widget.ProgressBar;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -43,13 +43,11 @@ public class AdminQnaFragment extends Fragment {
     private View layoutEmptyState;
 
     private AdminReportAdapter adapter;
-    private List<AdminReportItem> allQuestionItems = new ArrayList<>();
-    private List<AdminReportItem> allAnswerItems = new ArrayList<>();
+    private final List<AdminReportItem> allQuestionItems = new ArrayList<>();
+    private final List<AdminReportItem> allAnswerItems = new ArrayList<>();
 
-    // 0 = Questions, 1 = Answers
-    private int currentTab = 0;
-    // "ALL", "PENDING", "REPORTED_CONTENT_DELETED", "DISMISSED"
-    private String currentFilter = "ALL";
+    private int currentTab = 0; // 0: Câu hỏi, 1: Câu trả lời
+    private String currentFilter = "ALL"; // ALL, PENDING, REPORTED_CONTENT_DELETED, DISMISSED
     private String currentSearchKeyword = "";
 
     @Nullable
@@ -62,7 +60,6 @@ public class AdminQnaFragment extends Fragment {
         setupFilterChips();
         setupSearch();
         setupRecyclerView();
-
         loadFirestoreReports();
 
         return view;
@@ -82,6 +79,7 @@ public class AdminQnaFragment extends Fragment {
     }
 
     private void setupTabs() {
+        tabLayout.removeAllTabs();
         tabLayout.addTab(tabLayout.newTab().setText("Câu hỏi"));
         tabLayout.addTab(tabLayout.newTab().setText("Câu trả lời"));
 
@@ -165,8 +163,21 @@ public class AdminQnaFragment extends Fragment {
     private void setupRecyclerView() {
         rvReports.setLayoutManager(new LinearLayoutManager(requireContext()));
         adapter = new AdminReportAdapter(item -> {
-            Toast.makeText(requireContext(), "Đã chọn: " + item.getTitle(), Toast.LENGTH_SHORT).show();
-            // TODO: Ở Bước 1.2 sẽ mở AdminReportDetailActivity
+            Intent intent = new Intent(requireContext(), AdminReportDetailActivity.class);
+            intent.putExtra(AdminReportDetailActivity.EXTRA_REPORT_ID, item.getId());
+            intent.putExtra(AdminReportDetailActivity.EXTRA_TARGET_ID, item.getContentId());
+            intent.putExtra(AdminReportDetailActivity.EXTRA_TARGET_TYPE, item.getContentType());
+            intent.putExtra(AdminReportDetailActivity.EXTRA_TITLE, item.getTitle());
+            intent.putExtra(AdminReportDetailActivity.EXTRA_CONTENT, item.getContent());
+            intent.putExtra(AdminReportDetailActivity.EXTRA_PARENT_QUESTION, item.getParentQuestionTitle());
+            intent.putExtra(AdminReportDetailActivity.EXTRA_STATUS, item.getStatus());
+            intent.putExtra(AdminReportDetailActivity.EXTRA_REPORT_COUNT, item.getReportCount());
+            intent.putExtra(AdminReportDetailActivity.EXTRA_AUTHOR_NAME, item.getAuthorName());
+            intent.putExtra(AdminReportDetailActivity.EXTRA_AUTHOR_AVATAR, item.getAuthorAvatar());
+            intent.putExtra(AdminReportDetailActivity.EXTRA_POST_TIME, item.getTimeAgo());
+            String tag = (item.getTags() != null && !item.getTags().isEmpty()) ? android.text.TextUtils.join(" • ", item.getTags()) : "";
+            intent.putExtra(AdminReportDetailActivity.EXTRA_TAG, tag);
+            startActivity(intent);
         });
         rvReports.setAdapter(adapter);
     }
@@ -182,7 +193,7 @@ public class AdminQnaFragment extends Fragment {
                 if (task.isSuccessful() && task.getResult() != null && !task.getResult().isEmpty()) {
                     groupQuestionReports(task.getResult().getDocuments());
                 } else {
-                    allQuestionItems.clear();
+                    createMockQuestions();
                 }
 
                 // 2. Tải báo cáo Câu trả lời (answerReports)
@@ -198,7 +209,7 @@ public class AdminQnaFragment extends Fragment {
                 if (task.isSuccessful() && task.getResult() != null && !task.getResult().isEmpty()) {
                     groupAnswerReports(task.getResult().getDocuments());
                 } else {
-                    allAnswerItems.clear();
+                    createMockAnswers();
                 }
                 applyFilterAndSearch();
             }
@@ -268,7 +279,7 @@ public class AdminQnaFragment extends Fragment {
             final String statusToUse = latestStatus;
             db.collection("answers").document(answerId).get().addOnSuccessListener(aDoc -> {
                 if (!isAdded()) return;
-                String content = aDoc.exists() ? aDoc.getString("content") : "Câu trả lời vi phạm";
+                String content = aDoc.exists() ? aDoc.getString("content") : "Nội dung câu trả lời";
                 String questionId = aDoc.exists() ? aDoc.getString("questionId") : "";
 
                 AdminReportItem item = new AdminReportItem(
@@ -277,7 +288,7 @@ public class AdminQnaFragment extends Fragment {
                         "ANSWER",
                         content,
                         content,
-                        "Câu hỏi liên quan",
+                        null,
                         statusToUse,
                         reports.size(),
                         "Vừa xong",
@@ -288,26 +299,148 @@ public class AdminQnaFragment extends Fragment {
 
                 if (questionId != null && !questionId.isEmpty()) {
                     db.collection("questions").document(questionId).get().addOnSuccessListener(qDoc -> {
-                        if (isAdded() && qDoc.exists()) {
+                        if (qDoc.exists()) {
                             item.setParentQuestionTitle(qDoc.getString("title"));
-                            if (currentTab == 1) applyFilterAndSearch();
                         }
+                        allAnswerItems.add(item);
+                        if (currentTab == 1) applyFilterAndSearch();
+                    }).addOnFailureListener(e -> {
+                        allAnswerItems.add(item);
+                        if (currentTab == 1) applyFilterAndSearch();
                     });
+                } else {
+                    allAnswerItems.add(item);
+                    if (currentTab == 1) applyFilterAndSearch();
                 }
-
-                allAnswerItems.add(item);
-                if (currentTab == 1) applyFilterAndSearch();
             });
         }
     }
 
-    // Tạm thời bỏ các dữ liệu ví dụ mẫu (mock data), chỉ hiển thị dữ liệu thực từ Firestore
+    // Dữ liệu ví dụ mẫu phong phú phục vụ kiểm thử giao diện theo thiết kế image1.png
     private void createMockQuestions() {
         allQuestionItems.clear();
+        allQuestionItems.add(new AdminReportItem(
+                "q_rep_1",
+                "q_1",
+                "QUESTION",
+                "Làm thế nào để ứng dụng Deep Learning trong phân tích tế bào ung thư?",
+                "Tôi đang nghiên cứu đề tài về nhận diện tế bào ác tính qua ảnh mô bệnh học nhuộm H&E. Hiện tại tôi phân vân giữa mô hình ResNet50 và EfficientNetV2 để trích xuất đặc trưng hình thái tế bào, không biết mô hình nào cho độ nhạy (sensitivity) cao hơn trên tập dữ liệu kích thước nhỏ? Mọi người có kinh nghiệm tiền xử lý ảnh Whole Slide Imaging (WSI) xin cho mình lời khuyên.",
+                null,
+                "PENDING",
+                3,
+                "2 giờ trước",
+                "Nguyễn Văn A",
+                null,
+                Arrays.asList("AI", "Y sinh học")
+        ));
+
+        allQuestionItems.add(new AdminReportItem(
+                "q_rep_2",
+                "q_2",
+                "QUESTION",
+                "Có nên sử dụng ChatGPT để viết phần Tổng quan tài liệu (Literature Review)?",
+                "Việc sử dụng các công cụ LLM để tóm tắt các công trình nghiên cứu trước đây có bị các tạp chí khoa học xem là vi phạm liêm chính học thuật không? Có cách nào trích dẫn công cụ AI đúng quy chuẩn IEEE không?",
+                null,
+                "PENDING",
+                2,
+                "5 giờ trước",
+                "Trần Thị B",
+                null,
+                Arrays.asList("Liêm chính học thuật", "AI")
+        ));
+
+        allQuestionItems.add(new AdminReportItem(
+                "q_rep_3",
+                "q_3",
+                "QUESTION",
+                "Chia sẻ tài khoản truy cập cơ sở dữ liệu Scopus và Web of Science miễn phí",
+                "Mình có một số tài khoản và proxy dùng chung để tải bài báo có trả phí từ ScienceDirect, ai cần inbox mình gửi thông tin đăng nhập...",
+                null,
+                "REPORTED_CONTENT_DELETED",
+                5,
+                "1 ngày trước",
+                "Lê Hoàng C",
+                null,
+                Arrays.asList("Tài liệu", "Chia sẻ")
+        ));
+
+        allQuestionItems.add(new AdminReportItem(
+                "q_rep_4",
+                "q_4",
+                "QUESTION",
+                "Khác biệt cốt lõi giữa học có giám sát và học tăng cường là gì?",
+                "Mình là người mới bắt đầu học Machine Learning và thấy khó phân biệt khi nào nên áp dụng Reinforcement Learning thay vì Supervised Learning trong bài toán điều khiển tự động.",
+                null,
+                "DISMISSED",
+                1,
+                "3 ngày trước",
+                "Vũ Minh D",
+                null,
+                Arrays.asList("Machine Learning", "Nhập môn")
+        ));
     }
 
     private void createMockAnswers() {
         allAnswerItems.clear();
+        allAnswerItems.add(new AdminReportItem(
+                "a_rep_1",
+                "a_1",
+                "ANSWER",
+                "Cứ copy nguyên bài nghiên cứu của nhóm khác rồi dịch sang tiếng Việt nộp là được, không ai kiểm tra đâu...",
+                "Cứ copy nguyên bài nghiên cứu của nhóm khác rồi dịch sang tiếng Việt nộp là được, giáo viên cũng bận không ai kiểm tra đạo văn kỹ đâu bạn ơi, đỡ mất công làm.",
+                "Làm sao để hoàn thành khóa luận tốt nghiệp đúng hạn?",
+                "PENDING",
+                4,
+                "3 giờ trước",
+                "Phạm Hữu E",
+                null,
+                new ArrayList<>()
+        ));
+
+        allAnswerItems.add(new AdminReportItem(
+                "a_rep_2",
+                "a_2",
+                "ANSWER",
+                "Bạn truy cập trang web này [link rút gọn cá độ/quảng cáo] để nhận tài liệu tham khảo miễn phí...",
+                "Bạn truy cập trang web cá cược abc.xyz này để nhận tài liệu tham khảo luận văn miễn phí cực kỳ uy tín nhé.",
+                "Tìm kiếm bộ dữ liệu MNIST ở đâu?",
+                "PENDING",
+                2,
+                "6 giờ trước",
+                "Hoàng Nam F",
+                null,
+                new ArrayList<>()
+        ));
+
+        allAnswerItems.add(new AdminReportItem(
+                "a_rep_3",
+                "a_3",
+                "ANSWER",
+                "Dữ liệu nghiên cứu này hoàn toàn là bịa đặt, người viết câu hỏi này không có kiến thức...",
+                "Dữ liệu nghiên cứu này hoàn toàn là bịa đặt, người viết câu hỏi này không có kiến thức gì về khoa học mà cũng đòi lên đây hỏi...",
+                "Phương pháp chuẩn hóa Z-score trong dữ liệu y tế",
+                "REPORTED_CONTENT_DELETED",
+                3,
+                "2 ngày trước",
+                "Đặng Tiến G",
+                null,
+                new ArrayList<>()
+        ));
+
+        allAnswerItems.add(new AdminReportItem(
+                "a_rep_4",
+                "a_4",
+                "ANSWER",
+                "Theo tài liệu chính thống của tác giả bài báo gốc năm 2017 (Attention Is All You Need)...",
+                "Theo tài liệu chính thống của tác giả bài báo gốc năm 2017 (Attention Is All You Need), ma trận Query, Key, Value được nhân tích vô hướng tỷ lệ để tính toán trọng số tương đồng ngữ cảnh.",
+                "Cơ chế Self-Attention trong Transformer hoạt động ra sao?",
+                "DISMISSED",
+                1,
+                "4 ngày trước",
+                "Ngô Quốc H",
+                null,
+                new ArrayList<>()
+        ));
     }
 
     private void applyFilterAndSearch() {
