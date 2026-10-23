@@ -6,4 +6,9 @@
     </style>
 
     <style name="Theme.MyApplication" parent="Base.Theme.MyApplication" />
+
+    <style name="Theme.MyApplication.SearchResults"
+        parent="Theme.MyApplication">
+        <item name="android:windowActionModeOverlay">true</item>
+    </style>
 </resources>
