@@ -1,5 +1,5 @@
 package com.example.myapplication.articles;
-
+import com.google.firebase.firestore.Exclude;
 public class Article {
 
     private String id;
@@ -12,6 +12,7 @@ public class Article {
     private String imageUrl;
     private String sourceUrl;
     private String contentUrl;
+    private long createdAt;
 
     public Article() {
 
@@ -108,5 +109,20 @@ public class Article {
 
     public void setContentUrl(String contentUrl) {
         this.contentUrl = contentUrl;
+    }
+
+
+    //@Exclude là annotation của Firestore, báo cho Firestore bỏ qua property đó khi chuyển đổi giữa object Java và document:
+    //
+    //Khi ghi (set(object)): không lưu field đó lên Firestore.
+    //Khi đọc (document.toObject(Article.class)): không tự điền giá trị vào field đó.
+    @Exclude
+    public long getCreatedAt() {
+        return createdAt;
+    }
+
+    @Exclude
+    public void setCreatedAt(long createdAt) {
+        this.createdAt = createdAt;
     }
 }

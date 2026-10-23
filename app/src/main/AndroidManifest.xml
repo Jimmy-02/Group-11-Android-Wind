@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -32,6 +33,13 @@
             android:name=".articles.search.SearchResultsActivity"
             android:exported="false"
             android:theme="@style/Theme.MyApplication.SearchResults" />
+        <activity
+        android:name=".articles.articlesDetail.ArticleDetailActivity"
+        android:exported="false" />
+
+        <activity
+            android:name=".articles.articlesDetail.PdfReaderActivity"
+            android:exported="false" />
         <activity
             android:name=".account.EditProfileActivity"
             android:exported="false" />
