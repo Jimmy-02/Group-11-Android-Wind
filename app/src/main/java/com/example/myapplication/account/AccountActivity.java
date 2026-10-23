@@ -1,6 +1,5 @@
 package com.example.myapplication.account;
 import android.content.Intent;
-import com.example.myapplication.account.profile.EditProfileActivity;
 import android.os.Bundle;
 import androidx.fragment.app.Fragment;
 import android.widget.ImageView;
@@ -17,6 +16,12 @@ import com.example.myapplication.authentication.AuthSessionManager;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AlertDialog;
 import com.google.firebase.firestore.ListenerRegistration;
+import com.google.firebase.auth.UserInfo;
+import android.widget.Button;
+import android.widget.EditText;
+import com.example.myapplication.account.ChangePasswordActivity;
+import com.google.firebase.auth.AuthCredential;
+import com.google.firebase.auth.EmailAuthProvider;
 public class AccountActivity extends Fragment {
 
     private ListenerRegistration profileListener;
@@ -42,6 +47,7 @@ public class AccountActivity extends Fragment {
         TextView tvDiscussionCount = view.findViewById(R.id.tvDiscussionCount);
         TextView tvQuestionCount = view.findViewById(R.id.tvQuestionCount);
         TextView tvAnswerCount = view.findViewById(R.id.tvAnswerCount);
+
         // Chỉ mở Edit Profile khi người dùng nhấn
         view.findViewById(R.id.layoutEditProfile).setOnClickListener(v -> {
             Intent intent = new Intent(
@@ -60,6 +66,15 @@ public class AccountActivity extends Fragment {
                     requireContext(),
                     com.example.myapplication.admin.AdminActivity.class
             );
+            startActivity(intent);
+        });
+
+        view.findViewById(R.id.layoutChangePassword).setOnClickListener(v -> {
+            Intent intent = new Intent(
+                    requireContext(),
+                    ChangePasswordActivity.class
+            );
+
             startActivity(intent);
         });
 

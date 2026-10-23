@@ -1,5 +1,5 @@
 
-package com.example.myapplication.account.profile;
+package com.example.myapplication.account;
 import android.text.InputType;
 import android.widget.EditText;
 import androidx.appcompat.app.AlertDialog;
@@ -33,9 +33,7 @@ public class EditProfileActivity extends AppCompatActivity {
     private TextInputEditText etUsername;
     private TextInputEditText etAvatar;
     private TextInputEditText etEmail;
-
     private MaterialButton btnSaveProfile;
-
     private DocumentReference userRef;
     private String originalFullName = "";
     private String originalUsername = "";
@@ -92,7 +90,7 @@ public class EditProfileActivity extends AppCompatActivity {
         });
         btnSaveProfile = findViewById(R.id.btn_save_profile);
 
-        findViewById(R.id.tv_back).setOnClickListener(v -> finish());
+        findViewById(R.id.layoutBack).setOnClickListener(v -> finish());
 
         // 3. Kiểm tra tài khoản Firebase
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
@@ -247,15 +245,12 @@ public class EditProfileActivity extends AppCompatActivity {
 
         // Chỉ đưa những trường thực sự thay đổi vào danh sách cập nhật
         Map<String, Object> updates = new HashMap<>();
-
         if (!fullName.equals(originalFullName)) {
             updates.put("fullName", fullName);
         }
-
         if (!username.equals(originalUsername)) {
             updates.put("username", username);
         }
-
         if (!avatar.equals(originalAvatar)) {
             updates.put("avatar", avatar);
         }
