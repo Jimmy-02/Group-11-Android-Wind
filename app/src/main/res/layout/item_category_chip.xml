@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="40dp"
+    android:layout_marginEnd="8dp"
+    android:gravity="center"
+    android:paddingStart="16dp"
+    android:paddingEnd="16dp"
+    android:background="@drawable/bg_category_chip"
+    android:text="Category"
+    android:textColor="#475569"
+    android:textSize="13sp"
+    android:fontFamily="sans"
+    android:maxLines="1"
+    android:clickable="true"
+    android:focusable="true" />

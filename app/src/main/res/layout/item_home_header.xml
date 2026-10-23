@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
@@ -40,7 +41,7 @@
             android:layout_height="22dp"
             android:contentDescription="Search"
             android:src="@android:drawable/ic_menu_search"
-            android:tint="#718096" />
+            app:tint="#718096" />
 
         <EditText
             android:id="@+id/et_search_articles"
@@ -74,76 +75,11 @@
         android:scrollbars="none">
 
         <LinearLayout
+            android:id="@+id/category_chip_container"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:orientation="horizontal">
+            android:orientation="horizontal" />
 
-            <TextView
-                android:id="@+id/chip_all"
-                android:layout_width="wrap_content"
-                android:layout_height="40dp"
-                android:background="#2457C5"
-                android:gravity="center"
-                android:paddingStart="20dp"
-                android:paddingEnd="20dp"
-                android:text="All"
-                android:textColor="#FFFFFF"
-                android:textSize="14sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/chip_computer_science"
-                android:layout_width="wrap_content"
-                android:layout_height="40dp"
-                android:layout_marginStart="10dp"
-                android:background="#FFFFFF"
-                android:gravity="center"
-                android:paddingStart="16dp"
-                android:paddingEnd="16dp"
-                android:text="Computer Science"
-                android:textColor="#526174"
-                android:textSize="14sp" />
-
-            <TextView
-                android:id="@+id/chip_biology"
-                android:layout_width="wrap_content"
-                android:layout_height="40dp"
-                android:layout_marginStart="10dp"
-                android:background="#FFFFFF"
-                android:gravity="center"
-                android:paddingStart="16dp"
-                android:paddingEnd="16dp"
-                android:text="Biology"
-                android:textColor="#526174"
-                android:textSize="14sp" />
-
-            <TextView
-                android:id="@+id/chip_physics"
-                android:layout_width="wrap_content"
-                android:layout_height="40dp"
-                android:layout_marginStart="10dp"
-                android:background="#FFFFFF"
-                android:gravity="center"
-                android:paddingStart="16dp"
-                android:paddingEnd="16dp"
-                android:text="Physics"
-                android:textColor="#526174"
-                android:textSize="14sp" />
-
-            <TextView
-                android:id="@+id/chip_medicine"
-                android:layout_width="wrap_content"
-                android:layout_height="40dp"
-                android:layout_marginStart="10dp"
-                android:background="#FFFFFF"
-                android:gravity="center"
-                android:paddingStart="16dp"
-                android:paddingEnd="16dp"
-                android:text="Medicine"
-                android:textColor="#526174"
-                android:textSize="14sp" />
-
-        </LinearLayout>
     </HorizontalScrollView>
 
     <LinearLayout

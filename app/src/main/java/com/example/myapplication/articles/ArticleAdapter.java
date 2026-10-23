@@ -9,10 +9,14 @@ import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
 import android.widget.TextView;
-
+import java.util.HashMap;
+import java.util.Map;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
-
+import android.graphics.Color;
+import android.widget.LinearLayout;
+import com.example.myapplication.articles.categories.ArticleCategory;
+import com.example.myapplication.articles.categories.ArticleCategoryRepository;
 import com.example.myapplication.R;
 import com.squareup.picasso.Picasso;
 
@@ -27,7 +31,13 @@ public class ArticleAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
     private static final int TYPE_ARTICLE = 1;
 
     private final List<Article> articleList = new ArrayList<>();
+    private final Map<String, String> categoryNames = new HashMap<>();
+    private final ArticleCategoryRepository categoryRepository = new ArticleCategoryRepository();
 
+    private final OnArticleClickListener articleClickListener;
+    private final OnReportClickListener reportClickListener;
+    private final OnCategorySelectedListener categorySelectedListener;
+    private boolean categoriesLoaded = false;
     public interface OnArticleClickListener {
         void onArticleClick(Article article);
     }
@@ -36,12 +46,16 @@ public class ArticleAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
         void onReportClick(Article article);
     }
 
-    private final OnArticleClickListener articleClickListener;
-    private final OnReportClickListener reportClickListener;
+    public interface OnCategorySelectedListener {
+        void onCategorySelected(String categoryId);
+    }
 
-    public ArticleAdapter(OnArticleClickListener articleClickListener, OnReportClickListener reportClickListener) {
+
+
+    public ArticleAdapter(OnArticleClickListener articleClickListener, OnReportClickListener reportClickListener, OnCategorySelectedListener categorySelectedListener) {
         this.articleClickListener = articleClickListener;
         this.reportClickListener = reportClickListener;
+        this.categorySelectedListener = categorySelectedListener;
     }
 
     @Override
@@ -54,7 +68,7 @@ public class ArticleAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
     public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         if (viewType == TYPE_HEADER) {
             View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_home_header, parent, false);
-            return new HeaderViewHolder(view);
+            return new HeaderViewHolder(view, this);
         }
 
         View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_article, parent, false);
@@ -73,7 +87,10 @@ public class ArticleAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
 
         articleHolder.titleView.setText(article.getTitle());
         articleHolder.authorView.setText(article.getAuthorName());
-        articleHolder.categoryView.setText(article.getCategoryId());
+
+        String categoryId = article.getCategoryId();
+        String categoryName = categoryNames.get(categoryId);
+        articleHolder.categoryView.setText(categoryName != null ? categoryName : "Other");
 
         String institution = article.getInstitution();
         String doi = article.getDigitalObjectIdentifier();
@@ -135,22 +152,85 @@ public class ArticleAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
         notifyDataSetChanged();
     }
 
-    public void addArticles(List<Article> articles) {
-        int startPosition = articleList.size() + 1;
-        articleList.addAll(articles);
-        notifyItemRangeInserted(startPosition, articles.size());
+    public void setCategoryNames(Map<String, String> names) {
+        categoryNames.clear();
+
+        if (names != null) {
+            categoryNames.putAll(names);
+        }
+
+        notifyItemRangeChanged(1, articleList.size());
+    }
+    private void loadCategories(LinearLayout categoryChipContainer, Context context) {
+        if (categoriesLoaded) {
+            return;
+        }
+
+        categoriesLoaded = true;
+        categoryChipContainer.removeAllViews();
+        addCategoryChip(categoryChipContainer, context, "All", null, true);
+
+        categoryRepository.getActiveCategories(new ArticleCategoryRepository.OnCategoriesLoadedListener() {
+            @Override
+            public void onSuccess(List<ArticleCategory> categories) {
+                Map<String, String> names = new HashMap<>();
+
+                for (ArticleCategory category : categories) {
+                    if (category.getId() != null && category.getName() != null) {
+                        names.put(category.getId(), category.getName());
+                        addCategoryChip(categoryChipContainer, context, category.getName(), category.getId(), false);
+                    }
+                }
+
+                setCategoryNames(names);
+            }
+
+            @Override
+            public void onError(Exception exception) {
+                android.util.Log.e("ArticleAdapter", "Failed to load categories", exception);
+                categoriesLoaded = false;
+            }
+        });
     }
 
+    private void addCategoryChip(LinearLayout container, Context context, String name, String categoryId, boolean selected) {
+        TextView chip = (TextView) LayoutInflater.from(context).inflate(R.layout.item_category_chip, container, false);
+        chip.setText(name);
+        updateCategoryChipStyle(chip, selected);
+
+        chip.setOnClickListener(v -> {
+            for (int i = 0; i < container.getChildCount(); i++) {
+                View child = container.getChildAt(i);
+                if (child instanceof TextView) {
+                    updateCategoryChipStyle((TextView) child, child == chip);
+                }
+            }
+
+            if (categorySelectedListener != null) {
+                categorySelectedListener.onCategorySelected(categoryId);
+            }
+        });
+
+        container.addView(chip);
+    }
+
+    private void updateCategoryChipStyle(TextView chip, boolean selected) {
+        chip.setBackgroundTintList(android.content.res.ColorStateList.valueOf(Color.parseColor(selected ? "#2457C5" : "#F1F5F9")));
+        chip.setTextColor(Color.parseColor(selected ? "#FFFFFF" : "#475569"));
+    }
     private static class HeaderViewHolder extends RecyclerView.ViewHolder {
 
         private final TextView articleCount;
         private final EditText searchInput;
+        private final LinearLayout categoryChipContainer;
 
-        public HeaderViewHolder(@NonNull View itemView) {
+        public HeaderViewHolder(@NonNull View itemView, ArticleAdapter adapter) {
             super(itemView);
 
             articleCount = itemView.findViewById(R.id.tv_article_count);
             searchInput = itemView.findViewById(R.id.et_search_articles);
+            categoryChipContainer = itemView.findViewById(R.id.category_chip_container);
+            adapter.loadCategories(categoryChipContainer, itemView.getContext());
 
             searchInput.setOnEditorActionListener((view, actionId, event) -> {
                 if (actionId == EditorInfo.IME_ACTION_SEARCH) {
