@@ -1,0 +1,215 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#F5F6FA">
+
+    <!-- Status bar màu tím, chiều cao được set bằng code theo status bar -->
+    <View
+        android:id="@+id/status_bar_spacer"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:background="#6750A4" />
+
+    <!-- Toolbar -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:background="#FFFFFF"
+        android:elevation="2dp">
+
+        <ImageButton
+            android:id="@+id/btn_back"
+            android:layout_width="56dp"
+            android:layout_height="match_parent"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_arrow_back"
+            android:contentDescription="Back"
+            android:padding="16dp"
+            android:scaleType="fitCenter"
+            app:tint="#172B4D" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Article Details"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="#172B4D"
+            android:gravity="center_vertical"
+            android:paddingStart="4dp" />
+
+    </LinearLayout>
+
+    <!-- Article information -->
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="20dp">
+
+            <!-- Article title -->
+            <TextView
+                android:id="@+id/tv_detail_title"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Test Scientific Article 1"
+                android:textSize="25sp"
+                android:textStyle="bold"
+                android:textColor="#172B4D"
+                android:lineSpacingExtra="4dp" />
+
+            <!-- Author -->
+            <TextView
+                android:id="@+id/tv_detail_author"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="By Author 1"
+                android:textSize="15sp"
+                android:textColor="#526581" />
+
+            <!-- Category -->
+            <TextView
+                android:id="@+id/tv_detail_category"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
+                android:paddingTop="6dp"
+                android:paddingBottom="6dp"
+                android:background="#E4EDFF"
+                android:text="Computer Science"
+                android:textSize="13sp"
+                android:textColor="#2457A7" />
+
+            <!-- Divider -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginTop="24dp"
+                android:layout_marginBottom="20dp"
+                android:background="#DDE2EA" />
+
+            <!-- Abstract section -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="ABSTRACT"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:textColor="#718096"
+                android:letterSpacing="0.08" />
+
+            <TextView
+                android:id="@+id/tv_detail_description"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="This is the article description."
+                android:textSize="15sp"
+                android:textColor="#344054"
+                android:lineSpacingExtra="5dp" />
+
+            <!-- Publication information -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="28dp"
+                android:text="PUBLICATION INFORMATION"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:textColor="#718096"
+                android:letterSpacing="0.08" />
+
+            <!-- Institution -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="Institution"
+                android:textSize="13sp"
+                android:textColor="#718096" />
+
+            <TextView
+                android:id="@+id/tv_detail_institution"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="Research Institute 1"
+                android:textSize="15sp"
+                android:textColor="#172B4D" />
+
+            <!-- DOI -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="Digital Object Identifier (DOI)"
+                android:textSize="13sp"
+                android:textColor="#718096" />
+
+            <TextView
+                android:id="@+id/tv_detail_doi"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="10.1234/scishare.test1"
+                android:textSize="15sp"
+                android:textColor="#2457A7"
+                android:textIsSelectable="true" />
+
+            <!-- Article Created Date -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="Article Created Date"
+                android:textSize="13sp"
+                android:textColor="#718096" />
+
+            <TextView
+                android:id="@+id/tv_detail_date"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="October 23, 2026"
+                android:textSize="15sp"
+                android:textColor="#172B4D" />
+
+            <!-- Read article button -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_read_article"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:layout_marginTop="32dp"
+                android:layout_marginBottom="20dp"
+                android:text="Read Article"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textAllCaps="false"
+                android:textColor="#FFFFFF"
+                app:cornerRadius="12dp"
+                app:icon="@android:drawable/ic_menu_view"
+                app:iconGravity="textStart"
+                app:iconTint="#FFFFFF"
+                app:backgroundTint="#2457A7" />
+
+        </LinearLayout>
+
+    </ScrollView>
+
+</LinearLayout>

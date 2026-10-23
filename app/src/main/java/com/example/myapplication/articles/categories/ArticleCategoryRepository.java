@@ -36,6 +36,8 @@ public class ArticleCategoryRepository {
                 }).addOnFailureListener(listener::onError);
     }
 
+
+
     public interface OnCategoriesLoadedListener {
         void onSuccess(List<ArticleCategory> categories);
         void onError(Exception exception);

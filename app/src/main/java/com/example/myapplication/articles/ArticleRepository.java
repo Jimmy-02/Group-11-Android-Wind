@@ -3,7 +3,8 @@ package com.example.myapplication.articles;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
-
+import com.google.firebase.Timestamp;
+import java.util.Date;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -36,6 +37,13 @@ public class ArticleRepository {
 
                         if (article != null) {
                             article.setId(document.getId());
+
+                            Timestamp timestamp = document.getTimestamp("createdAt");
+
+                            if (timestamp != null) {
+                                article.setCreatedAt(timestamp.toDate().getTime());
+                            }
+
                             articles.add(article);
                         }
                     }
@@ -62,6 +70,13 @@ public class ArticleRepository {
 
                         if (article != null) {
                             article.setId(document.getId());
+
+                            Timestamp timestamp = document.getTimestamp("createdAt");
+
+                            if (timestamp != null) {
+                                article.setCreatedAt(timestamp.toDate().getTime());
+                            }
+
                             articles.add(article);
                         }
                     }

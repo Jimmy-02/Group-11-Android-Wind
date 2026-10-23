@@ -9,7 +9,8 @@ import android.view.ViewGroup;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
-
+import android.content.Intent;
+import com.example.myapplication.articles.articlesDetail.ArticleDetailActivity;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
@@ -53,7 +54,21 @@ public class HomeFragment extends Fragment {
         emptyState = view.findViewById(R.id.layout_empty_articles);
 
         articleAdapter = new ArticleAdapter(
-                article -> Toast.makeText(requireContext(), "Article: " + article.getTitle(), Toast.LENGTH_SHORT).show(),
+                article -> {
+                    Intent intent = new Intent(requireContext(), ArticleDetailActivity.class);
+                    intent.putExtra("articleId", article.getId());
+                    intent.putExtra("title", article.getTitle());
+                    intent.putExtra("authorName", article.getAuthorName());
+                    intent.putExtra("categoryId", article.getCategoryId());
+                    intent.putExtra("institution", article.getInstitution());
+                    intent.putExtra("digitalObjectIdentifier", article.getDigitalObjectIdentifier());
+                    intent.putExtra("description", article.getDescription());
+                    intent.putExtra("imageUrl", article.getImageUrl());
+                    intent.putExtra("sourceUrl", article.getSourceUrl());
+                    intent.putExtra("contentUrl", article.getContentUrl());
+                    intent.putExtra("createdAt", article.getCreatedAt());
+                    startActivity(intent);
+                },
                 article -> Toast.makeText(requireContext(), "Report feature will be added later.", Toast.LENGTH_SHORT).show(),
                 categoryId -> loadArticles(categoryId)
         );
