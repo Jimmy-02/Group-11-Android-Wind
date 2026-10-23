@@ -19,14 +19,21 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.myapplication.ImageLoader;
 import com.example.myapplication.R;
 import com.example.myapplication.admin.adapters.UserReportDetailAdapter;
+import com.example.myapplication.admin.dialogs.AdminActionBottomSheetDialog;
+import com.example.myapplication.admin.dialogs.AdminSuccessDialog;
 import com.example.myapplication.admin.models.UserReportDetail;
 import com.google.firebase.Timestamp;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.WriteBatch;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 public class AdminReportDetailActivity extends AppCompatActivity {
 
@@ -67,6 +74,7 @@ public class AdminReportDetailActivity extends AppCompatActivity {
     private String targetId;
     private String targetType;
     private String currentStatus;
+    private String itemTitle;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -116,7 +124,7 @@ public class AdminReportDetailActivity extends AppCompatActivity {
         currentStatus = getIntent().getStringExtra(EXTRA_STATUS);
         if (currentStatus == null || currentStatus.isEmpty()) currentStatus = "PENDING";
 
-        String title = getIntent().getStringExtra(EXTRA_TITLE);
+        itemTitle = getIntent().getStringExtra(EXTRA_TITLE);
         String content = getIntent().getStringExtra(EXTRA_CONTENT);
         String parentQuestion = getIntent().getStringExtra(EXTRA_PARENT_QUESTION);
         int reportCount = getIntent().getIntExtra(EXTRA_REPORT_COUNT, 0);
@@ -125,8 +133,8 @@ public class AdminReportDetailActivity extends AppCompatActivity {
         String postTime = getIntent().getStringExtra(EXTRA_POST_TIME);
         String tag = getIntent().getStringExtra(EXTRA_TAG);
 
-        tvDetailTitle.setText(title != null ? title : "Không có tiêu đề");
-        tvDetailContent.setText(content != null && !content.isEmpty() ? content : (title != null ? title : "Không có nội dung chi tiết"));
+        tvDetailTitle.setText(itemTitle != null ? itemTitle : "Không có tiêu đề");
+        tvDetailContent.setText(content != null && !content.isEmpty() ? content : (itemTitle != null ? itemTitle : "Không có nội dung chi tiết"));
         tvAuthorName.setText(authorName != null ? authorName : "Người dùng");
         tvPostTime.setText(postTime != null ? ("• " + postTime) : "");
 
@@ -191,13 +199,121 @@ public class AdminReportDetailActivity extends AppCompatActivity {
             }
         });
 
+        // 1. Bác bỏ báo cáo -> Mở BottomSheet
         btnDismissReport.setOnClickListener(v -> {
-            Toast.makeText(this, "Bác bỏ báo cáo (Sẽ triển khai BottomSheet ở Bước 1.3)", Toast.LENGTH_SHORT).show();
+            AdminActionBottomSheetDialog dialog = AdminActionBottomSheetDialog.newInstance(
+                    AdminActionBottomSheetDialog.ACTION_DISMISS,
+                    targetType,
+                    itemTitle != null ? itemTitle : ""
+            );
+            dialog.setOnActionConfirmListener(reason -> performDismissReports(reason, dialog));
+            dialog.show(getSupportFragmentManager(), "DismissBottomSheet");
         });
 
+        // 2. Xóa nội dung vi phạm -> Mở BottomSheet
         btnDeleteContent.setOnClickListener(v -> {
-            Toast.makeText(this, "Xóa nội dung vi phạm (Sẽ triển khai BottomSheet ở Bước 1.3)", Toast.LENGTH_SHORT).show();
+            AdminActionBottomSheetDialog dialog = AdminActionBottomSheetDialog.newInstance(
+                    AdminActionBottomSheetDialog.ACTION_DELETE,
+                    targetType,
+                    itemTitle != null ? itemTitle : ""
+            );
+            dialog.setOnActionConfirmListener(reason -> performDeleteContent(reason, dialog));
+            dialog.show(getSupportFragmentManager(), "DeleteBottomSheet");
         });
+    }
+
+    private void performDeleteContent(String reason, AdminActionBottomSheetDialog bottomSheet) {
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        String adminId = currentUser != null ? currentUser.getUid() : "ADMIN";
+        Timestamp now = Timestamp.now();
+
+        boolean isAnswer = "ANSWER".equalsIgnoreCase(targetType);
+        String targetCollection = isAnswer ? "answers" : "questions";
+        String reportCollection = isAnswer ? "answerReports" : "questionReports";
+        String filterField = isAnswer ? "answerId" : "questionId";
+
+        // Cập nhật soft delete cho nội dung gốc
+        Map<String, Object> contentUpdates = new HashMap<>();
+        contentUpdates.put("status", "DELETED");
+        contentUpdates.put("deletedAt", now);
+        contentUpdates.put("deletedReason", reason);
+        contentUpdates.put("deletedBy", adminId);
+        contentUpdates.put("updatedAt", now);
+
+        if (targetId != null && !targetId.isEmpty()) {
+            db.collection(targetCollection).document(targetId).update(contentUpdates)
+                    .addOnCompleteListener(task -> {
+                        // Tiếp tục cập nhật các document báo cáo liên quan
+                        updateReportsStatus(db, reportCollection, filterField, "REPORTED_CONTENT_DELETED", reason, adminId, now, () -> {
+                            if (bottomSheet != null && bottomSheet.isAdded()) {
+                                bottomSheet.dismiss();
+                            }
+                            showSuccessDialog("Đã xóa nội dung", "Nội dung vi phạm và các báo cáo liên quan đã được xóa thành công.");
+                        });
+                    });
+        } else {
+            if (bottomSheet != null && bottomSheet.isAdded()) bottomSheet.dismiss();
+            showSuccessDialog("Đã xóa nội dung", "Nội dung vi phạm và các báo cáo liên quan đã được xóa thành công.");
+        }
+    }
+
+    private void performDismissReports(String reason, AdminActionBottomSheetDialog bottomSheet) {
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        String adminId = currentUser != null ? currentUser.getUid() : "ADMIN";
+        Timestamp now = Timestamp.now();
+
+        boolean isAnswer = "ANSWER".equalsIgnoreCase(targetType);
+        String reportCollection = isAnswer ? "answerReports" : "questionReports";
+        String filterField = isAnswer ? "answerId" : "questionId";
+
+        updateReportsStatus(db, reportCollection, filterField, "DISMISSED", reason, adminId, now, () -> {
+            if (bottomSheet != null && bottomSheet.isAdded()) {
+                bottomSheet.dismiss();
+            }
+            showSuccessDialog("Đã bỏ qua báo cáo", "Các báo cáo liên quan đã được bác bỏ thành công.");
+        });
+    }
+
+    private void updateReportsStatus(FirebaseFirestore db, String collection, String filterField,
+                                     String newStatus, String reason, String adminId, Timestamp now, Runnable onComplete) {
+        if (targetId == null || targetId.isEmpty()) {
+            if (onComplete != null) onComplete.run();
+            return;
+        }
+
+        db.collection(collection)
+                .whereEqualTo(filterField, targetId)
+                .get()
+                .addOnCompleteListener(task -> {
+                    if (task.isSuccessful() && task.getResult() != null && !task.getResult().isEmpty()) {
+                        WriteBatch batch = db.batch();
+                        for (DocumentSnapshot doc : task.getResult().getDocuments()) {
+                            batch.update(doc.getReference(),
+                                    "status", newStatus,
+                                    "reviewReason", reason,
+                                    "reviewedBy", adminId,
+                                    "reviewedAt", now
+                            );
+                        }
+                        batch.commit().addOnCompleteListener(batchTask -> {
+                            if (onComplete != null) onComplete.run();
+                        });
+                    } else {
+                        // Nếu là dữ liệu mẫu hoặc không có document nào trên DB
+                        if (onComplete != null) onComplete.run();
+                    }
+                });
+    }
+
+    private void showSuccessDialog(String title, String message) {
+        AdminSuccessDialog dialog = AdminSuccessDialog.newInstance(title, message);
+        dialog.setOnDoneClickListener(() -> {
+            // Đóng Activity và quay lại màn hình danh sách
+            finish();
+        });
+        dialog.show(getSupportFragmentManager(), "SuccessDialog");
     }
 
     private void loadUserReportsFromFirestore() {
