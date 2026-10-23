@@ -100,7 +100,16 @@ public class AdminActionBottomSheetDialog extends BottomSheetDialogFragment {
         TextView btnConfirmAction = view.findViewById(R.id.btnConfirmAction);
 
         boolean isDelete = ACTION_DELETE.equals(actionType);
-        String typeName = "QUESTION".equalsIgnoreCase(targetType) ? "câu hỏi" : "câu trả lời";
+        String typeName;
+        if ("DISCUSSION".equalsIgnoreCase(targetType)) {
+            typeName = "bài thảo luận";
+        } else if ("COMMENT".equalsIgnoreCase(targetType)) {
+            typeName = "bình luận";
+        } else if ("ANSWER".equalsIgnoreCase(targetType)) {
+            typeName = "câu trả lời";
+        } else {
+            typeName = "câu hỏi";
+        }
 
         if (isDelete) {
             layoutIconCircle.setBackgroundResource(R.drawable.bg_status_pending);

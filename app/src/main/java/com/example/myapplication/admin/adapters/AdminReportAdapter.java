@@ -101,12 +101,14 @@ public class AdminReportAdapter extends RecyclerView.Adapter<AdminReportAdapter.
             // 3. Title or Content
             tvTitle.setText(item.getTitle() != null ? item.getTitle() : "");
 
-            // 4. Tags or Parent question subtitle
-            if ("ANSWER".equalsIgnoreCase(item.getContentType())) {
+            // 4. Tags or Parent question/discussion subtitle
+            boolean isChildItem = "ANSWER".equalsIgnoreCase(item.getContentType()) || "COMMENT".equalsIgnoreCase(item.getContentType());
+            if (isChildItem) {
                 layoutTags.setVisibility(View.GONE);
                 tvSubtitle.setVisibility(View.VISIBLE);
-                String parentTitle = item.getParentQuestionTitle() != null ? item.getParentQuestionTitle() : "Câu hỏi liên quan";
-                tvSubtitle.setText("Trong câu hỏi: " + parentTitle);
+                String parentTitle = item.getParentQuestionTitle() != null ? item.getParentQuestionTitle() : "Bài liên quan";
+                String prefix = "COMMENT".equalsIgnoreCase(item.getContentType()) ? "Trong thảo luận: " : "Trong câu hỏi: ";
+                tvSubtitle.setText(prefix + parentTitle);
             } else {
                 tvSubtitle.setVisibility(View.GONE);
                 List<String> tags = item.getTags();

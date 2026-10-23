@@ -7,7 +7,6 @@
     android:layout_height="match_parent"
     android:background="#F8FAFC">
 
-    <!-- Status Bar Spacer (Đồng bộ màu tím chuẩn #6750A4 của Home) -->
     <View
         android:id="@+id/status_bar_spacer"
         android:layout_width="0dp"
@@ -17,7 +16,6 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
-    <!-- Top Admin App Bar -->
     <LinearLayout
         android:id="@+id/admin_toolbar"
         android:layout_width="0dp"
@@ -54,7 +52,6 @@
 
     </LinearLayout>
 
-    <!-- Main Content Container for Fragments -->
     <FrameLayout
         android:id="@+id/admin_content_container"
         android:layout_width="0dp"
@@ -64,7 +61,6 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
-    <!-- Bottom Navigation Bar -->
     <com.google.android.material.bottomnavigation.BottomNavigationView
         android:id="@+id/admin_bottom_navigation"
         android:layout_width="0dp"

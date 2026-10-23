@@ -146,7 +146,8 @@ public class AdminReportDetailActivity extends AppCompatActivity {
         }
 
         if (parentQuestion != null && !parentQuestion.isEmpty()) {
-            tvParentQuestion.setText("Trong: " + parentQuestion);
+            String prefix = "COMMENT".equalsIgnoreCase(targetType) ? "Trong thảo luận: " : "Trong: ";
+            tvParentQuestion.setText(prefix + parentQuestion);
             tvParentQuestion.setVisibility(View.VISIBLE);
         } else {
             tvParentQuestion.setVisibility(View.GONE);
@@ -157,6 +158,27 @@ public class AdminReportDetailActivity extends AppCompatActivity {
         updateActionButtonsVisibility(currentStatus);
 
         tvReportListHeader.setText(String.format(Locale.getDefault(), "Danh sách báo cáo (%d)", reportCount));
+    }
+
+    private String getTargetCollection() {
+        if ("DISCUSSION".equalsIgnoreCase(targetType)) return "discussions";
+        if ("COMMENT".equalsIgnoreCase(targetType)) return "comments";
+        if ("ANSWER".equalsIgnoreCase(targetType)) return "answers";
+        return "questions";
+    }
+
+    private String getReportCollection() {
+        if ("DISCUSSION".equalsIgnoreCase(targetType)) return "discussionReports";
+        if ("COMMENT".equalsIgnoreCase(targetType)) return "commentReports";
+        if ("ANSWER".equalsIgnoreCase(targetType)) return "answerReports";
+        return "questionReports";
+    }
+
+    private String getFilterField() {
+        if ("DISCUSSION".equalsIgnoreCase(targetType)) return "discussionId";
+        if ("COMMENT".equalsIgnoreCase(targetType)) return "commentId";
+        if ("ANSWER".equalsIgnoreCase(targetType)) return "answerId";
+        return "questionId";
     }
 
     private void updateStatusBadge(String status) {
@@ -176,7 +198,6 @@ public class AdminReportDetailActivity extends AppCompatActivity {
     }
 
     private void updateActionButtonsVisibility(String status) {
-        // Nếu đã xóa hoặc đã bác bỏ, làm mờ hoặc ẩn thanh hành động
         if ("REPORTED_CONTENT_DELETED".equalsIgnoreCase(status) || "DISMISSED".equalsIgnoreCase(status)) {
             layoutBottomActions.setVisibility(View.GONE);
         } else {
@@ -228,10 +249,9 @@ public class AdminReportDetailActivity extends AppCompatActivity {
         String adminId = currentUser != null ? currentUser.getUid() : "ADMIN";
         Timestamp now = Timestamp.now();
 
-        boolean isAnswer = "ANSWER".equalsIgnoreCase(targetType);
-        String targetCollection = isAnswer ? "answers" : "questions";
-        String reportCollection = isAnswer ? "answerReports" : "questionReports";
-        String filterField = isAnswer ? "answerId" : "questionId";
+        String targetCollection = getTargetCollection();
+        String reportCollection = getReportCollection();
+        String filterField = getFilterField();
 
         // Cập nhật soft delete cho nội dung gốc
         Map<String, Object> contentUpdates = new HashMap<>();
@@ -264,9 +284,8 @@ public class AdminReportDetailActivity extends AppCompatActivity {
         String adminId = currentUser != null ? currentUser.getUid() : "ADMIN";
         Timestamp now = Timestamp.now();
 
-        boolean isAnswer = "ANSWER".equalsIgnoreCase(targetType);
-        String reportCollection = isAnswer ? "answerReports" : "questionReports";
-        String filterField = isAnswer ? "answerId" : "questionId";
+        String reportCollection = getReportCollection();
+        String filterField = getFilterField();
 
         updateReportsStatus(db, reportCollection, filterField, "DISMISSED", reason, adminId, now, () -> {
             if (bottomSheet != null && bottomSheet.isAdded()) {
@@ -326,8 +345,8 @@ public class AdminReportDetailActivity extends AppCompatActivity {
         tvEmptyReports.setVisibility(View.GONE);
 
         FirebaseFirestore db = FirebaseFirestore.getInstance();
-        String collection = "ANSWER".equalsIgnoreCase(targetType) ? "answerReports" : "questionReports";
-        String filterField = "ANSWER".equalsIgnoreCase(targetType) ? "answerId" : "questionId";
+        String collection = getReportCollection();
+        String filterField = getFilterField();
 
         db.collection(collection)
                 .whereEqualTo(filterField, targetId)
@@ -371,7 +390,7 @@ public class AdminReportDetailActivity extends AppCompatActivity {
                 "Lê Hoàng Phúc",
                 null,
                 "Spam hoặc quảng cáo",
-                "Tài khoản này lặp đi lặp lại câu trả lời mang tính chất câu view và dẫn link.",
+                "Tài khoản này lặp đi lặp lại nội dung mang tính chất câu view và dẫn link ngoài.",
                 "5 giờ trước"
         ));
 
