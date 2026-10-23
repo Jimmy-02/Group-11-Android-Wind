@@ -24,8 +24,7 @@ public class SearchResultsAdapter extends RecyclerView.Adapter<SearchResultsAdap
     @NonNull
     @Override
     public ArticleViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View view = LayoutInflater.from(parent.getContext())
-                .inflate(R.layout.item_article, parent, false);
+        View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_article, parent, false);
 
         return new ArticleViewHolder(view);
     }
@@ -36,7 +35,7 @@ public class SearchResultsAdapter extends RecyclerView.Adapter<SearchResultsAdap
 
         holder.titleView.setText(article.getTitle());
         holder.authorView.setText(article.getAuthorName());
-        holder.categoryView.setText(article.getCategory());
+        holder.categoryView.setText(article.getCategoryId());
 
         String institution = article.getInstitution();
         String doi = article.getDigitalObjectIdentifier();

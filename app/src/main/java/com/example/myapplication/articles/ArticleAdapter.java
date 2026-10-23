@@ -53,13 +53,11 @@ public class ArticleAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
     @Override
     public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         if (viewType == TYPE_HEADER) {
-            View view = LayoutInflater.from(parent.getContext())
-                    .inflate(R.layout.item_home_header, parent, false);
+            View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_home_header, parent, false);
             return new HeaderViewHolder(view);
         }
 
-        View view = LayoutInflater.from(parent.getContext())
-                .inflate(R.layout.item_article, parent, false);
+        View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_article, parent, false);
         return new ArticleViewHolder(view);
     }
 
@@ -75,7 +73,7 @@ public class ArticleAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
 
         articleHolder.titleView.setText(article.getTitle());
         articleHolder.authorView.setText(article.getAuthorName());
-        articleHolder.categoryView.setText(article.getCategory());
+        articleHolder.categoryView.setText(article.getCategoryId());
 
         String institution = article.getInstitution();
         String doi = article.getDigitalObjectIdentifier();
@@ -165,8 +163,7 @@ public class ArticleAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
 
                     Context context = itemView.getContext();
 
-                    InputMethodManager keyboard =
-                            (InputMethodManager) context.getSystemService(Context.INPUT_METHOD_SERVICE);
+                    InputMethodManager keyboard = (InputMethodManager) context.getSystemService(Context.INPUT_METHOD_SERVICE);
 
                     if (keyboard != null) {
                         keyboard.hideSoftInputFromWindow(searchInput.getWindowToken(), 0);

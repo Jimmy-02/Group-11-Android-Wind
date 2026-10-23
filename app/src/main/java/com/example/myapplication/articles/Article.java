@@ -5,7 +5,7 @@ public class Article {
     private String id;
     private String title;
     private String authorName;
-    private String category;
+    private String categoryId;
     private String institution;
     private String digitalObjectIdentifier;
     private String description;
@@ -14,25 +14,14 @@ public class Article {
     private String contentUrl;
 
     public Article() {
-        // Empty constructor
+
     }
 
-    public Article(
-            String id,
-            String title,
-            String authorName,
-            String category,
-            String institution,
-            String digitalObjectIdentifier,
-            String description,
-            String imageUrl,
-            String sourceUrl,
-            String contentUrl
-    ) {
+    public Article(String id, String title, String authorName, String categoryId, String institution, String digitalObjectIdentifier, String description, String imageUrl, String sourceUrl, String contentUrl) {
         this.id = id;
         this.title = title;
         this.authorName = authorName;
-        this.category = category;
+        this.categoryId = categoryId;
         this.institution = institution;
         this.digitalObjectIdentifier = digitalObjectIdentifier;
         this.description = description;
@@ -65,12 +54,12 @@ public class Article {
         this.authorName = authorName;
     }
 
-    public String getCategory() {
-        return category;
+    public String getCategoryId() {
+        return categoryId;
     }
 
-    public void setCategory(String category) {
-        this.category = category;
+    public void setCategoryId(String categoryId) {
+        this.categoryId = categoryId;
     }
 
     public String getInstitution() {

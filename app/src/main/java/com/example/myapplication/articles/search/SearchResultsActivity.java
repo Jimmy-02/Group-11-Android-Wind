@@ -42,17 +42,14 @@ public class SearchResultsActivity extends AppCompatActivity {
         WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
         setContentView(R.layout.activity_search_results);
 
-        WindowInsetsControllerCompat insetsController =
-                WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
+        WindowInsetsControllerCompat insetsController = WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
         insetsController.setAppearanceLightStatusBars(false);
 
         View root = findViewById(R.id.root);
         View statusBarSpacer = findViewById(R.id.status_bar_spacer);
 
         ViewCompat.setOnApplyWindowInsetsListener(root, (v, windowInsets) -> {
-            Insets bars = windowInsets.getInsets(
-                    WindowInsetsCompat.Type.systemBars()
-                            | WindowInsetsCompat.Type.displayCutout());
+            Insets bars = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout());
 
             ViewGroup.LayoutParams params = statusBarSpacer.getLayoutParams();
             params.height = bars.top;
@@ -105,19 +102,14 @@ public class SearchResultsActivity extends AppCompatActivity {
                 String keyword = query.toLowerCase(Locale.ROOT);
 
                 for (Article article : articles) {
-                    if (matches(article.getTitle(), keyword)
-                            || matches(article.getAuthorName(), keyword)
-                            || matches(article.getInstitution(), keyword)
-                            || matches(article.getDigitalObjectIdentifier(), keyword)) {
+                    if (matches(article.getTitle(), keyword) || matches(article.getAuthorName(), keyword) || matches(article.getInstitution(), keyword) || matches(article.getDigitalObjectIdentifier(), keyword)) {
                         matchedArticles.add(article);
                     }
                 }
 
                 searchAdapter.setArticles(matchedArticles);
                 resultCount.setText(matchedArticles.size() + " results");
-                resultList.setVisibility(
-                        matchedArticles.isEmpty() ? View.GONE : View.VISIBLE
-                );
+                resultList.setVisibility(matchedArticles.isEmpty() ? View.GONE : View.VISIBLE);
 
                 if (matchedArticles.isEmpty()) {
                     resultCount.setText("No articles found. Try another keyword.");
@@ -126,11 +118,7 @@ public class SearchResultsActivity extends AppCompatActivity {
 
             @Override
             public void onError(Exception exception) {
-                android.util.Log.e(
-                        "SearchResultsActivity",
-                        "Failed to search articles",
-                        exception
-                );
+                android.util.Log.e("SearchResultsActivity", "Failed to search articles", exception);
 
                 resultCount.setText("Unable to search articles. Please try again.");
                 resultList.setVisibility(View.GONE);
@@ -139,7 +127,6 @@ public class SearchResultsActivity extends AppCompatActivity {
     }
 
     private boolean matches(String value, String keyword) {
-        return value != null
-                && value.toLowerCase(Locale.ROOT).contains(keyword);
+        return value != null && value.toLowerCase(Locale.ROOT).contains(keyword);
     }
 }
