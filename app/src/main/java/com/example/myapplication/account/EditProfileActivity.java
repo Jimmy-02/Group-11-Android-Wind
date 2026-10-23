@@ -39,6 +39,8 @@ public class EditProfileActivity extends AppCompatActivity {
     private String originalUsername = "";
     private String originalAvatar = "";
     private String originalEmail = "";
+    private TextInputLayout tilEmail;
+    private boolean canChangeEmail = false;
 
 
     @Override
@@ -51,6 +53,7 @@ public class EditProfileActivity extends AppCompatActivity {
         // 2. Ánh xạ các View
         tilFullName = findViewById(R.id.til_full_name);
         tilUsername = findViewById(R.id.til_username);
+        tilEmail = findViewById(R.id.til_email);
 
         etAvatar = findViewById(R.id.et_avatar);
         etFullName = findViewById(R.id.et_full_name);
@@ -151,6 +154,14 @@ public class EditProfileActivity extends AppCompatActivity {
             String username = document.getString("username");
             String avatar = document.getString("avatar");
 
+            String authProvider = document.getString("authProvider");
+            // Chỉ tài khoản EMAIL_PASSWORD mới được đổi email
+            canChangeEmail =
+                    "EMAIL_PASSWORD".equalsIgnoreCase(authProvider);
+            // Khóa ô Email Address đối với tài khoản Google
+            tilEmail.setEnabled(canChangeEmail);
+            etEmail.setEnabled(canChangeEmail);
+
 
             originalFullName = fullName != null ? fullName : "";
             originalUsername = username != null ? username : "";
@@ -197,7 +208,9 @@ public class EditProfileActivity extends AppCompatActivity {
         String fullName = getText(etFullName);
         String username = getText(etUsername);
         String avatar = getText(etAvatar);
-        String newEmail = getText(etEmail);
+        String newEmail = canChangeEmail
+                ? getText(etEmail)
+                : originalEmail;
 
         if (fullName.isEmpty()) {
             tilFullName.setError("Vui lòng nhập họ tên.");
