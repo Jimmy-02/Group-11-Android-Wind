@@ -137,7 +137,23 @@ public class MainActivity extends AppCompatActivity {
         });
 
         ViewHeaderSetup();
-        bottomNavigation.setSelectedItemId(R.id.nav_home);
+        int selectedItem = savedInstanceState != null
+                ? savedInstanceState.getInt("selected_nav_item", R.id.nav_home)
+                : R.id.nav_home;
+
+        bottomNavigation.setSelectedItemId(selectedItem);
+    }
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+
+        BottomNavigationView bottomNavigation =
+                findViewById(R.id.bottom_navigation);
+
+        outState.putInt(
+                "selected_nav_item",
+                bottomNavigation.getSelectedItemId()
+        );
     }
 
     private void ViewHeaderSetup() {
