@@ -33,13 +33,13 @@
             android:exported="false"
             android:theme="@style/Theme.MyApplication.SearchResults" />
         <activity
-            android:name=".account.profile.EditProfileActivity"
+            android:name=".account.EditProfileActivity"
             android:exported="false" />
-
         <activity
-
+            android:name=".account.ChangePasswordActivity"
+            android:exported="false" />
+        <activity
             android:name=".admin.AdminActivity"
-
             android:exported="false" />
     </application>
 
