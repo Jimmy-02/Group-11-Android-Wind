@@ -52,6 +52,9 @@
         <activity
             android:name=".admin.AdminReportDetailActivity"
             android:exported="false" />
+        <activity
+            android:name="com.example.myapplication.qna.questionDetail.QuestionDetailActivity"
+            android:exported="false" />
     </application>
 
 </manifest>
