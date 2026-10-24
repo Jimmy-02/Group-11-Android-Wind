@@ -70,6 +70,9 @@ public class QuestionDetailActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
 
         setContentView(R.layout.activity_question_detail);
+        View qnaBackLayout = findViewById(R.id.QNAbackLayout);
+
+        qnaBackLayout.setOnClickListener(v -> finish());
 
         questionId = getIntent().getStringExtra(EXTRA_QUESTION_ID);
 
