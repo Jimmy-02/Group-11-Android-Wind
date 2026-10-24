@@ -36,7 +36,7 @@ public class QuestionAdapter
 
         void onCloseClick(Question question);
 
-        void onVoteClick(Question question);
+        void onVoteClick(Question question, int value);
     }
 
     public QuestionAdapter(
@@ -196,10 +196,17 @@ public class QuestionAdapter
             }
         });
 
-        // Bình chọn câu hỏi
-        holder.tvVoteCount.setOnClickListener(v -> {
+        // UP vote
+        holder.tvQuestionUpVote.setOnClickListener(v -> {
             if (listener != null) {
-                listener.onVoteClick(question);
+                listener.onVoteClick(question, 1);
+            }
+        });
+
+        // DOWN vote
+        holder.tvQuestionDownVote.setOnClickListener(v -> {
+            if (listener != null) {
+                listener.onVoteClick(question, -1);
             }
         });
     }
@@ -273,6 +280,8 @@ public class QuestionAdapter
         TextView tvContent;
         TextView tvAuthor;
         TextView tvDate;
+        TextView tvQuestionUpVote;
+        TextView tvQuestionDownVote;
         TextView tvVoteCount;
         TextView tvAnswerCount;
         TextView btnReportQuestion;
@@ -288,6 +297,8 @@ public class QuestionAdapter
             tvContent = itemView.findViewById(R.id.tvQuestionBody);
             tvAuthor = itemView.findViewById(R.id.tvQuestionAuthor);
             tvDate = itemView.findViewById(R.id.tvQuestionDate);
+            tvQuestionUpVote = itemView.findViewById(R.id.tvQuestionUpVote);
+            tvQuestionDownVote = itemView.findViewById(R.id.tvQuestionDownVote);
             tvVoteCount = itemView.findViewById(R.id.tvQuestionVoteCount);
             tvAnswerCount = itemView.findViewById(R.id.tvQuestionAnswerCount);
             btnReportQuestion = itemView.findViewById(R.id.btnReportQuestion);

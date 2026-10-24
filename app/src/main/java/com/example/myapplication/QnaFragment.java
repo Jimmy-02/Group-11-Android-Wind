@@ -18,24 +18,28 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FieldValue;
+import com.google.firebase.firestore.FirebaseFirestore;
 
+import java.util.HashMap;
+import java.util.Map;
 import com.example.myapplication.qna.QuestionAdapter;
 import com.example.myapplication.qna.Question;
 import com.example.myapplication.qna.questionDetail.QuestionDetailActivity;
 import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.firestore.DocumentSnapshot;
-import com.google.firebase.firestore.FirebaseFirestore;
+import com.example.myapplication.qna.QuestionAdapter;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
-import java.util.HashMap;
+
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
+
 
 public class QnaFragment extends Fragment {
 
@@ -161,16 +165,20 @@ public class QnaFragment extends Fragment {
                     }
 
                     @Override
-                    public void onVoteClick(Question question) {
-                        toggleQuestionVote(question);
+                    public void onVoteClick(Question question, int value) {
+                        toggleQuestionVote(question, value);
                     }
                 }
         );
 
         rvQuestions.setAdapter(adapter);
     }
-    private void toggleQuestionVote(Question question) {
-        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+    private void toggleQuestionVote(
+            Question question,
+            int requestedValue
+    ) {
+        FirebaseUser user =
+                FirebaseAuth.getInstance().getCurrentUser();
 
         if (user == null) {
             Toast.makeText(
@@ -181,12 +189,14 @@ public class QnaFragment extends Fragment {
             return;
         }
 
-        String userId = user.getUid();
-        String questionId = question.getId();
-
-        if (questionId == null || questionId.isEmpty()) {
+        if (question == null
+                || question.getId() == null
+                || (requestedValue != 1 && requestedValue != -1)) {
             return;
         }
+
+        String questionId = question.getId();
+        String userId = user.getUid();
 
         FirebaseFirestore db = FirebaseFirestore.getInstance();
 
@@ -201,66 +211,99 @@ public class QnaFragment extends Fragment {
             DocumentSnapshot questionSnapshot =
                     transaction.get(questionRef);
 
+            DocumentSnapshot voteSnapshot =
+                    transaction.get(voteRef);
+
             if (!questionSnapshot.exists()) {
-                throw new IllegalStateException("Không tìm thấy câu hỏi.");
+                throw new IllegalStateException(
+                        "Không tìm thấy câu hỏi."
+                );
             }
 
-            DocumentSnapshot voteSnapshot = transaction.get(voteRef);
+            Long countValue =
+                    questionSnapshot.getLong("voteCount");
 
-            Long countValue = questionSnapshot.getLong("voteCount");
-            long currentCount = countValue == null ? 0L : countValue;
+            long currentCount =
+                    countValue == null ? 0L : countValue;
 
             Long savedValue = voteSnapshot.getLong("value");
-            long oldValue = voteSnapshot.exists() && savedValue != null
-                    ? savedValue : 0L;
 
-            // Đã vote thì bấm lại sẽ bỏ vote.
-            long newValue = oldValue == 1L ? 0L : 1L;
+            long oldValue =
+                    voteSnapshot.exists() && savedValue != null
+                            ? savedValue
+                            : 0L;
 
-            long updatedCount = Math.max(
-                    0L,
-                    currentCount + newValue - oldValue
+            long updatedCount;
+
+            if (voteSnapshot.exists()
+                    && oldValue == requestedValue) {
+
+                // Nhấn lại lựa chọn đang chọn: bỏ vote.
+                transaction.delete(voteRef);
+                updatedCount = currentCount - oldValue;
+
+            } else if (voteSnapshot.exists()) {
+
+                // Đổi UP sang DOWN hoặc DOWN sang UP.
+                transaction.update(
+                        voteRef,
+                        "value",
+                        requestedValue
+                );
+
+                updatedCount =
+                        currentCount + requestedValue - oldValue;
+
+            } else {
+
+                // Tạo vote mới.
+                Map<String, Object> voteData = new HashMap<>();
+
+                voteData.put("questionId", questionId);
+                voteData.put("userId", userId);
+                voteData.put("value", requestedValue);
+                voteData.put(
+                        "createdAt",
+                        FieldValue.serverTimestamp()
+                );
+
+                transaction.set(voteRef, voteData);
+
+                updatedCount = currentCount + requestedValue;
+            }
+
+            transaction.update(
+                    questionRef,
+                    "voteCount",
+                    updatedCount
             );
-
-            Map<String, Object> voteData = new HashMap<>();
-            voteData.put("questionId", questionId);
-            voteData.put("userId", userId);
-            voteData.put("value", newValue);
-            voteData.put(
-                    "updatedAt",
-                    com.google.firebase.firestore.FieldValue.serverTimestamp()
-            );
-
-            transaction.set(voteRef, voteData);
-            transaction.update(questionRef, "voteCount", updatedCount);
 
             return updatedCount;
 
         }).addOnSuccessListener(updatedCount -> {
-            if (!isAdded()) return;
+            if (!isAdded()) {
+                return;
+            }
 
-            // Cập nhật số vote của câu hỏi đang hiển thị.
             question.setVoteCount(updatedCount);
-
-            // Vẽ lại danh sách để cập nhật số vote trên thẻ.
-            applyFilterAndSort();
+            adapter.notifyDataSetChanged();
 
             Toast.makeText(
                     requireContext(),
-                    updatedCount >= 0
-                            ? "Đã cập nhật bình chọn."
-                            : "Không thể cập nhật bình chọn.",
+                    "Đã cập nhật bình chọn.",
                     Toast.LENGTH_SHORT
             ).show();
 
         }).addOnFailureListener(error -> {
             android.util.Log.e(
-                    "QNA_VOTE",
-                    "Vote from question card failed",
+                    "QNA_QUESTION_VOTE",
+                    "Question vote failed",
                     error
             );
 
-            if (!isAdded()) return;
+            if (!isAdded()) {
+                return;
+            }
 
             Toast.makeText(
                     requireContext(),
