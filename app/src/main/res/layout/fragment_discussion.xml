@@ -4,28 +4,188 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#FFFFFF"
-    android:padding="24dp">
+    android:background="#F5F7FA">
 
+    <!-- Header -->
     <TextView
         android:id="@+id/tv_discussion_title"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginStart="20dp"
+        android:layout_marginTop="20dp"
         android:text="Discussion"
         android:textColor="#14264A"
         android:textSize="24sp"
         android:textStyle="bold"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
 
     <TextView
+        android:id="@+id/tv_discussion_subtitle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
-        android:text="Share your thoughts and discuss scientific topics."
+        android:layout_marginStart="20dp"
+        android:layout_marginTop="4dp"
+        android:text="Share your thoughts and discuss science."
         android:textColor="#667085"
-        android:textSize="14sp"
-        app:layout_constraintTop_toBottomOf="@id/tv_discussion_title"
-        app:layout_constraintStart_toStartOf="parent" />
+        android:textSize="13sp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tv_discussion_title" />
+
+    <!-- Search -->
+    <LinearLayout
+        android:id="@+id/layout_discussion_search"
+        android:layout_width="0dp"
+        android:layout_height="52dp"
+        android:layout_marginStart="20dp"
+        android:layout_marginTop="20dp"
+        android:layout_marginEnd="20dp"
+        android:background="#FFFFFF"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="14dp"
+        android:paddingEnd="14dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tv_discussion_subtitle">
+
+        <ImageView
+            android:layout_width="22dp"
+            android:layout_height="22dp"
+            android:contentDescription="Search"
+            android:src="@android:drawable/ic_menu_search"
+            app:tint="#718096" />
+
+        <EditText
+            android:id="@+id/et_discussion_search"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_marginStart="10dp"
+            android:layout_weight="1"
+            android:background="@null"
+            android:hint="Search discussions"
+            android:inputType="text"
+            android:singleLine="true"
+            android:imeOptions="actionSearch"
+            android:textColor="#172B4D"
+            android:textColorHint="#9AA5B1"
+            android:textSize="14sp" />
+
+    </LinearLayout>
+
+    <!-- Filters -->
+    <com.google.android.material.chip.ChipGroup
+        android:id="@+id/chip_group_discussion_filter"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="12dp"
+        android:layout_marginEnd="16dp"
+        app:chipSpacingHorizontal="8dp"
+        app:singleSelection="true"
+        app:selectionRequired="true"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/layout_discussion_search">
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chip_all_discussions"
+            style="@style/Widget.MaterialComponents.Chip.Choice"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:checked="true"
+            android:text="All"
+            android:textColor="#14264A"
+            app:chipBackgroundColor="#E8EEFF"
+            app:chipCornerRadius="20dp" />
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chip_my_discussions"
+            style="@style/Widget.MaterialComponents.Chip.Choice"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="My Discussions"
+            android:textColor="#14264A"
+            app:chipBackgroundColor="#FFFFFF"
+            app:chipCornerRadius="20dp" />
+
+    </com.google.android.material.chip.ChipGroup>
+
+    <!-- Section title -->
+    <TextView
+        android:id="@+id/tv_discussion_section"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="20dp"
+        android:layout_marginTop="20dp"
+        android:text="Latest Discussions"
+        android:textColor="#14264A"
+        android:textSize="17sp"
+        android:textStyle="bold"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/chip_group_discussion_filter" />
+
+    <!-- Discussion list placeholder -->
+    <LinearLayout
+        android:id="@+id/layout_discussion_empty"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:padding="24dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tv_discussion_section">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="No discussions yet"
+            android:textColor="#14264A"
+            android:textSize="17sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:gravity="center"
+            android:text="Start a discussion and share your ideas with the community."
+            android:textColor="#667085"
+            android:textSize="14sp" />
+
+    </LinearLayout>
+
+    <!-- Discussion list: will be connected later -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rv_discussions"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:clipToPadding="false"
+        android:paddingStart="16dp"
+        android:paddingTop="8dp"
+        android:paddingEnd="16dp"
+        android:paddingBottom="88dp"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tv_discussion_section" />
+
+    <!-- Create discussion button -->
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fab_create_discussion"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="20dp"
+        android:layout_marginBottom="20dp"
+        android:contentDescription="Create discussion"
+        android:src="@android:drawable/ic_input_add"
+        app:backgroundTint="#2457D6"
+        app:tint="#FFFFFF"
+        app:elevation="6dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
