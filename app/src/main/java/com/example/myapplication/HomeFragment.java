@@ -18,7 +18,7 @@ import com.example.myapplication.articles.ArticleAdapter;
 import com.example.myapplication.articles.ArticleRepository;
 import com.example.myapplication.articles.articlesDetail.ArticleDetailActivity;
 import com.example.myapplication.articles.reports.ReportArticleActivity;
-
+import com.example.myapplication.articles.creation.CreateArticleActivity;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -70,7 +70,12 @@ public class HomeFragment extends Fragment {
 
                     startActivity(intent);
                 },
-                categoryId -> loadArticles(categoryId)
+                categoryId -> loadArticles(categoryId),
+                () -> {
+                    Intent intent = new Intent(requireContext(), CreateArticleActivity.class);
+                    startActivity(intent);
+                }
+
         );
 
         articleList.setLayoutManager(new LinearLayoutManager(requireContext()));

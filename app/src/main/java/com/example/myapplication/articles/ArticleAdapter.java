@@ -17,6 +17,7 @@ import android.graphics.Color;
 import android.widget.LinearLayout;
 import com.example.myapplication.articles.categories.ArticleCategory;
 import com.example.myapplication.articles.categories.ArticleCategoryRepository;
+import com.example.myapplication.articles.creation.CreateArticleActivity;
 import com.example.myapplication.R;
 import com.squareup.picasso.Picasso;
 
@@ -37,6 +38,7 @@ public class ArticleAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
     private final OnArticleClickListener articleClickListener;
     private final OnReportClickListener reportClickListener;
     private final OnCategorySelectedListener categorySelectedListener;
+    private final OnCreateArticleClickListener createArticleClickListener;
     private boolean categoriesLoaded = false;
     public interface OnArticleClickListener {
         void onArticleClick(Article article);
@@ -49,13 +51,16 @@ public class ArticleAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
     public interface OnCategorySelectedListener {
         void onCategorySelected(String categoryId);
     }
+    public interface OnCreateArticleClickListener {
+        void onCreateArticleClick();
+    }
 
 
-
-    public ArticleAdapter(OnArticleClickListener articleClickListener, OnReportClickListener reportClickListener, OnCategorySelectedListener categorySelectedListener) {
+    public ArticleAdapter(OnArticleClickListener articleClickListener, OnReportClickListener reportClickListener, OnCategorySelectedListener categorySelectedListener, OnCreateArticleClickListener createArticleClickListener) {
         this.articleClickListener = articleClickListener;
         this.reportClickListener = reportClickListener;
         this.categorySelectedListener = categorySelectedListener;
+        this.createArticleClickListener = createArticleClickListener;
     }
 
     @Override
@@ -223,13 +228,19 @@ public class ArticleAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
         private final TextView articleCount;
         private final EditText searchInput;
         private final LinearLayout categoryChipContainer;
+        private final View btnCreateArticle;
 
         public HeaderViewHolder(@NonNull View itemView, ArticleAdapter adapter) {
             super(itemView);
-
             articleCount = itemView.findViewById(R.id.tv_article_count);
             searchInput = itemView.findViewById(R.id.et_search_articles);
             categoryChipContainer = itemView.findViewById(R.id.category_chip_container);
+            btnCreateArticle = itemView.findViewById(R.id.btn_create_article);
+            btnCreateArticle.setOnClickListener(v -> {
+                if (adapter.createArticleClickListener != null) {
+                    adapter.createArticleClickListener.onCreateArticleClick();
+                }
+            });
             adapter.loadCategories(categoryChipContainer, itemView.getContext());
 
             searchInput.setOnEditorActionListener((view, actionId, event) -> {
