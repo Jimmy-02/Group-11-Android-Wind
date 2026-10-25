@@ -1,7 +1,6 @@
 package com.example.myapplication.articles;
 
 import android.view.View;
-import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -17,7 +16,7 @@ public class ArticleViewHolder extends RecyclerView.ViewHolder {
     TextView authorView;
     TextView metadataView;
     TextView categoryView;
-    ImageButton reportButton;
+    TextView reportButton;
 
     public ArticleViewHolder(@NonNull View itemView) {
         super(itemView);

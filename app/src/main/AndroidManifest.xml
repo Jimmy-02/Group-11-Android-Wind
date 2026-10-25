@@ -41,6 +41,9 @@
             android:name=".articles.articlesDetail.PdfReaderActivity"
             android:exported="false" />
         <activity
+            android:name=".articles.reports.ReportArticleActivity"
+            android:exported="false" />
+        <activity
             android:name=".account.EditProfileActivity"
             android:exported="false" />
         <activity
