@@ -1,42 +1,27 @@
 package com.example.myapplication.discussions;
 
-import com.google.firebase.firestore.Exclude;
-
 public class Discussion {
 
     private String id;
     private String title;
     private String content;
     private String category;
+    private String categoryId;
     private String articleId;
     private String imageUrl;
     private String userId;
     private String status;
-    private long createdAt;
-    private long updatedAt;
     private long likeCount;
     private long commentCount;
+    private long createdAt;
 
     public Discussion() {
     }
 
-    public Discussion(String id, String title, String content, String category, String articleId, String imageUrl, String userId, String status) {
-        this.id = id;
-        this.title = title;
-        this.content = content;
-        this.category = category;
-        this.articleId = articleId;
-        this.imageUrl = imageUrl;
-        this.userId = userId;
-        this.status = status;
-    }
-
-    @Exclude
     public String getId() {
         return id;
     }
 
-    @Exclude
     public void setId(String id) {
         this.id = id;
     }
@@ -63,6 +48,14 @@ public class Discussion {
 
     public void setCategory(String category) {
         this.category = category;
+    }
+
+    public String getCategoryId() {
+        return categoryId;
+    }
+
+    public void setCategoryId(String categoryId) {
+        this.categoryId = categoryId;
     }
 
     public String getArticleId() {
@@ -97,26 +90,6 @@ public class Discussion {
         this.status = status;
     }
 
-    @Exclude
-    public long getCreatedAt() {
-        return createdAt;
-    }
-
-    @Exclude
-    public void setCreatedAt(long createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    @Exclude
-    public long getUpdatedAt() {
-        return updatedAt;
-    }
-
-    @Exclude
-    public void setUpdatedAt(long updatedAt) {
-        this.updatedAt = updatedAt;
-    }
-
     public long getLikeCount() {
         return likeCount;
     }
@@ -131,5 +104,13 @@ public class Discussion {
 
     public void setCommentCount(long commentCount) {
         this.commentCount = commentCount;
+    }
+
+    public long getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(long createdAt) {
+        this.createdAt = createdAt;
     }
 }
