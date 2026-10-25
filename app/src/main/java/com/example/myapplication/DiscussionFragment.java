@@ -195,7 +195,28 @@ public class DiscussionFragment extends Fragment implements DiscussionAdapter.On
 
     @Override
     public void onLikeClick(Discussion discussion) {
-        //de sau
+        if (FirebaseAuth.getInstance().getCurrentUser() == null) {
+            Toast.makeText(requireContext(), "Please log in to like discussions.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+
+        discussionRepository.toggleLike(discussion.getId(), userId, new DiscussionRepository.OnLikeToggledListener() {
+            @Override
+            public void onSuccess(boolean isLiked, long likeCount) {
+                if (!isAdded()) return;
+                Toast.makeText(requireContext(), isLiked ? "You liked this discussion." : "Bạn đã bỏ like", Toast.LENGTH_SHORT).show();
+                loadDiscussions();
+            }
+
+            @Override
+            public void onError(Exception exception) {
+                if (!isAdded()) return;
+                android.util.Log.e("DiscussionLike", "Failed to toggle Like", exception);
+                Toast.makeText(requireContext(), "Like failed: " + exception.getMessage(), Toast.LENGTH_LONG).show();
+            }
+        });
     }
 
     @Override
