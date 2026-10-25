@@ -17,6 +17,7 @@ import com.example.myapplication.articles.Article;
 import com.example.myapplication.articles.ArticleAdapter;
 import com.example.myapplication.articles.ArticleRepository;
 import com.example.myapplication.articles.articlesDetail.ArticleDetailActivity;
+import com.example.myapplication.articles.reports.ReportArticleActivity;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -60,7 +61,15 @@ public class HomeFragment extends Fragment {
                     intent.putExtra("createdAt", article.getCreatedAt());
                     startActivity(intent);
                 },
-                article -> Toast.makeText(requireContext(), "Report feature will be added later.", Toast.LENGTH_SHORT).show(),
+                article -> {
+                    Intent intent = new Intent(requireContext(), ReportArticleActivity.class);
+
+                    intent.putExtra("articleId", article.getId());
+                    intent.putExtra("title", article.getTitle());
+                    intent.putExtra("authorName", article.getAuthorName());
+
+                    startActivity(intent);
+                },
                 categoryId -> loadArticles(categoryId)
         );
 

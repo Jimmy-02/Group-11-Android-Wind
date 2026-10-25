@@ -44,23 +44,28 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:maxLines="2"
                     android:ellipsize="end"
+                    android:maxLines="2"
                     android:text="Article title"
                     android:textColor="#24344D"
                     android:textSize="15sp"
                     android:textStyle="bold" />
 
-                <ImageButton
+                <!-- Nút báo cáo bài báo -->
+                <TextView
                     android:id="@+id/btn_report_article"
                     android:layout_width="32dp"
                     android:layout_height="32dp"
                     android:layout_marginStart="4dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
+                    android:clickable="true"
                     android:contentDescription="Report article"
-                    android:padding="6dp"
-                    android:src="@android:drawable/ic_menu_report_image"
-                    app:tint="#8290A3" />
+                    android:focusable="true"
+                    android:gravity="center"
+                    android:text="!"
+                    android:textColor="#8290A3"
+                    android:textSize="23sp"
+                    android:textStyle="bold" />
 
             </LinearLayout>
 
@@ -69,8 +74,8 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:maxLines="1"
                 android:ellipsize="end"
+                android:maxLines="1"
                 android:text="Author name"
                 android:textColor="#718096"
                 android:textSize="12sp" />
@@ -80,8 +85,8 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:maxLines="2"
                 android:ellipsize="end"
+                android:maxLines="2"
                 android:text="Journal · Year · DOI"
                 android:textColor="#8290A3"
                 android:textSize="11sp" />
