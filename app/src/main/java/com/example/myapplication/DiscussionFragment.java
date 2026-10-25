@@ -5,7 +5,8 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Toast;
-
+import android.content.Intent;
+import com.example.myapplication.discussions.creation.CreateDiscussionActivity;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
@@ -29,6 +30,9 @@ public class DiscussionFragment extends Fragment {
 
         FloatingActionButton fabCreateDiscussion = view.findViewById(R.id.fab_create_discussion);
 
-        fabCreateDiscussion.setOnClickListener(v -> Toast.makeText(requireContext(), "Create Discussion", Toast.LENGTH_SHORT).show());
+        fabCreateDiscussion.setOnClickListener(v -> {
+            Intent intent = new Intent(requireContext(), CreateDiscussionActivity.class);
+            startActivity(intent);
+        });
     }
 }

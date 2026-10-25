@@ -47,6 +47,9 @@
             android:name=".articles.creation.CreateArticleActivity"
             android:exported="false" />
         <activity
+            android:name=".discussions.creation.CreateDiscussionActivity"
+            android:exported="false" />
+        <activity
             android:name=".account.EditProfileActivity"
             android:exported="false" />
         <activity
