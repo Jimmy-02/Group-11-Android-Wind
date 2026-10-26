@@ -1,0 +1,248 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="horizontal"
+    android:background="#F8FAFC">
+
+    <ScrollView
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="0.35"
+        android:fillViewport="true"
+        android:scrollbars="vertical"
+        android:background="#FFFFFF">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:paddingTop="16dp"
+            android:paddingBottom="16dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Quản lý Bài báo"
+                android:textColor="#0F172A"
+                android:textSize="22sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:text="Kiểm duyệt bài báo khoa học và xử lý báo cáo."
+                android:textColor="#64748B"
+                android:textSize="12sp" />
+
+            <com.google.android.material.tabs.TabLayout
+                android:id="@+id/tab_admin_articles"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:background="#FFFFFF"
+                app:tabIndicatorColor="#2563EB"
+                app:tabIndicatorHeight="3dp"
+                app:tabSelectedTextColor="#2563EB"
+                app:tabTextColor="#64748B"
+                app:tabTextAppearance="@android:style/TextAppearance.Small"
+                app:tabMode="fixed"
+                app:tabGravity="fill" />
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginTop="10dp"
+                android:background="#E2E8F0" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="42dp"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_search_input"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="10dp"
+                android:paddingEnd="10dp">
+
+                <ImageView
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    android:src="@drawable/ic_search"
+                    app:tint="#64748B"
+                    android:contentDescription="Tìm kiếm" />
+
+                <EditText
+                    android:id="@+id/et_admin_article_search"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_marginStart="8dp"
+                    android:layout_weight="1"
+                    android:background="@null"
+                    android:hint="Tìm kiếm bài báo..."
+                    android:textColorHint="#94A3B8"
+                    android:textColor="#0F172A"
+                    android:textSize="12sp"
+                    android:singleLine="true"
+                    android:imeOptions="actionSearch" />
+
+                <ImageView
+                    android:id="@+id/btn_clear_article_search"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:padding="2dp"
+                    android:src="@drawable/ic_block"
+                    app:tint="#94A3B8"
+                    android:visibility="gone"
+                    android:contentDescription="Xóa tìm kiếm" />
+
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="Lọc theo trạng thái"
+                android:textColor="#0F172A"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/chip_article_filter_1"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:background="@drawable/bg_filter_chip_selected"
+                android:gravity="center"
+                android:padding="9dp"
+                android:text="Tất cả"
+                android:textColor="#FFFFFF"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/chip_article_filter_2"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="7dp"
+                android:background="@drawable/bg_filter_chip_unselected"
+                android:gravity="center"
+                android:padding="9dp"
+                android:text="Chờ duyệt"
+                android:textColor="#475569"
+                android:textSize="12sp" />
+
+            <TextView
+                android:id="@+id/chip_article_filter_3"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="7dp"
+                android:background="@drawable/bg_filter_chip_unselected"
+                android:gravity="center"
+                android:padding="9dp"
+                android:text="Đã duyệt"
+                android:textColor="#475569"
+                android:textSize="12sp" />
+
+            <TextView
+                android:id="@+id/chip_article_filter_4"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="7dp"
+                android:background="@drawable/bg_filter_chip_unselected"
+                android:gravity="center"
+                android:padding="9dp"
+                android:text="Từ chối"
+                android:textColor="#475569"
+                android:textSize="12sp" />
+
+            <TextView
+                android:id="@+id/chip_article_filter_5"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="7dp"
+                android:background="@drawable/bg_filter_chip_unselected"
+                android:gravity="center"
+                android:padding="9dp"
+                android:text="Đã xóa"
+                android:textColor="#475569"
+                android:textSize="12sp" />
+
+        </LinearLayout>
+
+    </ScrollView>
+
+    <View
+        android:layout_width="1dp"
+        android:layout_height="match_parent"
+        android:background="#E2E8F0" />
+
+    <FrameLayout
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="0.65">
+
+        <ProgressBar
+            android:id="@+id/pb_admin_articles"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:indeterminateTint="#2563EB" />
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rv_admin_articles"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:clipToPadding="false"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:paddingTop="8dp"
+            android:paddingBottom="12dp" />
+
+        <LinearLayout
+            android:id="@+id/layout_empty_articles"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:padding="24dp"
+            android:visibility="gone">
+
+            <ImageView
+                android:layout_width="52dp"
+                android:layout_height="52dp"
+                android:src="@drawable/ic_my_article"
+                app:tint="#94A3B8"
+                android:contentDescription="Empty" />
+
+            <TextView
+                android:id="@+id/tv_empty_articles_title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="Không có bài báo nào"
+                android:textColor="#1E293B"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tv_empty_articles_desc"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:gravity="center"
+                android:text="Danh sách bài báo phù hợp sẽ hiển thị tại đây."
+                android:textColor="#64748B"
+                android:textSize="13sp" />
+
+        </LinearLayout>
+
+    </FrameLayout>
+
+</LinearLayout>
