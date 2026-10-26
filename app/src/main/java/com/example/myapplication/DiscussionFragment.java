@@ -22,6 +22,7 @@ import com.example.myapplication.discussions.Discussion;
 import com.example.myapplication.discussions.DiscussionAdapter;
 import com.example.myapplication.discussions.DiscussionRepository;
 import com.example.myapplication.discussions.creation.CreateDiscussionActivity;
+import com.example.myapplication.discussions.reports.ReportDiscussionActivity;
 import com.google.android.material.chip.Chip;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.firebase.auth.FirebaseAuth;
@@ -190,7 +191,16 @@ public class DiscussionFragment extends Fragment implements DiscussionAdapter.On
 
     @Override
     public void onReportClick(Discussion discussion) {
-        //de sau
+        if (FirebaseAuth.getInstance().getCurrentUser() == null) {
+            Toast.makeText(requireContext(), "Vui lòng đăng nhập để báo cáo bài thảo luận.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        Intent intent = new Intent(requireContext(), ReportDiscussionActivity.class);
+        intent.putExtra("discussionId", discussion.getId());
+        intent.putExtra("title", discussion.getTitle());
+        intent.putExtra("content", discussion.getContent());
+        startActivity(intent);
     }
 
     @Override

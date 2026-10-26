@@ -33,21 +33,14 @@ public class DiscussionAdapter extends RecyclerView.Adapter<DiscussionViewHolder
 
     @NonNull
     @Override
-    public DiscussionViewHolder onCreateViewHolder(
-            @NonNull ViewGroup parent,
-            int viewType
-    ) {
-        View view = LayoutInflater.from(parent.getContext())
-                .inflate(R.layout.item_discussion, parent, false);
+    public DiscussionViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+        View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_discussion, parent, false);
 
         return new DiscussionViewHolder(view);
     }
 
     @Override
-    public void onBindViewHolder(
-            @NonNull DiscussionViewHolder holder,
-            int position
-    ) {
+    public void onBindViewHolder(@NonNull DiscussionViewHolder holder, int position) {
         Discussion discussion = discussions.get(position);
 
         holder.bind(discussion);
