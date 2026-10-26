@@ -161,6 +161,7 @@ public class AdminReportDetailActivity extends AppCompatActivity {
     }
 
     private String getTargetCollection() {
+        if ("ARTICLE".equalsIgnoreCase(targetType)) return "articles";
         if ("DISCUSSION".equalsIgnoreCase(targetType)) return "discussions";
         if ("COMMENT".equalsIgnoreCase(targetType)) return "comments";
         if ("ANSWER".equalsIgnoreCase(targetType)) return "answers";
@@ -168,6 +169,7 @@ public class AdminReportDetailActivity extends AppCompatActivity {
     }
 
     private String getReportCollection() {
+        if ("ARTICLE".equalsIgnoreCase(targetType)) return "articleReports";
         if ("DISCUSSION".equalsIgnoreCase(targetType)) return "discussionReports";
         if ("COMMENT".equalsIgnoreCase(targetType)) return "commentReports";
         if ("ANSWER".equalsIgnoreCase(targetType)) return "answerReports";
@@ -175,6 +177,7 @@ public class AdminReportDetailActivity extends AppCompatActivity {
     }
 
     private String getFilterField() {
+        if ("ARTICLE".equalsIgnoreCase(targetType)) return "articleId";
         if ("DISCUSSION".equalsIgnoreCase(targetType)) return "discussionId";
         if ("COMMENT".equalsIgnoreCase(targetType)) return "commentId";
         if ("ANSWER".equalsIgnoreCase(targetType)) return "answerId";
@@ -262,6 +265,16 @@ public class AdminReportDetailActivity extends AppCompatActivity {
         contentUpdates.put("updatedAt", now);
 
         if (targetId != null && !targetId.isEmpty()) {
+            if ("ARTICLE".equalsIgnoreCase(targetType)) {
+                Map<String, Object> approval = new HashMap<>();
+                approval.put("action", "DELETED");
+                approval.put("articleId", targetId);
+                approval.put("adminId", adminId);
+                approval.put("reason", reason);
+                approval.put("createdAt", now);
+                db.collection("articleApprovals").add(approval);
+            }
+
             db.collection(targetCollection).document(targetId).update(contentUpdates)
                     .addOnCompleteListener(task -> {
                         // Tiếp tục cập nhật các document báo cáo liên quan
