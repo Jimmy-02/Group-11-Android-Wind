@@ -77,6 +77,8 @@ public class DiscussionRepository {
         discussion.setArticleId(document.getString("articleId"));
         discussion.setImageUrl(document.getString("imageUrl"));
         discussion.setUserId(document.getString("userId"));
+        discussion.setAuthorName(document.getString("authorName"));
+        discussion.setAuthorAvatar(document.getString("authorAvatar"));
         discussion.setStatus(document.getString("status"));
 
         Long likeCount = document.getLong("likeCount");

@@ -10,6 +10,8 @@ public class Discussion {
     private String articleId;
     private String imageUrl;
     private String userId;
+    private String authorName;
+    private String authorAvatar;
     private String status;
     private long likeCount;
     private long commentCount;
@@ -80,6 +82,22 @@ public class Discussion {
 
     public void setUserId(String userId) {
         this.userId = userId;
+    }
+
+    public String getAuthorName() {
+        return authorName;
+    }
+
+    public void setAuthorName(String authorName) {
+        this.authorName = authorName;
+    }
+
+    public String getAuthorAvatar() {
+        return authorAvatar;
+    }
+
+    public void setAuthorAvatar(String authorAvatar) {
+        this.authorAvatar = authorAvatar;
     }
 
     public String getStatus() {

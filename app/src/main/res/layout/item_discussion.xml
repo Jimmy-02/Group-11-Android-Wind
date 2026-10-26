@@ -17,22 +17,34 @@
         android:orientation="vertical"
         android:padding="16dp">
 
-        <!-- Category and report -->
+        <!-- Author and report -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
+            <ImageView
+                android:id="@+id/iv_discussion_author_avatar"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:background="@drawable/bg_avatar_circle"
+                android:clipToOutline="true"
+                android:contentDescription="Author avatar"
+                android:scaleType="centerCrop" />
+
             <TextView
-                android:id="@+id/tv_discussion_category"
+                android:id="@+id/tv_discussion_author_name"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
                 android:layout_weight="1"
-                android:text="Science"
-                android:textColor="#2457D6"
-                android:textSize="12sp"
-                android:textStyle="bold" />
+                android:text="User"
+                android:textColor="#172B4D"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:maxLines="1"
+                android:ellipsize="end" />
 
             <TextView
                 android:id="@+id/tv_discussion_report"
@@ -48,12 +60,23 @@
 
         </LinearLayout>
 
+        <!-- Category -->
+        <TextView
+            android:id="@+id/tv_discussion_category"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:text="Science"
+            android:textColor="#2457D6"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+
         <!-- Title -->
         <TextView
             android:id="@+id/tv_discussion_item_title"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
+            android:layout_marginTop="4dp"
             android:text="Discussion title"
             android:textColor="#14264A"
             android:textSize="17sp"
