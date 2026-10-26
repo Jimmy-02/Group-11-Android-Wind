@@ -70,6 +70,12 @@
         <activity
             android:name=".qna.CreateQuestionActivity"
             android:exported="false" />
+        <activity
+            android:name=".qna.report.ReportQuestionActivity"
+            android:exported="false" />
+        <activity
+            android:name=".qna.report.ReportAnswerActivity"
+            android:exported="false" />
     </application>
 
 </manifest>

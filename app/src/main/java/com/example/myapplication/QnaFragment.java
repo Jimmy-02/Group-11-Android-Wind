@@ -17,7 +17,7 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-
+import com.example.myapplication.qna.report.ReportQuestionActivity;
 import com.example.myapplication.qna.CreateQuestionActivity;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -218,14 +218,28 @@ public class QnaFragment extends Fragment {
 
                     @Override
                     public void onReportClick(Question question) {
-                        // Sẽ mở màn hình báo cáo ở bước sau.
-                        Toast.makeText(
+                        Intent intent = new Intent(
                                 requireContext(),
-                                "Báo cáo câu hỏi",
-                                Toast.LENGTH_SHORT
-                        ).show();
-                    }
+                                ReportQuestionActivity.class
+                        );
 
+                        intent.putExtra(
+                                ReportQuestionActivity.EXTRA_QUESTION_ID,
+                                question.getId()
+                        );
+
+                        intent.putExtra(
+                                ReportQuestionActivity.EXTRA_TITLE,
+                                question.getTitle()
+                        );
+
+                        intent.putExtra(
+                                ReportQuestionActivity.EXTRA_CONTENT,
+                                question.getContent()
+                        );
+
+                        startActivity(intent);
+                    }
                     @Override
                     public void onCloseClick(Question question) {
                         confirmCloseQuestion(question);
@@ -239,6 +253,162 @@ public class QnaFragment extends Fragment {
         );
 
         rvQuestions.setAdapter(adapter);
+    }
+
+    private void showQuestionReportDialog(Question question) {
+        if (question == null || question.getId() == null) {
+            return;
+        }
+
+        String[] reasons = {
+                "Spam hoặc quảng cáo",
+                "Thông tin sai lệch",
+                "Nội dung không phù hợp",
+                "Quấy rối hoặc xúc phạm",
+                "Không liên quan đến chủ đề",
+                "Vi phạm quyền riêng tư",
+                "Vi phạm bản quyền",
+                "Lý do khác"
+        };
+
+        int[] selectedReason = {-1};
+
+        new AlertDialog.Builder(requireContext())
+                .setTitle("Báo cáo câu hỏi")
+                .setSingleChoiceItems(
+                        reasons,
+                        -1,
+                        (dialog, which) -> selectedReason[0] = which
+                )
+                .setPositiveButton("Gửi báo cáo", (dialog, which) -> {
+                    if (selectedReason[0] < 0) {
+                        Toast.makeText(
+                                requireContext(),
+                                "Vui lòng chọn lý do báo cáo.",
+                                Toast.LENGTH_SHORT
+                        ).show();
+                        return;
+                    }
+
+                    submitQuestionReport(
+                            question,
+                            reasons[selectedReason[0]]
+                    );
+                })
+                .setNegativeButton("Hủy", null)
+                .show();
+    }
+
+    private void submitQuestionReport(
+            Question question,
+            String reason
+    ) {
+        FirebaseUser user =
+                FirebaseAuth.getInstance().getCurrentUser();
+
+        if (user == null) {
+            Toast.makeText(
+                    requireContext(),
+                    "Vui lòng đăng nhập để báo cáo.",
+                    Toast.LENGTH_SHORT
+            ).show();
+            return;
+        }
+
+        String questionId = question.getId();
+        String userId = user.getUid();
+
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+
+        // Mỗi tài khoản chỉ có một báo cáo cho mỗi câu hỏi.
+        String reportId = questionId + "_" + userId;
+
+        com.google.firebase.firestore.DocumentReference reportRef =
+                db.collection("questionReports").document(reportId);
+
+        com.google.firebase.firestore.DocumentReference questionRef =
+                db.collection("questions").document(questionId);
+
+        Map<String, Object> report = new HashMap<>();
+
+        report.put("questionId", questionId);
+        report.put("userId", userId);
+        report.put("reason", reason);
+        report.put("detailReason", "");
+        report.put("status", "PENDING");
+        report.put("createdAt", FieldValue.serverTimestamp());
+        report.put("reviewedAt", null);
+        report.put("reviewedBy", "");
+        report.put("reviewReason", "");
+        report.put(
+                "questionTitle",
+                question.getTitle() == null ? "" : question.getTitle()
+        );
+
+        db.runTransaction(transaction -> {
+            DocumentSnapshot existingReport =
+                    transaction.get(reportRef);
+
+            if (existingReport.exists()) {
+                return "DUPLICATE";
+            }
+
+            DocumentSnapshot questionSnapshot =
+                    transaction.get(questionRef);
+
+            if (!questionSnapshot.exists()) {
+                throw new IllegalStateException(
+                        "Không tìm thấy câu hỏi."
+                );
+            }
+
+            transaction.set(reportRef, report);
+
+            transaction.update(
+                    questionRef,
+                    "reportCount",
+                    FieldValue.increment(1)
+            );
+
+            return "CREATED";
+
+        }).addOnSuccessListener(result -> {
+            if (!isAdded()) {
+                return;
+            }
+
+            if ("CREATED".equals(result)) {
+                Toast.makeText(
+                        requireContext(),
+                        "Đã gửi báo cáo câu hỏi thành công.",
+                        Toast.LENGTH_SHORT
+                ).show();
+
+            } else {
+                Toast.makeText(
+                        requireContext(),
+                        "Bạn đã báo cáo câu hỏi này trước đó.",
+                        Toast.LENGTH_LONG
+                ).show();
+            }
+
+        }).addOnFailureListener(error -> {
+            if (!isAdded()) {
+                return;
+            }
+
+            android.util.Log.e(
+                    "QNA_REPORT",
+                    "Không thể gửi báo cáo Question",
+                    error
+            );
+
+            Toast.makeText(
+                    requireContext(),
+                    "Gửi báo cáo thất bại. Vui lòng thử lại.",
+                    Toast.LENGTH_LONG
+            ).show();
+        });
     }
     private void toggleQuestionVote(
             Question question,

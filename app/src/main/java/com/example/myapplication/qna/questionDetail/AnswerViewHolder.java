@@ -17,10 +17,10 @@ public class AnswerViewHolder extends RecyclerView.ViewHolder {
     public TextView tvAnswerDownVote;
     public TextView tvAnswerVoteCount;
     public ImageView ivAuthorAvatar;
-
+    public TextView btnReportAnswer;
     public AnswerViewHolder(@NonNull View itemView) {
         super(itemView);
-
+        btnReportAnswer = itemView.findViewById(R.id.btnReportAnswer);
         ivAuthorAvatar = itemView.findViewById(R.id.ivAnswerAuthorAvatar);
         tvAnswerAuthor = itemView.findViewById(R.id.tvAnswerAuthor);
         tvAnswerDate = itemView.findViewById(R.id.tvAnswerDate);

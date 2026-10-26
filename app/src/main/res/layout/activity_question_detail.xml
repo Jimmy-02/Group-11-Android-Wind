@@ -102,6 +102,16 @@
                 android:textColor="#334155"
                 android:textSize="15sp" />
 
+            <!-- Ảnh của câu hỏi -->
+            <ImageView
+                android:id="@+id/ivDetailQuestionImage"
+                android:layout_width="match_parent"
+                android:layout_height="200dp"
+                android:layout_marginTop="12dp"
+                android:scaleType="centerCrop"
+                android:contentDescription="Ảnh câu hỏi"
+                android:visibility="gone" />
+
             <!-- Danh mục -->
             <com.google.android.material.chip.ChipGroup
                 android:id="@+id/chipGroupDetailCategories"
