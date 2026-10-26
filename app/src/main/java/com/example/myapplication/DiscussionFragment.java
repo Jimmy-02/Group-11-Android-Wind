@@ -21,6 +21,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.myapplication.discussions.Discussion;
 import com.example.myapplication.discussions.DiscussionAdapter;
 import com.example.myapplication.discussions.DiscussionRepository;
+import com.example.myapplication.discussions.comments.DiscussionCommentBottomSheet;
 import com.example.myapplication.discussions.creation.CreateDiscussionActivity;
 import com.example.myapplication.discussions.reports.ReportDiscussionActivity;
 import com.google.android.material.chip.Chip;
@@ -31,7 +32,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
-public class DiscussionFragment extends Fragment implements DiscussionAdapter.OnDiscussionClickListener {
+public class DiscussionFragment extends Fragment implements DiscussionAdapter.OnDiscussionClickListener, DiscussionCommentBottomSheet.OnCommentsChangedListener {
 
     private RecyclerView rvDiscussions;
     private LinearLayout layoutDiscussionEmpty;
@@ -185,11 +186,6 @@ public class DiscussionFragment extends Fragment implements DiscussionAdapter.On
     }
 
     @Override
-    public void onDiscussionClick(Discussion discussion) {
-        //de sau
-    }
-
-    @Override
     public void onReportClick(Discussion discussion) {
         if (FirebaseAuth.getInstance().getCurrentUser() == null) {
             Toast.makeText(requireContext(), "Vui lòng đăng nhập để báo cáo bài thảo luận.", Toast.LENGTH_SHORT).show();
@@ -216,7 +212,6 @@ public class DiscussionFragment extends Fragment implements DiscussionAdapter.On
             @Override
             public void onSuccess(boolean isLiked, long likeCount) {
                 if (!isAdded()) return;
-                Toast.makeText(requireContext(), isLiked ? "You liked this discussion." : "Bạn đã bỏ like", Toast.LENGTH_SHORT).show();
                 loadDiscussions();
             }
 
@@ -231,6 +226,22 @@ public class DiscussionFragment extends Fragment implements DiscussionAdapter.On
 
     @Override
     public void onCommentsClick(Discussion discussion) {
-        //de sau
+        openCommentsBottomSheet(discussion);
+    }
+
+    @Override
+    public void onDiscussionClick(Discussion discussion) {
+        openCommentsBottomSheet(discussion);
+    }
+
+    @Override
+    public void onCommentsChanged() {
+        if (!isAdded()) return;
+        loadDiscussions();
+    }
+
+    private void openCommentsBottomSheet(Discussion discussion) {
+        if (!isAdded()) return;
+        DiscussionCommentBottomSheet.newInstance(discussion).show(getChildFragmentManager(), "discussion_comments");
     }
 }

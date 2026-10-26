@@ -17,6 +17,8 @@ import com.squareup.picasso.Picasso;
 
 public class DiscussionViewHolder extends RecyclerView.ViewHolder {
 
+    private final ImageView ivAuthorAvatar;
+    private final TextView tvAuthorName;
     private final TextView tvCategory;
     private final TextView tvTitle;
     private final TextView tvContent;
@@ -28,6 +30,8 @@ public class DiscussionViewHolder extends RecyclerView.ViewHolder {
 
     public DiscussionViewHolder(@NonNull View itemView) {
         super(itemView);
+        ivAuthorAvatar = itemView.findViewById(R.id.iv_discussion_author_avatar);
+        tvAuthorName = itemView.findViewById(R.id.tv_discussion_author_name);
         tvCategory = itemView.findViewById(R.id.tv_discussion_category);
         tvTitle = itemView.findViewById(R.id.tv_discussion_item_title);
         tvContent = itemView.findViewById(R.id.tv_discussion_item_content);
@@ -39,6 +43,8 @@ public class DiscussionViewHolder extends RecyclerView.ViewHolder {
     }
 
     public void bind(Discussion discussion) {
+        bindAuthor(discussion);
+
         tvCategory.setText(discussion.getCategory() != null ? discussion.getCategory() : "General");
         tvTitle.setText(discussion.getTitle() != null ? discussion.getTitle() : "");
         tvContent.setText(discussion.getContent() != null ? discussion.getContent() : "");
@@ -62,6 +68,20 @@ public class DiscussionViewHolder extends RecyclerView.ViewHolder {
         }
 
         loadRelatedArticle(discussion.getArticleId());
+    }
+
+    private void bindAuthor(Discussion discussion) {
+        String authorName = discussion.getAuthorName();
+        tvAuthorName.setText(authorName != null && !authorName.trim().isEmpty() ? authorName : "User");
+
+        String avatarUrl = discussion.getAuthorAvatar();
+
+        if (avatarUrl != null && !avatarUrl.trim().isEmpty()) {
+            Picasso.get().load(avatarUrl).placeholder(R.drawable.ic_account).error(R.drawable.ic_account).fit().centerCrop().into(ivAuthorAvatar);
+        } else {
+            Picasso.get().cancelRequest(ivAuthorAvatar);
+            ivAuthorAvatar.setImageResource(R.drawable.ic_account);
+        }
     }
 
     private void loadLikeStatus(Discussion discussion) {
