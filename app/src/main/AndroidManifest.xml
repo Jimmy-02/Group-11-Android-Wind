@@ -50,6 +50,9 @@
             android:name=".discussions.creation.CreateDiscussionActivity"
             android:exported="false" />
         <activity
+            android:name=".discussions.reports.ReportDiscussionActivity"
+            android:exported="false" />
+        <activity
             android:name=".account.EditProfileActivity"
             android:exported="false" />
         <activity
