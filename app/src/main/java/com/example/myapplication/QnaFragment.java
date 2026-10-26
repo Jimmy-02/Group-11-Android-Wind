@@ -11,19 +11,20 @@ import android.widget.ProgressBar;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
-
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+
+import com.example.myapplication.qna.CreateQuestionActivity;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
-
+import java.util.Locale;
 import java.util.HashMap;
 import java.util.Map;
 import com.example.myapplication.qna.QuestionAdapter;
@@ -31,12 +32,14 @@ import com.example.myapplication.qna.Question;
 import com.example.myapplication.qna.questionDetail.QuestionDetailActivity;
 import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
-import com.example.myapplication.qna.QuestionAdapter;
-
+import android.text.Editable;
+import android.text.TextWatcher;
+import com.google.android.material.textfield.TextInputEditText;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
-
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import java.util.List;
 import java.util.Locale;
 
@@ -45,6 +48,7 @@ public class QnaFragment extends Fragment {
 
     private RecyclerView rvQuestions;
     private ChipGroup chipGroupQuestionFilter;
+    private com.google.android.material.floatingactionbutton.FloatingActionButton fabAskQuestion;
     private Chip chipAllQuestions;
     private Chip chipMyQuestions;
     private Chip chipUnanswered;
@@ -59,6 +63,10 @@ public class QnaFragment extends Fragment {
 
     private String currentFilter = "ALL";
     private int currentSort = 0;
+    private TextInputEditText etSearchQuestions;
+    private String searchQuery = "";
+    private ActivityResultLauncher<Intent> createQuestionLauncher;
+    private ActivityResultLauncher<Intent> questionDetailLauncher;
 
     public QnaFragment() {
         // Required empty public constructor
@@ -77,10 +85,33 @@ public class QnaFragment extends Fragment {
                 false
         );
 
+        createQuestionLauncher =
+                registerForActivityResult(
+                        new ActivityResultContracts.StartActivityForResult(),
+                        result -> {
+                            if (result.getResultCode() == android.app.Activity.RESULT_OK) {
+                                loadQuestions();
+                            }
+                        }
+                );
+
+        questionDetailLauncher =
+                registerForActivityResult(
+                        new ActivityResultContracts.StartActivityForResult(),
+                        result -> {
+                            if (result.getResultCode()
+                                    == android.app.Activity.RESULT_OK) {
+                                loadQuestions();
+                            }
+                        }
+                );
+
         initViews(view);
         setupRecyclerView();
         setupFilters();
         setupSort();
+        setupSearch();
+        setupCreateQuestion();
 
         getParentFragmentManager().setFragmentResultListener(
                 "questionVoteUpdated",
@@ -95,6 +126,8 @@ public class QnaFragment extends Fragment {
 
     private void initViews(View view) {
         rvQuestions = view.findViewById(R.id.rvQuestions);
+        etSearchQuestions = view.findViewById(R.id.etSearchQuestions);
+        fabAskQuestion = view.findViewById(R.id.fabAskQuestion);
 
         chipGroupQuestionFilter =
                 view.findViewById(R.id.chipGroupQuestionFilter);
@@ -118,6 +151,40 @@ public class QnaFragment extends Fragment {
 
         tvEmptyQuestions =
                 view.findViewById(R.id.tvEmptyQuestions);
+    }
+    private void setupSearch() {
+        etSearchQuestions.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(
+                    CharSequence s, int start, int count, int after
+            ) {
+            }
+
+            @Override
+            public void onTextChanged(
+                    CharSequence s, int start, int before, int count
+            ) {
+                searchQuery = s == null
+                        ? ""
+                        : s.toString().trim().toLowerCase(Locale.ROOT);
+
+                applyFilterAndSort();
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+            }
+        });
+    }
+    private void setupCreateQuestion() {
+        fabAskQuestion.setOnClickListener(v -> {
+            Intent intent = new Intent(
+                    requireContext(),
+                    CreateQuestionActivity.class
+            );
+
+            createQuestionLauncher.launch(intent);
+        });
     }
 
     private void setupRecyclerView() {
@@ -146,7 +213,7 @@ public class QnaFragment extends Fragment {
                                 QuestionDetailActivity.EXTRA_QUESTION_ID,
                                 question.getId()
                         );
-                        startActivity(intent);
+                        questionDetailLauncher.launch(intent);
                     }
 
                     @Override
@@ -409,6 +476,10 @@ public class QnaFragment extends Fragment {
                                 doc.getString("content")
                         );
 
+                        question.setImageUrl(
+                                doc.getString("imageUrl")
+                        );
+
                         question.setUserId(
                                 readFirstString(
                                         doc,
@@ -601,9 +672,28 @@ public class QnaFragment extends Fragment {
                     break;
             }
 
-            if (matches) {
+
+            String title = question.getTitle() == null
+                    ? ""
+                    : question.getTitle().toLowerCase(Locale.ROOT);
+
+            String content = question.getContent() == null
+                    ? ""
+                    : question.getContent().toLowerCase(Locale.ROOT);
+
+            String author = question.getAuthorName() == null
+                    ? ""
+                    : question.getAuthorName().toLowerCase(Locale.ROOT);
+
+            boolean matchesSearch = searchQuery.isEmpty()
+                    || title.contains(searchQuery)
+                    || content.contains(searchQuery)
+                    || author.contains(searchQuery);
+
+            if (matches && matchesSearch) {
                 filtered.add(question);
             }
+
         }
 
         if (currentSort == 0) {

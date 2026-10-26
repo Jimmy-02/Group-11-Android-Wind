@@ -10,15 +10,14 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.myapplication.R;
-
+import com.squareup.picasso.Picasso;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
-public class AnswerAdapter
-        extends RecyclerView.Adapter<AnswerAdapter.AnswerViewHolder> {
+public class AnswerAdapter extends RecyclerView.Adapter<AnswerViewHolder> {
 
     private final List<Answer> answerList = new ArrayList<>();
     private final OnAnswerVoteListener voteListener;
@@ -65,6 +64,21 @@ public class AnswerAdapter
                         ? "Người dùng"
                         : authorName
         );
+
+        String avatarUrl = answer.getAuthorAvatar();
+
+        if (avatarUrl != null && !avatarUrl.trim().isEmpty()) {
+            Picasso.get()
+                    .load(avatarUrl)
+                    .placeholder(R.drawable.ic_account)
+                    .error(R.drawable.ic_account)
+                    .fit()
+                    .centerCrop()
+                    .into(holder.ivAuthorAvatar);
+        } else {
+            Picasso.get().cancelRequest(holder.ivAuthorAvatar);
+            holder.ivAuthorAvatar.setImageResource(R.drawable.ic_account);
+        }
 
         // Nội dung câu trả lời
         holder.tvAnswerContent.setText(
@@ -128,36 +142,5 @@ public class AnswerAdapter
         return answerList.size();
     }
 
-    static class AnswerViewHolder extends RecyclerView.ViewHolder {
-
-        TextView tvAnswerAuthor;
-        TextView tvAnswerDate;
-        TextView tvAnswerContent;
-        TextView tvAnswerUpVote;
-        TextView tvAnswerDownVote;
-        TextView tvAnswerVoteCount;
-
-        AnswerViewHolder(@NonNull View itemView) {
-            super(itemView);
-
-            tvAnswerAuthor =
-                    itemView.findViewById(R.id.tvAnswerAuthor);
-
-            tvAnswerDate =
-                    itemView.findViewById(R.id.tvAnswerDate);
-
-            tvAnswerContent =
-                    itemView.findViewById(R.id.tvAnswerContent);
-
-            tvAnswerUpVote =
-                    itemView.findViewById(R.id.tvAnswerUpVote);
-
-            tvAnswerDownVote =
-                    itemView.findViewById(R.id.tvAnswerDownVote);
-
-            tvAnswerVoteCount =
-                    itemView.findViewById(R.id.tvAnswerVoteCount);
-        }
-    }
 }
 

@@ -18,10 +18,19 @@ public class Question {
     private Timestamp createdAt;
     private long voteCount;
     private int answerCount;
+    private String imageUrl;
 
     public Question() {
         categories = new ArrayList<>();
         status = "OPEN";
+    }
+
+    public String getImageUrl() {
+        return imageUrl;
+    }
+
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
     }
 
     public String getId() {

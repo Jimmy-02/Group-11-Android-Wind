@@ -9,7 +9,7 @@ import android.widget.Button;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
-
+import android.util.Log;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.appcompat.app.AppCompatActivity;
@@ -151,9 +151,6 @@ public class QuestionDetailActivity extends AppCompatActivity {
         loadQuestionVoteState();
     }
 
-    // =========================
-    // BÌNH CHỌN CÂU TRẢ LỜI
-    // =========================
 
     private void toggleAnswerVote(Answer answer, int requestedValue) {
         FirebaseUser user =
@@ -293,9 +290,6 @@ public class QuestionDetailActivity extends AppCompatActivity {
         });
     }
 
-    // =========================
-    // BÌNH CHỌN CÂU HỎI
-    // =========================
 
     private void toggleQuestionVote(int requestedValue) {
         FirebaseUser user =
@@ -460,9 +454,6 @@ public class QuestionDetailActivity extends AppCompatActivity {
                 });
     }
 
-    // =========================
-    // TẢI CHI TIẾT CÂU HỎI
-    // =========================
 
     private void loadQuestion() {
         FirebaseFirestore.getInstance()
@@ -568,10 +559,6 @@ public class QuestionDetailActivity extends AppCompatActivity {
                 });
     }
 
-    // =========================
-    // HIỂN THỊ DANH MỤC
-    // =========================
-
     private void loadCategories(DocumentSnapshot document) {
         chipGroupDetailCategories.removeAllViews();
 
@@ -603,9 +590,6 @@ public class QuestionDetailActivity extends AppCompatActivity {
         chipGroupDetailCategories.addView(chip);
     }
 
-    // =========================
-    // TẢI CÂU TRẢ LỜI
-    // =========================
 
     private void loadAnswers() {
         pbDetailAnswers.setVisibility(View.VISIBLE);
@@ -646,6 +630,10 @@ public class QuestionDetailActivity extends AppCompatActivity {
                                         "username",
                                         "userName"
                                 )
+                        );
+
+                        answer.setAuthorAvatar(
+                                document.getString("authorAvatar")
                         );
 
                         answer.setContent(
@@ -701,9 +689,6 @@ public class QuestionDetailActivity extends AppCompatActivity {
                 });
     }
 
-    // =========================
-    // GỬI CÂU TRẢ LỜI
-    // =========================
 
     private void submitAnswer() {
         FirebaseUser user =
@@ -720,14 +705,10 @@ public class QuestionDetailActivity extends AppCompatActivity {
 
         String content = edtDetailAnswer.getText() == null
                 ? ""
-                : edtDetailAnswer.getText()
-                .toString()
-                .trim();
+                : edtDetailAnswer.getText().toString().trim();
 
         if (content.isEmpty()) {
-            tilDetailAnswer.setError(
-                    "Vui lòng nhập câu trả lời"
-            );
+            tilDetailAnswer.setError("Vui lòng nhập câu trả lời");
             return;
         }
 
@@ -736,7 +717,7 @@ public class QuestionDetailActivity extends AppCompatActivity {
 
         FirebaseFirestore db = FirebaseFirestore.getInstance();
 
-        // Kiểm tra lại trạng thái câu hỏi trước khi ghi dữ liệu.
+        // Kiểm tra trạng thái Question trước khi gửi Answer.
         db.collection("questions")
                 .document(questionId)
                 .get()
@@ -754,9 +735,7 @@ public class QuestionDetailActivity extends AppCompatActivity {
 
                         questionStatus = latestStatus == null
                                 ? "CLOSED"
-                                : latestStatus.toUpperCase(
-                                Locale.ROOT
-                        );
+                                : latestStatus.toUpperCase(Locale.ROOT);
 
                         setAnswerInputEnabled(false);
 
@@ -769,39 +748,26 @@ public class QuestionDetailActivity extends AppCompatActivity {
                         return;
                     }
 
-                    Map<String, Object> answerData =
-                            new HashMap<>();
-
-                    answerData.put("questionId", questionId);
-                    answerData.put("userId", user.getUid());
-                    answerData.put("content", content);
-                    answerData.put(
-                            "createdAt",
-                            FieldValue.serverTimestamp()
-                    );
-                    answerData.put("voteCount", 0);
-
-                    db.collection("answers")
-                            .add(answerData)
-                            .addOnSuccessListener(reference -> {
+                    // Lấy thông tin hồ sơ người trả lời giống Discussion.
+                    db.collection("users")
+                            .document(user.getUid())
+                            .get()
+                            .addOnSuccessListener(userDocument -> {
                                 if (!isActivityActive()) {
                                     return;
                                 }
 
-                                edtDetailAnswer.setText("");
-
-                                Toast.makeText(
-                                        this,
-                                        "Đã gửi câu trả lời",
-                                        Toast.LENGTH_SHORT
-                                ).show();
-
-                                loadAnswers();
+                                saveAnswer(
+                                        db,
+                                        user,
+                                        userDocument,
+                                        content
+                                );
                             })
                             .addOnFailureListener(error -> {
-                                android.util.Log.e(
+                                Log.e(
                                         "QNA_ANSWER",
-                                        "Send answer failed",
+                                        "Không thể tải hồ sơ người dùng",
                                         error
                                 );
 
@@ -809,19 +775,12 @@ public class QuestionDetailActivity extends AppCompatActivity {
                                     return;
                                 }
 
-                                Toast.makeText(
-                                        this,
-                                        "Lỗi: " + error.getMessage(),
-                                        Toast.LENGTH_LONG
-                                ).show();
-                            })
-                            .addOnCompleteListener(task -> {
-                                if (!isActivityActive()) {
-                                    return;
-                                }
-
-                                btnSubmitAnswer.setEnabled(
-                                        "OPEN".equals(questionStatus)
+                                // Vẫn cho phép trả lời nếu không tải được hồ sơ.
+                                saveAnswer(
+                                        db,
+                                        user,
+                                        null,
+                                        content
                                 );
                             });
                 })
@@ -840,6 +799,123 @@ public class QuestionDetailActivity extends AppCompatActivity {
                 });
     }
 
+    private void saveAnswer(
+            FirebaseFirestore db,
+            FirebaseUser user,
+            DocumentSnapshot userDocument,
+            String content
+    ) {
+        if (!isActivityActive()) {
+            return;
+        }
+
+        Map<String, Object> answerData = new HashMap<>();
+
+        answerData.put("questionId", questionId);
+        answerData.put("userId", user.getUid());
+        answerData.put(
+                "authorName",
+                resolveAnswerAuthorName(user, userDocument)
+        );
+        answerData.put(
+                "authorAvatar",
+                resolveAnswerAuthorAvatar(user, userDocument)
+        );
+        answerData.put("content", content);
+        answerData.put("createdAt", FieldValue.serverTimestamp());
+        answerData.put("voteCount", 0);
+
+        db.collection("answers")
+                .add(answerData)
+                .addOnSuccessListener(reference -> {
+                    if (!isActivityActive()) {
+                        return;
+                    }
+
+                    edtDetailAnswer.setText("");
+
+                    Toast.makeText(
+                            this,
+                            "Đã gửi câu trả lời",
+                            Toast.LENGTH_SHORT
+                    ).show();
+
+                    loadAnswers();
+                })
+                .addOnFailureListener(error -> {
+                    Log.e(
+                            "QNA_ANSWER",
+                            "Send answer failed",
+                            error
+                    );
+
+                    if (!isActivityActive()) {
+                        return;
+                    }
+
+                    Toast.makeText(
+                            this,
+                            "Lỗi: " + error.getMessage(),
+                            Toast.LENGTH_LONG
+                    ).show();
+                })
+                .addOnCompleteListener(task -> {
+                    if (!isActivityActive()) {
+                        return;
+                    }
+
+                    btnSubmitAnswer.setEnabled(
+                            "OPEN".equals(questionStatus)
+                    );
+                });
+    }
+
+    private String resolveAnswerAuthorName(
+            FirebaseUser user,
+            DocumentSnapshot userDocument
+    ) {
+        if (userDocument != null && userDocument.exists()) {
+            String fullName = userDocument.getString("fullName");
+
+            if (fullName != null && !fullName.trim().isEmpty()) {
+                return fullName.trim();
+            }
+
+            String username = userDocument.getString("username");
+
+            if (username != null && !username.trim().isEmpty()) {
+                return username.trim();
+            }
+        }
+
+        String displayName = user.getDisplayName();
+
+        if (displayName != null && !displayName.trim().isEmpty()) {
+            return displayName.trim();
+        }
+
+        return "Người dùng";
+    }
+
+    private String resolveAnswerAuthorAvatar(
+            FirebaseUser user,
+            DocumentSnapshot userDocument
+    ) {
+        if (userDocument != null && userDocument.exists()) {
+            String avatar = userDocument.getString("avatar");
+
+            if (avatar != null && !avatar.trim().isEmpty()) {
+                return avatar.trim();
+            }
+        }
+
+        if (user.getPhotoUrl() != null) {
+            return user.getPhotoUrl().toString();
+        }
+
+        return "";
+    }
+
     private void setAnswerInputEnabled(boolean enabled) {
         tilDetailAnswer.setEnabled(enabled);
         edtDetailAnswer.setEnabled(enabled);
@@ -856,9 +932,6 @@ public class QuestionDetailActivity extends AppCompatActivity {
         }
     }
 
-    // =========================
-    // HÀM HỖ TRỢ
-    // =========================
 
     private String readFirstString(
             DocumentSnapshot document,
