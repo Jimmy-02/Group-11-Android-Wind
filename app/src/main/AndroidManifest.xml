@@ -67,6 +67,9 @@
         <activity
             android:name="com.example.myapplication.qna.questionDetail.QuestionDetailActivity"
             android:exported="false" />
+        <activity
+            android:name=".qna.CreateQuestionActivity"
+            android:exported="false" />
     </application>
 
 </manifest>

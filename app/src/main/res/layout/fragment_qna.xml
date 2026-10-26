@@ -11,7 +11,30 @@
         android:orientation="vertical"
         android:padding="12dp">
 
-        <!-- Tiêu đề -->
+
+        <!-- Ô tìm kiếm câu hỏi -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/tilSearchQuestions"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Tìm câu hỏi..."
+            app:boxBackgroundMode="outline"
+            app:boxCornerRadiusTopStart="12dp"
+            app:boxCornerRadiusTopEnd="12dp"
+            app:boxCornerRadiusBottomStart="12dp"
+            app:boxCornerRadiusBottomEnd="12dp">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etSearchQuestions"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:singleLine="true"
+                android:imeOptions="actionSearch"
+                android:inputType="text"
+                android:drawableStart="@android:drawable/ic_menu_search"
+                android:drawablePadding="8dp" />
+
+        </com.google.android.material.textfield.TextInputLayout>
 
         <!-- Bộ lọc câu hỏi -->
         <HorizontalScrollView

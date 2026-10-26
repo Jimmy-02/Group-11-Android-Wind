@@ -11,6 +11,7 @@ public class Answer {
     private String content;
     private Timestamp createdAt;
     private long voteCount;
+    private String authorAvatar;
 
     public Answer() {
         // Constructor mặc định
@@ -63,12 +64,12 @@ public class Answer {
     public void setCreatedAt(Timestamp createdAt) {
         this.createdAt = createdAt;
     }
-
     public long getVoteCount() {
         return voteCount;
     }
-
     public void setVoteCount(long voteCount) {
         this.voteCount = voteCount;
     }
+    public String getAuthorAvatar() {return authorAvatar;}
+    public void setAuthorAvatar(String authorAvatar) {this.authorAvatar = authorAvatar;}
 }

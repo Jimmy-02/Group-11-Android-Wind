@@ -1,222 +1,242 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.cardview.widget.CardView
+<com.google.android.material.card.MaterialCardView
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/cardQuestion"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_marginHorizontal="4dp"
-    android:layout_marginVertical="6dp"
+    android:layout_marginBottom="12dp"
     android:clickable="true"
     android:focusable="true"
-    android:foreground="?android:attr/selectableItemBackground"
     app:cardBackgroundColor="#FFFFFF"
     app:cardCornerRadius="14dp"
-    app:cardElevation="2dp"
-    app:cardUseCompatPadding="false">
+    app:cardElevation="1dp"
+    app:strokeColor="#E8EDF5"
+    app:strokeWidth="1dp">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="14dp">
+        android:padding="16dp">
 
-        <!-- Tiêu đề và trạng thái -->
+        <!-- Author, date, status and actions -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
-            <TextView
-                android:id="@+id/tvQuestionTitle"
+            <ImageView
+                android:id="@+id/ivQuestionAuthorAvatar"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:background="@drawable/bg_avatar_circle"
+                android:clipToOutline="true"
+                android:contentDescription="Question author avatar"
+                android:scaleType="centerCrop" />
+
+            <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
                 android:layout_weight="1"
-                android:paddingEnd="8dp"
-                android:text="Làm thế nào để giải quyết câu hỏi khoa học?"
-                android:textColor="#172B4D"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                android:maxLines="2"
-                android:ellipsize="end" />
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tvQuestionAuthor"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:text="User"
+                    android:textColor="#172B4D"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvQuestionDate"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="Vừa xong"
+                    android:textColor="#94A3B8"
+                    android:textSize="11sp" />
+
+            </LinearLayout>
 
             <TextView
                 android:id="@+id/tvQuestionStatus"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:background="#E1F5E8"
-                android:paddingHorizontal="8dp"
+                android:layout_marginStart="4dp"
+                android:background="#DDF7E8"
+                android:paddingHorizontal="7dp"
                 android:paddingVertical="4dp"
+                android:text="OPEN"
                 android:textColor="#16834A"
-                android:textSize="11sp"
+                android:textSize="10sp"
                 android:textStyle="bold" />
 
-            <!-- Chỉ hiện cho chủ câu hỏi -->
             <TextView
                 android:id="@+id/btnCloseQuestion"
-                android:layout_width="32dp"
+                android:layout_width="28dp"
                 android:layout_height="32dp"
-                android:layout_marginStart="4dp"
                 android:gravity="center"
                 android:text="×"
                 android:textColor="#64748B"
-                android:textSize="24sp"
+                android:textSize="23sp"
                 android:visibility="gone"
                 android:clickable="true"
                 android:focusable="true"
-                android:contentDescription="Đóng câu hỏi" />
+                android:contentDescription="Close question" />
+
+            <TextView
+                android:id="@+id/btnReportQuestion"
+                android:layout_width="28dp"
+                android:layout_height="32dp"
+                android:gravity="center"
+                android:text="!"
+                android:textColor="#667085"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Report question" />
 
         </LinearLayout>
 
-        <!-- Nội dung câu hỏi -->
+        <!-- Category: same position as Discussion -->
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/chipGroupQuestionCategories"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            app:chipSpacingHorizontal="8dp"
+            app:chipSpacingVertical="4dp"
+            app:singleLine="false" />
+
+        <!-- Title -->
+        <TextView
+            android:id="@+id/tvQuestionTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:ellipsize="end"
+            android:maxLines="2"
+            android:text="Question title"
+            android:textColor="#14264A"
+            android:textSize="17sp"
+            android:textStyle="bold" />
+
+        <!-- Content -->
         <TextView
             android:id="@+id/tvQuestionBody"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="Nội dung chi tiết của câu hỏi sẽ hiển thị ở đây."
-            android:textColor="#475569"
-            android:textSize="14sp"
+            android:ellipsize="end"
             android:lineSpacingExtra="2dp"
             android:maxLines="4"
-            android:ellipsize="end" />
+            android:text="Question content"
+            android:textColor="#667085"
+            android:textSize="14sp" />
 
-        <!-- Danh mục câu hỏi -->
-        <com.google.android.material.chip.ChipGroup
-            android:id="@+id/chipGroupQuestionCategories"
+        <!-- Question image -->
+        <ImageView
+            android:id="@+id/ivQuestionImage"
+            android:layout_width="match_parent"
+            android:layout_height="180dp"
+            android:layout_marginTop="12dp"
+            android:contentDescription="Question image"
+            android:scaleType="centerCrop"
+            android:visibility="gone" />
+
+        <!-- Divider -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginTop="14dp"
+            android:background="#EEF1F6" />
+
+        <!-- Voting and answers -->
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            app:chipSpacingHorizontal="8dp"
-            app:chipSpacingVertical="4dp"
-            app:singleLine="false" />
-
-
-        <!-- Người đăng và thời gian -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
             <TextView
-                android:id="@+id/tvQuestionAuthor"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Người đăng"
-                android:textColor="#64748B"
+                android:id="@+id/tvQuestionUpVote"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center"
+                android:paddingHorizontal="5dp"
+                android:text="UP"
+                android:textColor="#2563EB"
                 android:textSize="12sp"
-                android:maxLines="1"
-                android:ellipsize="end" />
+                android:textStyle="bold" />
 
             <TextView
-                android:id="@+id/tvQuestionDate"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Vừa xong"
+                android:text="|"
                 android:textColor="#94A3B8"
                 android:textSize="12sp" />
 
-        </LinearLayout>
+            <TextView
+                android:id="@+id/tvQuestionDownVote"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center"
+                android:paddingHorizontal="5dp"
+                android:text="DOWN"
+                android:textColor="#DC2626"
+                android:textSize="12sp"
+                android:textStyle="bold" />
 
-        <!-- Vote, câu trả lời và báo cáo -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
-            android:gravity="center_vertical"
-            android:orientation="horizontal">
-
-            <LinearLayout
+            <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:gravity="center_vertical"
-                android:orientation="horizontal">
+                android:text="|"
+                android:textColor="#94A3B8"
+                android:textSize="12sp" />
 
-                <TextView
-                    android:id="@+id/tvQuestionUpVote"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:padding="6dp"
-                    android:text="UP"
-                    android:textColor="#2563EB"
-                    android:textSize="12sp"
-                    android:textStyle="bold" />
+            <TextView
+                android:id="@+id/tvQuestionVoteCount"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:gravity="center"
+                android:paddingHorizontal="6dp"
+                android:text="0 vote"
+                android:textColor="#667085"
+                android:textSize="12sp" />
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="|"
-                    android:textColor="#94A3B8"
-                    android:textSize="12sp" />
-
-                <TextView
-                    android:id="@+id/tvQuestionDownVote"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:padding="6dp"
-                    android:text="DOWN"
-                    android:textColor="#DC2626"
-                    android:textSize="12sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="|"
-                    android:textColor="#94A3B8"
-                    android:textSize="12sp" />
-
-                <TextView
-                    android:id="@+id/tvQuestionVoteCount"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:padding="6dp"
-                    android:text="0 vote"
-                    android:textColor="#475569"
-                    android:textSize="12sp" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="|"
-                    android:textColor="#94A3B8"
-                    android:textSize="12sp" />
-
-            </LinearLayout>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="|"
+                android:textColor="#94A3B8"
+                android:textSize="12sp" />
 
             <TextView
                 android:id="@+id/tvQuestionAnswerCount"
                 android:layout_width="0dp"
-                android:layout_height="wrap_content"
+                android:layout_height="40dp"
                 android:layout_weight="1"
-                android:paddingStart="6dp"
+                android:gravity="center_vertical"
+                android:paddingStart="8dp"
                 android:text="0 câu trả lời"
-                android:textColor="#2563EB"
+                android:textColor="#2457D6"
                 android:textSize="12sp" />
-
-            <!-- Chỉ hiện cho câu hỏi của người khác -->
-            <TextView
-                android:id="@+id/btnReportQuestion"
-                android:layout_width="40dp"
-                android:layout_height="36dp"
-                android:clickable="true"
-                android:contentDescription="Báo cáo câu hỏi"
-                android:focusable="true"
-                android:gravity="center"
-                android:text="⚑"
-                android:textColor="#64748B"
-                android:textSize="22sp" />
 
         </LinearLayout>
 
     </LinearLayout>
 
-</androidx.cardview.widget.CardView>
+</com.google.android.material.card.MaterialCardView>

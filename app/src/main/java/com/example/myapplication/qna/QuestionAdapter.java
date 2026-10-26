@@ -8,22 +8,21 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
-
+import com.example.myapplication.qna.QuestionViewHolder;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
-
+import com.squareup.picasso.Picasso;
 import com.example.myapplication.R;
 import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
-
+import com.squareup.picasso.Picasso;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
-public class QuestionAdapter
-        extends RecyclerView.Adapter<QuestionAdapter.QuestionViewHolder> {
+public class QuestionAdapter extends RecyclerView.Adapter<QuestionViewHolder> {
 
     private final List<Question> questionList = new ArrayList<>();
     private final String currentUserId;
@@ -77,11 +76,44 @@ public class QuestionAdapter
                         : question.getTitle()
         );
 
+        String avatarUrl = question.getAuthorAvatar();
+
+        if (avatarUrl != null && !avatarUrl.trim().isEmpty()) {
+            Picasso.get()
+                    .load(avatarUrl)
+                    .placeholder(R.drawable.ic_account)
+                    .error(R.drawable.ic_account)
+                    .fit()
+                    .centerCrop()
+                    .into(holder.ivAuthorAvatar);
+        } else {
+            Picasso.get().cancelRequest(holder.ivAuthorAvatar);
+            holder.ivAuthorAvatar.setImageResource(R.drawable.ic_account);
+        }
+
         holder.tvContent.setText(
                 question.getContent() == null
                         ? ""
                         : question.getContent()
         );
+
+        String imageUrl = question.getImageUrl();
+
+        if (imageUrl != null && !imageUrl.trim().isEmpty()) {
+            holder.ivQuestionImage.setVisibility(View.VISIBLE);
+
+            Picasso.get()
+                    .load(imageUrl)
+                    .fit()
+                    .centerCrop()
+                    .into(holder.ivQuestionImage);
+
+        } else {
+            holder.ivQuestionImage.setVisibility(View.GONE);
+
+            Picasso.get().cancelRequest(holder.ivQuestionImage);
+            holder.ivQuestionImage.setImageDrawable(null);
+        }
 
         holder.tvAuthor.setText(
                 question.getAuthorName() == null
@@ -211,9 +243,7 @@ public class QuestionAdapter
         });
     }
 
-    private String formatTimeAgo(
-            com.google.firebase.Timestamp timestamp
-    ) {
+    private String formatTimeAgo(com.google.firebase.Timestamp timestamp) {
         if (timestamp == null) {
             return "";
         }
@@ -270,42 +300,5 @@ public class QuestionAdapter
         return questionList.size();
     }
 
-    static class QuestionViewHolder
-            extends RecyclerView.ViewHolder {
 
-        View cardQuestion;
-        TextView tvTitle;
-        TextView tvStatus;
-        TextView btnCloseQuestion;
-        TextView tvContent;
-        TextView tvAuthor;
-        TextView tvDate;
-        TextView tvQuestionUpVote;
-        TextView tvQuestionDownVote;
-        TextView tvVoteCount;
-        TextView tvAnswerCount;
-        TextView btnReportQuestion;
-        ChipGroup chipGroupCategories;
-
-        QuestionViewHolder(@NonNull View itemView) {
-            super(itemView);
-
-            cardQuestion = itemView.findViewById(R.id.cardQuestion);
-            tvTitle = itemView.findViewById(R.id.tvQuestionTitle);
-            tvStatus = itemView.findViewById(R.id.tvQuestionStatus);
-            btnCloseQuestion = itemView.findViewById(R.id.btnCloseQuestion);
-            tvContent = itemView.findViewById(R.id.tvQuestionBody);
-            tvAuthor = itemView.findViewById(R.id.tvQuestionAuthor);
-            tvDate = itemView.findViewById(R.id.tvQuestionDate);
-            tvQuestionUpVote = itemView.findViewById(R.id.tvQuestionUpVote);
-            tvQuestionDownVote = itemView.findViewById(R.id.tvQuestionDownVote);
-            tvVoteCount = itemView.findViewById(R.id.tvQuestionVoteCount);
-            tvAnswerCount = itemView.findViewById(R.id.tvQuestionAnswerCount);
-            btnReportQuestion = itemView.findViewById(R.id.btnReportQuestion);
-
-            chipGroupCategories = itemView.findViewById(
-                    R.id.chipGroupQuestionCategories
-            );
-        }
-    }
 }
