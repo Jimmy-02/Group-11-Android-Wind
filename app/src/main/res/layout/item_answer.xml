@@ -63,6 +63,17 @@
                     android:textSize="11sp" />
 
             </LinearLayout>
+            <TextView
+                android:id="@+id/btnReportAnswer"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:gravity="center"
+                android:text="!"
+                android:textColor="#667085"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Report answer" />
 
         </LinearLayout>
 

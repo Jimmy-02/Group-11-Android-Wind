@@ -13,7 +13,7 @@ import android.util.Log;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.appcompat.app.AppCompatActivity;
-
+import java.util.Collections;
 import com.example.myapplication.R;
 import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
@@ -25,7 +25,7 @@ import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
-
+import com.example.myapplication.qna.report.ReportAnswerActivity;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -33,6 +33,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import android.widget.ImageView;
+import com.squareup.picasso.Picasso;
 
 public class QuestionDetailActivity extends AppCompatActivity {
 
@@ -48,7 +50,7 @@ public class QuestionDetailActivity extends AppCompatActivity {
     private TextView tvDetailVoteCount;
     private TextView tvDetailAnswerCount;
     private TextView tvDetailAnswersEmpty;
-
+    private ImageView ivDetailQuestionImage;
     private ChipGroup chipGroupDetailCategories;
 
     private RecyclerView rvDetailAnswers;
@@ -107,16 +109,12 @@ public class QuestionDetailActivity extends AppCompatActivity {
         tvDetailVoteCount = findViewById(R.id.tvDetailVoteCount);
         tvDetailAnswerCount = findViewById(R.id.tvDetailAnswerCount);
         tvDetailAnswersEmpty = findViewById(R.id.tvDetailAnswersEmpty);
-
-        chipGroupDetailCategories =
-                findViewById(R.id.chipGroupDetailCategories);
-
+        ivDetailQuestionImage = findViewById(R.id.ivDetailQuestionImage);
+        chipGroupDetailCategories = findViewById(R.id.chipGroupDetailCategories);
         rvDetailAnswers = findViewById(R.id.rvDetailAnswers);
         pbDetailAnswers = findViewById(R.id.pbDetailAnswers);
-
         tilDetailAnswer = findViewById(R.id.tilDetailAnswer);
         edtDetailAnswer = findViewById(R.id.edtDetailAnswer);
-
         btnSubmitAnswer = findViewById(R.id.btnSubmitAnswer);
         tvQuestionUpVote = findViewById(R.id.tvQuestionUpVote);
         tvQuestionDownVote = findViewById(R.id.tvQuestionDownVote);
@@ -131,7 +129,8 @@ public class QuestionDetailActivity extends AppCompatActivity {
 
         answerAdapter = new AnswerAdapter(
                 answerList,
-                (answer, value) -> toggleAnswerVote(answer, value)
+                (answer, value) -> toggleAnswerVote(answer, value),
+                answer -> openAnswerReport(answer)
         );
 
         rvDetailAnswers.setAdapter(answerAdapter);
@@ -149,6 +148,46 @@ public class QuestionDetailActivity extends AppCompatActivity {
         );
 
         loadQuestionVoteState();
+    }
+
+    private void openAnswerReport(Answer answer) {
+        if (answer == null
+                || answer.getId() == null
+                || answer.getId().trim().isEmpty()) {
+            Toast.makeText(
+                    this,
+                    "Không tìm thấy câu trả lời cần báo cáo.",
+                    Toast.LENGTH_SHORT
+            ).show();
+            return;
+        }
+
+        Intent intent = new Intent(
+                this,
+                ReportAnswerActivity.class
+        );
+
+        intent.putExtra(
+                ReportAnswerActivity.EXTRA_ANSWER_ID,
+                answer.getId()
+        );
+
+        intent.putExtra(
+                ReportAnswerActivity.EXTRA_CONTENT,
+                answer.getContent()
+        );
+
+        startActivity(intent);
+    }
+
+    private void sortAnswersByVotes() {
+        Collections.sort(
+                answerList,
+                (a, b) -> Long.compare(
+                        b.getVoteCount(),
+                        a.getVoteCount()
+                )
+        );
     }
 
 
@@ -263,6 +302,8 @@ public class QuestionDetailActivity extends AppCompatActivity {
             }
 
             answer.setVoteCount(updatedCount);
+
+            sortAnswersByVotes();
             answerAdapter.setAnswers(answerList);
 
             Toast.makeText(
@@ -488,6 +529,23 @@ public class QuestionDetailActivity extends AppCompatActivity {
                             )
                     );
 
+                    String imageUrl = document.getString("imageUrl");
+
+                    if (imageUrl != null && !imageUrl.trim().isEmpty()) {
+                        ivDetailQuestionImage.setVisibility(View.VISIBLE);
+
+                        Picasso.get()
+                                .load(imageUrl.trim())
+                                .fit()
+                                .centerCrop()
+                                .into(ivDetailQuestionImage);
+
+                    } else {
+                        Picasso.get().cancelRequest(ivDetailQuestionImage);
+                        ivDetailQuestionImage.setImageDrawable(null);
+                        ivDetailQuestionImage.setVisibility(View.GONE);
+                    }
+
                     String status =
                             document.getString("status");
 
@@ -654,6 +712,7 @@ public class QuestionDetailActivity extends AppCompatActivity {
                         answerList.add(answer);
                     }
 
+                    sortAnswersByVotes();
                     answerAdapter.setAnswers(answerList);
 
                     tvDetailAnswerCount.setText(

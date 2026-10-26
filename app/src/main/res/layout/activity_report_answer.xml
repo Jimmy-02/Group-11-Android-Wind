@@ -1,0 +1,245 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#F5F6F8">
+
+    <!-- Status bar spacer -->
+    <View
+        android:id="@+id/status_bar_spacer"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:background="#6750A4" />
+
+    <!-- Header -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:background="#FFFFFF"
+        android:elevation="2dp">
+
+        <ImageButton
+            android:id="@+id/btn_back"
+            android:layout_width="56dp"
+            android:layout_height="match_parent"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_arrow_back"
+            android:contentDescription="Quay lại"
+            android:padding="16dp"
+            android:scaleType="fitCenter"
+            app:tint="#172B4D" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Báo cáo câu trả lời"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="#172B4D"
+            android:gravity="center_vertical"
+            android:paddingStart="4dp" />
+
+    </LinearLayout>
+
+    <!-- Form -->
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="20dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Hãy cho chúng tôi biết vấn đề của câu trả lời này."
+                android:textColor="#718096"
+                android:textSize="14sp" />
+
+            <!-- Answer information -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:background="#FFFFFF"
+                android:orientation="vertical"
+                android:padding="14dp">
+
+                <TextView
+                    android:id="@+id/tv_report_answer_title"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Answer"
+                    android:textColor="#24344D"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tv_report_answer_content"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="Answer content"
+                    android:textColor="#718096"
+                    android:textSize="14sp"
+                    android:maxLines="5"
+                    android:ellipsize="end" />
+
+            </LinearLayout>
+
+            <!-- Report reason -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="22dp"
+                android:text="Lý do báo cáo *"
+                android:textColor="#24344D"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <RadioGroup
+                android:id="@+id/rg_report_reason"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:background="#FFFFFF"
+                android:orientation="vertical"
+                android:padding="12dp">
+
+                <RadioButton
+                    android:id="@+id/rb_harassment"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:paddingVertical="5dp"
+                    android:text="Quấy rối, xúc phạm hoặc công kích người khác"
+                    android:textColor="#24344D"
+                    android:textSize="14sp" />
+
+                <RadioButton
+                    android:id="@+id/rb_misinformation"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:paddingVertical="5dp"
+                    android:text="Thông tin sai lệch hoặc gây hiểu lầm"
+                    android:textColor="#24344D"
+                    android:textSize="14sp" />
+
+                <RadioButton
+                    android:id="@+id/rb_spam"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:paddingVertical="5dp"
+                    android:text="Spam hoặc quảng cáo không phù hợp"
+                    android:textColor="#24344D"
+                    android:textSize="14sp" />
+
+                <RadioButton
+                    android:id="@+id/rb_inappropriate"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:paddingVertical="5dp"
+                    android:text="Nội dung phản cảm hoặc không phù hợp"
+                    android:textColor="#24344D"
+                    android:textSize="14sp" />
+
+                <RadioButton
+                    android:id="@+id/rb_off_topic"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:paddingVertical="5dp"
+                    android:text="Nội dung không liên quan đến cộng đồng khoa học"
+                    android:textColor="#24344D"
+                    android:textSize="14sp" />
+
+                <RadioButton
+                    android:id="@+id/rb_copyright"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:paddingVertical="5dp"
+                    android:text="Vi phạm bản quyền"
+                    android:textColor="#24344D"
+                    android:textSize="14sp" />
+
+                <RadioButton
+                    android:id="@+id/rb_privacy"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:paddingVertical="5dp"
+                    android:text="Tiết lộ thông tin cá nhân của người khác"
+                    android:textColor="#24344D"
+                    android:textSize="14sp" />
+
+                <RadioButton
+                    android:id="@+id/rb_other"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:paddingVertical="5dp"
+                    android:text="Lý do khác"
+                    android:textColor="#24344D"
+                    android:textSize="14sp" />
+
+            </RadioGroup>
+
+            <!-- Additional details -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="18dp"
+                android:text="Mô tả thêm (không bắt buộc)"
+                android:textColor="#24344D"
+                android:textSize="15sp"
+                android:textStyle="bold" />
+
+            <EditText
+                android:id="@+id/et_report_details"
+                android:layout_width="match_parent"
+                android:layout_height="120dp"
+                android:layout_marginTop="8dp"
+                android:background="#FFFFFF"
+                android:gravity="top|start"
+                android:hint="Mô tả vấn đề bạn nhận thấy..."
+                android:inputType="textCapSentences|textMultiLine"
+                android:maxLength="500"
+                android:padding="12dp"
+                android:textColor="#24344D"
+                android:textColorHint="#8290A3"
+                android:textSize="14sp" />
+
+            <!-- Submit -->
+            <Button
+                android:id="@+id/btn_submit_report"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:layout_marginTop="22dp"
+                android:text="Gửi báo cáo"
+                android:textAllCaps="false"
+                android:textSize="15sp" />
+
+            <!-- Cancel -->
+            <Button
+                android:id="@+id/btn_cancel_report"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="20dp"
+                android:backgroundTint="#E8EDF3"
+                android:text="Hủy"
+                android:textAllCaps="false"
+                android:textColor="#24344D"
+                android:textSize="15sp" />
+
+        </LinearLayout>
+    </ScrollView>
+
+</LinearLayout>

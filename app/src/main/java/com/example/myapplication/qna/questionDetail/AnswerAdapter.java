@@ -28,13 +28,15 @@ public class AnswerAdapter extends RecyclerView.Adapter<AnswerViewHolder> {
 
     public AnswerAdapter(
             List<Answer> answers,
-            OnAnswerVoteListener voteListener
+            OnAnswerVoteListener voteListener,
+            OnAnswerReportListener reportListener
     ) {
         if (answers != null) {
             answerList.addAll(answers);
         }
 
         this.voteListener = voteListener;
+        this.reportListener = reportListener;
     }
 
     @NonNull
@@ -110,6 +112,11 @@ public class AnswerAdapter extends RecyclerView.Adapter<AnswerViewHolder> {
                 voteListener.onVoteClick(answer, -1);
             }
         });
+        holder.btnReportAnswer.setOnClickListener(v -> {
+            if (reportListener != null) {
+                reportListener.onReportClick(answer);
+            }
+        });
     }
 
     private String formatDate(
@@ -136,6 +143,11 @@ public class AnswerAdapter extends RecyclerView.Adapter<AnswerViewHolder> {
 
         notifyDataSetChanged();
     }
+    public interface OnAnswerReportListener {
+        void onReportClick(Answer answer);
+    }
+
+    private final OnAnswerReportListener reportListener;
 
     @Override
     public int getItemCount() {
