@@ -5,6 +5,7 @@ import android.net.ConnectivityManager;
 import android.net.Network;
 import android.net.NetworkCapabilities;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageButton;
@@ -20,22 +21,19 @@ import androidx.core.view.WindowInsetsCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
 
 import com.example.myapplication.R;
+import com.example.myapplication.data.local.OfflinePdfManager;
 import com.github.barteksc.pdfviewer.PDFView;
 
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.InputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 public class PdfReaderActivity extends AppCompatActivity {
+
+    private static final String TAG = "PdfReaderActivity";
 
     private PDFView pdfViewer;
     private ProgressBar progressPdf;
     private TextView tvPdfTitle;
-    private ExecutorService executorService;
+    private OfflinePdfManager offlinePdfManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -52,13 +50,10 @@ public class PdfReaderActivity extends AppCompatActivity {
 
         ViewCompat.setOnApplyWindowInsetsListener(root, (v, windowInsets) -> {
             Insets bars = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout());
-
             ViewGroup.LayoutParams params = statusBarSpacer.getLayoutParams();
             params.height = bars.top;
             statusBarSpacer.setLayoutParams(params);
-
             v.setPadding(bars.left, 0, bars.right, bars.bottom);
-
             return WindowInsetsCompat.CONSUMED;
         });
 
@@ -66,10 +61,12 @@ public class PdfReaderActivity extends AppCompatActivity {
         pdfViewer = findViewById(R.id.pdf_viewer);
         progressPdf = findViewById(R.id.progress_pdf);
         tvPdfTitle = findViewById(R.id.tv_pdf_title);
-        executorService = Executors.newSingleThreadExecutor();
+
+        offlinePdfManager = new OfflinePdfManager(this);
 
         btnBack.setOnClickListener(v -> finish());
 
+        String articleId = getIntent().getStringExtra("articleId");
         String pdfUrl = getIntent().getStringExtra("contentUrl");
         String articleTitle = getIntent().getStringExtra("articleTitle");
 
@@ -77,17 +74,56 @@ public class PdfReaderActivity extends AppCompatActivity {
             tvPdfTitle.setText(articleTitle);
         }
 
+        if (articleId == null || articleId.trim().isEmpty()) {
+            showError("Không xác định được bài báo. Vui lòng mở lại từ trang chi tiết.");
+            return;
+        }
+
         if (pdfUrl == null || pdfUrl.trim().isEmpty()) {
             showError("Không tìm thấy đường dẫn PDF.");
             return;
         }
 
-        if (!isNetworkAvailable()) {
-            showError("Thiết bị không có kết nối mạng. Vui lòng kiểm tra Wi-Fi hoặc dữ liệu di động.");
+        openArticlePdf(articleId, pdfUrl);
+    }
+
+    private void openArticlePdf(String articleId, String pdfUrl) {
+        File offlineFile = offlinePdfManager.getOfflinePdf(articleId);
+
+        if (offlineFile != null) {
+            Log.d(TAG, "Opening offline PDF: " + offlineFile.getAbsolutePath());
+            displayPdf(offlineFile);
             return;
         }
 
-        loadPdf(pdfUrl);
+        if (!isNetworkAvailable()) {
+            showError("Bài báo này chưa được lưu để đọc offline. Vui lòng kết nối Internet và bấm Read Article trước.");
+            return;
+        }
+
+        progressPdf.setVisibility(View.VISIBLE);
+
+        offlinePdfManager.downloadPdf(articleId, pdfUrl, new OfflinePdfManager.PdfCallback() {
+            @Override
+            public void onSuccess(File pdfFile) {
+                if (isFinishing() || isDestroyed()) {
+                    return;
+                }
+
+                Log.d(TAG, "PDF downloaded and saved: " + pdfFile.getAbsolutePath());
+                displayPdf(pdfFile);
+            }
+
+            @Override
+            public void onError(Exception exception) {
+                if (isFinishing() || isDestroyed()) {
+                    return;
+                }
+
+                Log.e(TAG, "Failed to download PDF", exception);
+                showError("Không thể tải bài báo. Vui lòng kiểm tra đường dẫn PDF và kết nối mạng.");
+            }
+        });
     }
 
     private boolean isNetworkAvailable() {
@@ -105,92 +141,31 @@ public class PdfReaderActivity extends AppCompatActivity {
 
         NetworkCapabilities capabilities = manager.getNetworkCapabilities(network);
 
-        return capabilities != null && capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET);
+        return capabilities != null
+                && capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                && capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED);
     }
 
-    private void loadPdf(String pdfUrl) {
-        progressPdf.setVisibility(View.VISIBLE);
+    private void displayPdf(File pdfFile) {
+        if (isFinishing() || isDestroyed()) {
+            return;
+        }
 
-        executorService.execute(() -> {
-            HttpURLConnection connection = null;
-            File pdfFile = null;
+        progressPdf.setVisibility(View.GONE);
 
-            try {
-                URL url = new URL(pdfUrl);
-                connection = (HttpURLConnection) url.openConnection();
-                connection.setConnectTimeout(15000);
-                connection.setReadTimeout(30000);
-                connection.setRequestMethod("GET");
-                connection.connect();
+        pdfViewer.fromFile(pdfFile)
+                .enableSwipe(true)
+                .swipeHorizontal(false)
+                .enableDoubletap(true)
+                .defaultPage(0)
+                .onError(error -> {
+                    Log.e(TAG, "Unable to render PDF", error);
 
-                int responseCode = connection.getResponseCode();
-
-                if (responseCode != HttpURLConnection.HTTP_OK) {
-                    throw new Exception("Máy chủ trả về mã HTTP " + responseCode);
-                }
-
-                pdfFile = File.createTempFile("article_", ".pdf", getCacheDir());
-
-                try (InputStream inputStream = connection.getInputStream();
-                     FileOutputStream outputStream = new FileOutputStream(pdfFile)) {
-
-                    byte[] buffer = new byte[8192];
-                    int bytesRead;
-
-                    while ((bytesRead = inputStream.read(buffer)) != -1) {
-                        outputStream.write(buffer, 0, bytesRead);
-                    }
-                }
-
-                if (pdfFile.length() == 0) {
-                    throw new Exception("Tệp PDF rỗng.");
-                }
-
-                File finalPdfFile = pdfFile;
-
-                runOnUiThread(() -> {
                     if (!isFinishing() && !isDestroyed()) {
-                        progressPdf.setVisibility(View.GONE);
-
-                        pdfViewer.fromFile(finalPdfFile)
-                                .enableSwipe(true)
-                                .swipeHorizontal(false)
-                                .enableDoubletap(true)
-                                .defaultPage(0)
-                                .onError(error -> {
-                                    if (!isFinishing() && !isDestroyed()) {
-                                        showError("Không thể đọc tệp PDF này.");
-                                    }
-                                })
-                                .load();
+                        showError("Không thể đọc tệp PDF này.");
                     }
-                });
-
-            } catch (java.net.SocketTimeoutException e) {
-                showErrorOnUiThread("Kết nối quá lâu. Vui lòng thử lại.");
-
-            } catch (java.net.UnknownHostException e) {
-                showErrorOnUiThread("Không thể kết nối máy chủ. Hãy kiểm tra mạng Internet.");
-
-            } catch (Exception e) {
-                android.util.Log.e("PdfReaderActivity", "Failed to load PDF", e);
-                showErrorOnUiThread("Không thể tải bài báo. Vui lòng thử lại.");
-
-            } finally {
-                if (connection != null) {
-                    connection.disconnect();
-                }
-            }
-        });
-    }
-
-    private void showErrorOnUiThread(String message) {
-        runOnUiThread(() -> {
-            if (!isFinishing() && !isDestroyed()) {
-                progressPdf.setVisibility(View.GONE);
-                showError(message);
-            }
-        });
+                })
+                .load();
     }
 
     private void showError(String message) {
@@ -200,10 +175,14 @@ public class PdfReaderActivity extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
-        super.onDestroy();
-
-        if (executorService != null) {
-            executorService.shutdownNow();
+        if (pdfViewer != null) {
+            pdfViewer.recycle();
         }
+
+        if (offlinePdfManager != null) {
+            offlinePdfManager.shutdown();
+        }
+
+        super.onDestroy();
     }
 }

@@ -12,6 +12,7 @@ public class Article {
     private String imageUrl;
     private String sourceUrl;
     private String contentUrl;
+    private String status;
     private long createdAt;
 
     public Article() {
@@ -69,6 +70,13 @@ public class Article {
 
     public void setInstitution(String institution) {
         this.institution = institution;
+    }
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
     }
 
     public String getDigitalObjectIdentifier() {

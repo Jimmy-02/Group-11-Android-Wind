@@ -172,6 +172,44 @@
                 android:textColor="#2457A7"
                 android:textIsSelectable="true" />
 
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="Source URL"
+                android:textSize="13sp"
+                android:textColor="#718096" />
+
+            <TextView
+                android:id="@+id/tv_detail_source_url"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="Not provided"
+                android:textSize="14sp"
+                android:textColor="#2457A7"
+                android:textIsSelectable="true"
+                android:breakStrategy="simple" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="Article Content URL"
+                android:textSize="13sp"
+                android:textColor="#718096" />
+
+            <TextView
+                android:id="@+id/tv_detail_content_url"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="Not provided"
+                android:textSize="14sp"
+                android:textColor="#2457A7"
+                android:textIsSelectable="true"
+                android:breakStrategy="simple" />
+
             <!-- Article Created Date -->
             <TextView
                 android:layout_width="match_parent"
