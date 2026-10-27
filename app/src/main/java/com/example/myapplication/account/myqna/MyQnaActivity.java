@@ -41,6 +41,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import android.view.ViewGroup;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
 
 public class MyQnaActivity extends AppCompatActivity {
 
@@ -67,7 +73,40 @@ public class MyQnaActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
         setContentView(R.layout.activity_my_qna);
+        WindowInsetsControllerCompat insetsController =
+                WindowCompat.getInsetsController(
+                        getWindow(),
+                        getWindow().getDecorView()
+                );
+
+        insetsController.setAppearanceLightStatusBars(false);
+
+        View root = findViewById(R.id.root);
+        View statusBarSpacer = findViewById(R.id.status_bar_spacer);
+
+        ViewCompat.setOnApplyWindowInsetsListener(root, (v, windowInsets) -> {
+            Insets bars = windowInsets.getInsets(
+                    WindowInsetsCompat.Type.systemBars()
+                            | WindowInsetsCompat.Type.displayCutout()
+            );
+
+            ViewGroup.LayoutParams params =
+                    statusBarSpacer.getLayoutParams();
+
+            params.height = bars.top;
+            statusBarSpacer.setLayoutParams(params);
+
+            v.setPadding(
+                    bars.left,
+                    0,
+                    bars.right,
+                    bars.bottom
+            );
+
+            return WindowInsetsCompat.CONSUMED;
+        });
 
         progressBar = findViewById(R.id.pbMyQna);
         tvSummary = findViewById(R.id.tvMyQnaSummary);
@@ -338,18 +377,21 @@ public class MyQnaActivity extends AppCompatActivity {
                     for (DocumentSnapshot doc :
                             snapshot.getDocuments()) {
 
-                        String questionId =
-                                doc.getString("questionId");
+                        String status = doc.getString("status");
+
+                        if ("DELETE".equalsIgnoreCase(status)
+                                || "DELETED".equalsIgnoreCase(status)
+                                || doc.get("deletedAt") != null) {
+                            continue;
+                        }
+
+                        String questionId = doc.getString("questionId");
 
                         if (questionId != null) {
                             Integer oldCount =
                                     answerCounts.get(questionId);
 
-                            answerCounts.put(
-                                    questionId,
-                                    oldCount == null ? 1 : oldCount + 1
-                            );
-                        }
+                            answerCounts.put(questionId, oldCount == null ? 1 : oldCount + 1);}
 
                         String ownerId = readFirstString(
                                 doc,

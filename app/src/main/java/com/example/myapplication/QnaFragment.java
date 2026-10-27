@@ -713,6 +713,14 @@ public class QnaFragment extends Fragment {
                     for (DocumentSnapshot doc :
                             snapshot.getDocuments()) {
 
+                        String status = doc.getString("status");
+
+                        if ("DELETE".equalsIgnoreCase(status)
+                                || "DELETED".equalsIgnoreCase(status)
+                                || doc.get("deletedAt") != null) {
+                            continue;
+                        }
+
                         String questionId =
                                 readFirstString(
                                         doc,

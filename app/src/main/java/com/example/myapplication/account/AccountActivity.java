@@ -385,8 +385,24 @@ public class AccountActivity extends Fragment {
 
                     if (snapshot == null) return;
 
+                    int activeAnswerCount = 0;
+
+                    for (com.google.firebase.firestore.DocumentSnapshot document
+                            : snapshot.getDocuments()) {
+
+                        String status = document.getString("status");
+
+                        if ("DELETE".equalsIgnoreCase(status)
+                                || "DELETED".equalsIgnoreCase(status)
+                                || document.get("deletedAt") != null) {
+                            continue;
+                        }
+
+                        activeAnswerCount++;
+                    }
+
                     tvAnswerCount.setText(
-                            snapshot.size() + " câu trả lời"
+                            activeAnswerCount + " câu trả lời"
                     );
                 });
     }
