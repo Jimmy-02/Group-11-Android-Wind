@@ -3,7 +3,6 @@ package com.example.myapplication.articles.search;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -19,13 +18,21 @@ import java.util.List;
 
 public class SearchResultsAdapter extends RecyclerView.Adapter<SearchResultsAdapter.ArticleViewHolder> {
 
+    public interface OnArticleClickListener {
+        void onArticleClick(Article article);
+    }
+
     private final List<Article> articles = new ArrayList<>();
+    private final OnArticleClickListener listener;
+
+    public SearchResultsAdapter(OnArticleClickListener listener) {
+        this.listener = listener;
+    }
 
     @NonNull
     @Override
     public ArticleViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_article, parent, false);
-
         return new ArticleViewHolder(view);
     }
 
@@ -49,7 +56,6 @@ public class SearchResultsAdapter extends RecyclerView.Adapter<SearchResultsAdap
             if (metadata.length() > 0) {
                 metadata.append(" · ");
             }
-
             metadata.append("DOI: ").append(doi.trim());
         }
 
@@ -62,19 +68,14 @@ public class SearchResultsAdapter extends RecyclerView.Adapter<SearchResultsAdap
         String imageUrl = article.getImageUrl();
 
         if (imageUrl != null && !imageUrl.trim().isEmpty()) {
-            Picasso.get()
-                    .load(imageUrl)
-                    .placeholder(android.R.drawable.ic_menu_gallery)
-                    .error(android.R.drawable.ic_menu_gallery)
-                    .fit()
-                    .centerCrop()
-                    .into(holder.coverView);
+            Picasso.get().load(imageUrl).placeholder(android.R.drawable.ic_menu_gallery).error(android.R.drawable.ic_menu_gallery).fit().centerCrop().into(holder.coverView);
         } else {
             Picasso.get().cancelRequest(holder.coverView);
             holder.coverView.setImageResource(android.R.drawable.ic_menu_gallery);
         }
 
         holder.reportButton.setVisibility(View.GONE);
+        holder.itemView.setOnClickListener(v -> listener.onArticleClick(article));
     }
 
     @Override
@@ -95,11 +96,10 @@ public class SearchResultsAdapter extends RecyclerView.Adapter<SearchResultsAdap
         private final TextView authorView;
         private final TextView metadataView;
         private final TextView categoryView;
-        private final ImageButton reportButton;
+        private final TextView reportButton;
 
         ArticleViewHolder(@NonNull View itemView) {
             super(itemView);
-
             coverView = itemView.findViewById(R.id.iv_article_cover);
             titleView = itemView.findViewById(R.id.tv_article_title);
             authorView = itemView.findViewById(R.id.tv_article_author);

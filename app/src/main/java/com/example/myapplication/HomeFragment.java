@@ -19,15 +19,16 @@ import com.example.myapplication.articles.ArticleRepository;
 import com.example.myapplication.articles.articlesDetail.ArticleDetailActivity;
 import com.example.myapplication.articles.reports.ReportArticleActivity;
 import com.example.myapplication.articles.creation.CreateArticleActivity;
-import java.util.ArrayList;
+import com.google.firebase.firestore.ListenerRegistration;
+
 import java.util.List;
 
 public class HomeFragment extends Fragment {
 
     private RecyclerView articleList;
     private ArticleAdapter articleAdapter;
-
     private ArticleRepository repository;
+    private ListenerRegistration articleListener;
 
     public HomeFragment() {
 
@@ -63,11 +64,9 @@ public class HomeFragment extends Fragment {
                 },
                 article -> {
                     Intent intent = new Intent(requireContext(), ReportArticleActivity.class);
-
                     intent.putExtra("articleId", article.getId());
                     intent.putExtra("title", article.getTitle());
                     intent.putExtra("authorName", article.getAuthorName());
-
                     startActivity(intent);
                 },
                 categoryId -> loadArticles(categoryId),
@@ -75,7 +74,6 @@ public class HomeFragment extends Fragment {
                     Intent intent = new Intent(requireContext(), CreateArticleActivity.class);
                     startActivity(intent);
                 }
-
         );
 
         articleList.setLayoutManager(new LinearLayoutManager(requireContext()));
@@ -89,10 +87,19 @@ public class HomeFragment extends Fragment {
     private void loadArticles(String categoryId) {
         // Không ẩn articleList: header (search + chip category) nằm trong RecyclerView,
         // ẩn đi thì người dùng không đổi category được nữa.
-        ArticleRepository.OnArticlesLoadedListener listener = new ArticleRepository.OnArticlesLoadedListener() {
+        if (!isAdded() || repository == null || articleAdapter == null) {
+            return;
+        }
+
+        if (articleListener != null) {
+            articleListener.remove();
+            articleListener = null;
+        }
+
+        articleListener = repository.listenApprovedArticles(categoryId, new ArticleRepository.OnArticlesLoadedListener() {
             @Override
             public void onSuccess(List<Article> articles) {
-                if (!isAdded()) {
+                if (!isAdded() || articleAdapter == null) {
                     return;
                 }
 
@@ -108,15 +115,20 @@ public class HomeFragment extends Fragment {
 
                 android.util.Log.e("HomeFragment", "Failed to load articles", exception);
                 Toast.makeText(requireContext(), "Unable to load articles.", Toast.LENGTH_SHORT).show();
-
-                articleAdapter.setArticles(new ArrayList<>());
             }
-        };
+        });
+    }
 
-        if (categoryId == null) {
-            repository.getLatestArticles(listener);
-        } else {
-            repository.getArticlesByCategory(categoryId, listener);
+    @Override
+    public void onDestroyView() {
+        if (articleListener != null) {
+            articleListener.remove();
+            articleListener = null;
         }
+
+        articleList = null;
+        articleAdapter = null;
+
+        super.onDestroyView();
     }
 }
