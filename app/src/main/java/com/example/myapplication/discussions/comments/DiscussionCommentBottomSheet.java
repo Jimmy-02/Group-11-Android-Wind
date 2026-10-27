@@ -203,7 +203,7 @@ public class DiscussionCommentBottomSheet extends BottomSheetDialogFragment {
 
         if (imageUrl != null && !imageUrl.trim().isEmpty()) {
             imgDiscussion.setVisibility(View.VISIBLE);
-            Picasso.get().load(imageUrl).fit().centerCrop().into(imgDiscussion);
+            Picasso.get().load(imageUrl.trim()).fit().centerCrop().into(imgDiscussion);
         } else {
             imgDiscussion.setVisibility(View.GONE);
         }

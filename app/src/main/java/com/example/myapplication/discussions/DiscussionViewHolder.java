@@ -60,7 +60,7 @@ public class DiscussionViewHolder extends RecyclerView.ViewHolder {
         String imageUrl = discussion.getImageUrl();
         if (imageUrl != null && !imageUrl.trim().isEmpty()) {
             ivDiscussionImage.setVisibility(View.VISIBLE);
-            Picasso.get().load(imageUrl).fit().centerCrop().into(ivDiscussionImage);
+            Picasso.get().load(imageUrl.trim()).fit().centerCrop().into(ivDiscussionImage);
         } else {
             ivDiscussionImage.setVisibility(View.GONE);
             Picasso.get().cancelRequest(ivDiscussionImage);
@@ -72,15 +72,42 @@ public class DiscussionViewHolder extends RecyclerView.ViewHolder {
 
     private void bindAuthor(Discussion discussion) {
         String authorName = discussion.getAuthorName();
-        tvAuthorName.setText(authorName != null && !authorName.trim().isEmpty() ? authorName : "User");
+        tvAuthorName.setText(authorName != null && !authorName.trim().isEmpty() ? authorName.trim() : "User");
 
         String avatarUrl = discussion.getAuthorAvatar();
 
         if (avatarUrl != null && !avatarUrl.trim().isEmpty()) {
-            Picasso.get().load(avatarUrl).placeholder(R.drawable.ic_account).error(R.drawable.ic_account).fit().centerCrop().into(ivAuthorAvatar);
+            Picasso.get().load(avatarUrl.trim()).placeholder(R.drawable.ic_account).error(R.drawable.ic_account).fit().centerCrop().into(ivAuthorAvatar);
         } else {
             Picasso.get().cancelRequest(ivAuthorAvatar);
             ivAuthorAvatar.setImageResource(R.drawable.ic_account);
+        }
+
+        if ((authorName == null || authorName.trim().isEmpty() || avatarUrl == null || avatarUrl.trim().isEmpty())
+                && discussion.getUserId() != null && !discussion.getUserId().trim().isEmpty()) {
+            com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                    .collection("users")
+                    .document(discussion.getUserId())
+                    .get()
+                    .addOnSuccessListener(uDoc -> {
+                        if (uDoc.exists()) {
+                            String uName = uDoc.getString("fullName");
+                            if (uName == null || uName.trim().isEmpty()) uName = uDoc.getString("username");
+                            if (uName != null && !uName.trim().isEmpty() && "User".equals(tvAuthorName.getText().toString())) {
+                                tvAuthorName.setText(uName.trim());
+                            }
+                            String uAvatar = uDoc.getString("avatar");
+                            if (uAvatar != null && !uAvatar.trim().isEmpty() && (avatarUrl == null || avatarUrl.trim().isEmpty())) {
+                                Picasso.get()
+                                        .load(uAvatar.trim())
+                                        .placeholder(R.drawable.ic_account)
+                                        .error(R.drawable.ic_account)
+                                        .fit()
+                                        .centerCrop()
+                                        .into(ivAuthorAvatar);
+                            }
+                        }
+                    });
         }
     }
 

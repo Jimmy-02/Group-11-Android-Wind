@@ -379,6 +379,7 @@ public class AdminArticlesFragment extends Fragment
                 String title = aDoc.exists() ? aDoc.getString("title") : "Bài báo khoa học";
                 String author = aDoc.exists() ? aDoc.getString("authorName") : "Tác giả";
                 String category = aDoc.exists() ? aDoc.getString("category") : "Khoa học";
+                String imgUrl = aDoc.exists() ? aDoc.getString("imageUrl") : null;
 
                 AdminReportItem item = new AdminReportItem(
                         reports.get(0).getId(),
@@ -391,9 +392,10 @@ public class AdminArticlesFragment extends Fragment
                         reports.size(),
                         "Vừa xong",
                         author,
-                        null,
+                        imgUrl,
                         Arrays.asList(category != null ? category : "Khoa học", "Bài báo")
                 );
+                item.setImageUrl(imgUrl);
 
                 allReportItems.add(item);
                 if (currentTab == 1) applyFilterAndSearch();
@@ -695,6 +697,7 @@ public class AdminArticlesFragment extends Fragment
         intent.putExtra(AdminReportDetailActivity.EXTRA_REPORT_COUNT, item.getReportCount());
         intent.putExtra(AdminReportDetailActivity.EXTRA_AUTHOR_NAME, item.getAuthorName());
         intent.putExtra(AdminReportDetailActivity.EXTRA_AUTHOR_AVATAR, item.getAuthorAvatar());
+        intent.putExtra(AdminReportDetailActivity.EXTRA_IMAGE_URL, item.getImageUrl());
         intent.putExtra(AdminReportDetailActivity.EXTRA_POST_TIME, item.getTimeAgo());
         if (item.getTags() != null && !item.getTags().isEmpty()) {
             intent.putExtra(AdminReportDetailActivity.EXTRA_TAG, item.getTags().get(0));
