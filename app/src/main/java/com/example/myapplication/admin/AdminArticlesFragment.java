@@ -712,6 +712,14 @@ public class AdminArticlesFragment extends Fragment
     }
 
     @Override
+    public void onHiddenChanged(boolean hidden) {
+        super.onHiddenChanged(hidden);
+        if (!hidden && isAdded()) {
+            applyFilterAndSearch();
+        }
+    }
+
+    @Override
     public void onDestroyView() {
         super.onDestroyView();
         if (articlesListener != null) {

@@ -110,6 +110,14 @@ public class DiscussionFragment extends Fragment implements DiscussionAdapter.On
     }
 
     @Override
+    public void onHiddenChanged(boolean hidden) {
+        super.onHiddenChanged(hidden);
+        if (!hidden && isAdded() && discussionRepository != null) {
+            loadDiscussions();
+        }
+    }
+
+    @Override
     public void onResume() {
         super.onResume();
         if (isAdded() && discussionRepository != null) {

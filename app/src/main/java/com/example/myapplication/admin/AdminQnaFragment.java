@@ -24,6 +24,7 @@ import com.example.myapplication.admin.models.AdminReportItem;
 import com.google.android.material.tabs.TabLayout;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.ListenerRegistration;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -45,6 +46,8 @@ public class AdminQnaFragment extends Fragment {
     private AdminReportAdapter adapter;
     private final List<AdminReportItem> allQuestionItems = new ArrayList<>();
     private final List<AdminReportItem> allAnswerItems = new ArrayList<>();
+    private ListenerRegistration questionReportsListener;
+    private ListenerRegistration answerReportsListener;
 
     private int currentTab = 0; // 0: Câu hỏi, 1: Câu trả lời
     private String currentFilter = "ALL"; // ALL, PENDING, REPORTED_CONTENT_DELETED, DISMISSED
@@ -63,6 +66,12 @@ public class AdminQnaFragment extends Fragment {
         loadFirestoreReports();
 
         return view;
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        loadFirestoreReports();
     }
 
     private void initViews(View view) {
@@ -184,37 +193,51 @@ public class AdminQnaFragment extends Fragment {
     }
 
     private void loadFirestoreReports() {
-        pbLoading.setVisibility(View.VISIBLE);
+        if (questionReportsListener != null) {
+            questionReportsListener.remove();
+            questionReportsListener = null;
+        }
+        if (answerReportsListener != null) {
+            answerReportsListener.remove();
+            answerReportsListener = null;
+        }
 
+        pbLoading.setVisibility(View.VISIBLE);
         FirebaseFirestore db = FirebaseFirestore.getInstance();
 
-        // 1. Tải báo cáo Câu hỏi (questionReports)
-        db.collection("questionReports").get().addOnCompleteListener(task -> {
-            if (isAdded()) {
-                if (task.isSuccessful() && task.getResult() != null && !task.getResult().isEmpty()) {
-                    groupQuestionReports(task.getResult().getDocuments());
-                } else {
-                    createMockQuestions();
-                }
+        // 1. Tải báo cáo Câu hỏi (questionReports) realtime
+        questionReportsListener = db.collection("questionReports")
+                .addSnapshotListener((snapshots, error) -> {
+                    if (!isAdded()) return;
+                    if (error != null || snapshots == null || snapshots.isEmpty()) {
+                        if (allQuestionItems.isEmpty()) {
+                            createMockQuestions();
+                        }
+                        if (currentTab == 0) {
+                            pbLoading.setVisibility(View.GONE);
+                            applyFilterAndSearch();
+                        }
+                        return;
+                    }
+                    groupQuestionReports(snapshots.getDocuments());
+                });
 
-                // 2. Tải báo cáo Câu trả lời (answerReports)
-                loadAnswerReports(db);
-            }
-        });
-    }
-
-    private void loadAnswerReports(FirebaseFirestore db) {
-        db.collection("answerReports").get().addOnCompleteListener(task -> {
-            if (isAdded()) {
-                pbLoading.setVisibility(View.GONE);
-                if (task.isSuccessful() && task.getResult() != null && !task.getResult().isEmpty()) {
-                    groupAnswerReports(task.getResult().getDocuments());
-                } else {
-                    createMockAnswers();
-                }
-                applyFilterAndSearch();
-            }
-        });
+        // 2. Tải báo cáo Câu trả lời (answerReports) realtime
+        answerReportsListener = db.collection("answerReports")
+                .addSnapshotListener((snapshots, error) -> {
+                    if (!isAdded()) return;
+                    if (error != null || snapshots == null || snapshots.isEmpty()) {
+                        if (allAnswerItems.isEmpty()) {
+                            createMockAnswers();
+                        }
+                        if (currentTab == 1) {
+                            pbLoading.setVisibility(View.GONE);
+                            applyFilterAndSearch();
+                        }
+                        return;
+                    }
+                    groupAnswerReports(snapshots.getDocuments());
+                });
     }
 
     private void groupQuestionReports(List<DocumentSnapshot> docs) {
@@ -227,14 +250,18 @@ public class AdminQnaFragment extends Fragment {
             map.get(qId).add(doc);
         }
 
+        if (map.isEmpty()) {
+            if (currentTab == 0) {
+                pbLoading.setVisibility(View.GONE);
+                applyFilterAndSearch();
+            }
+            return;
+        }
+
         FirebaseFirestore db = FirebaseFirestore.getInstance();
         for (Map.Entry<String, List<DocumentSnapshot>> entry : map.entrySet()) {
             String questionId = entry.getKey();
             List<DocumentSnapshot> reports = entry.getValue();
-            String latestStatus = reports.get(0).getString("status");
-            if (latestStatus == null || latestStatus.isEmpty()) latestStatus = "PENDING";
-
-            final String statusToUse = latestStatus;
             db.collection("questions").document(questionId).get().addOnSuccessListener(qDoc -> {
                 if (!isAdded()) return;
                 String title = qDoc.exists() ? qDoc.getString("title") : "Câu hỏi vi phạm";
@@ -243,6 +270,37 @@ public class AdminQnaFragment extends Fragment {
                 String authorAvatar = qDoc.exists() ? qDoc.getString("authorAvatar") : null;
                 String imageUrl = qDoc.exists() ? qDoc.getString("imageUrl") : null;
                 String userId = qDoc.exists() ? qDoc.getString("userId") : null;
+                String qStatus = qDoc.exists() ? qDoc.getString("status") : null;
+
+                String statusToUse;
+                if ("DELETED".equalsIgnoreCase(qStatus) || (qDoc.exists() && qDoc.get("deletedAt") != null)) {
+                    statusToUse = "REPORTED_CONTENT_DELETED";
+                } else {
+                    boolean hasPending = false;
+                    boolean hasDeleted = false;
+                    boolean allDismissed = true;
+                    for (DocumentSnapshot rDoc : reports) {
+                        String s = rDoc.getString("status");
+                        if ("PENDING".equalsIgnoreCase(s) || s == null || s.isEmpty()) {
+                            hasPending = true;
+                            allDismissed = false;
+                        } else if ("REPORTED_CONTENT_DELETED".equalsIgnoreCase(s)) {
+                            hasDeleted = true;
+                            allDismissed = false;
+                        } else if (!"DISMISSED".equalsIgnoreCase(s)) {
+                            allDismissed = false;
+                        }
+                    }
+                    if (hasPending) {
+                        statusToUse = "PENDING";
+                    } else if (hasDeleted) {
+                        statusToUse = "REPORTED_CONTENT_DELETED";
+                    } else if (allDismissed && !reports.isEmpty()) {
+                        statusToUse = "DISMISSED";
+                    } else {
+                        statusToUse = "PENDING";
+                    }
+                }
 
                 AdminReportItem item = new AdminReportItem(
                         reports.get(0).getId(),
@@ -296,14 +354,18 @@ public class AdminQnaFragment extends Fragment {
             map.get(aId).add(doc);
         }
 
-        FirebaseFirestore db = FirebaseFirestore.getInstance();
+if (map.isEmpty()) {
+            if (currentTab == 1) {
+                pbLoading.setVisibility(View.GONE);
+                applyFilterAndSearch();
+            }
+            return;
+        }
+
+                FirebaseFirestore db = FirebaseFirestore.getInstance();
         for (Map.Entry<String, List<DocumentSnapshot>> entry : map.entrySet()) {
             String answerId = entry.getKey();
             List<DocumentSnapshot> reports = entry.getValue();
-            String latestStatus = reports.get(0).getString("status");
-            if (latestStatus == null || latestStatus.isEmpty()) latestStatus = "PENDING";
-
-            final String statusToUse = latestStatus;
             db.collection("answers").document(answerId).get().addOnSuccessListener(aDoc -> {
                 if (!isAdded()) return;
                 String content = aDoc.exists() ? aDoc.getString("content") : "Nội dung câu trả lời";
@@ -311,6 +373,37 @@ public class AdminQnaFragment extends Fragment {
                 String authorName = aDoc.exists() ? aDoc.getString("authorName") : null;
                 String authorAvatar = aDoc.exists() ? aDoc.getString("authorAvatar") : null;
                 String userId = aDoc.exists() ? aDoc.getString("userId") : null;
+                String aStatus = aDoc.exists() ? aDoc.getString("status") : null;
+
+                String statusToUse;
+                if ("DELETED".equalsIgnoreCase(aStatus) || (aDoc.exists() && aDoc.get("deletedAt") != null)) {
+                    statusToUse = "REPORTED_CONTENT_DELETED";
+                } else {
+                    boolean hasPending = false;
+                    boolean hasDeleted = false;
+                    boolean allDismissed = true;
+                    for (DocumentSnapshot rDoc : reports) {
+                        String s = rDoc.getString("status");
+                        if ("PENDING".equalsIgnoreCase(s) || s == null || s.isEmpty()) {
+                            hasPending = true;
+                            allDismissed = false;
+                        } else if ("REPORTED_CONTENT_DELETED".equalsIgnoreCase(s)) {
+                            hasDeleted = true;
+                            allDismissed = false;
+                        } else if (!"DISMISSED".equalsIgnoreCase(s)) {
+                            allDismissed = false;
+                        }
+                    }
+                    if (hasPending) {
+                        statusToUse = "PENDING";
+                    } else if (hasDeleted) {
+                        statusToUse = "REPORTED_CONTENT_DELETED";
+                    } else if (allDismissed && !reports.isEmpty()) {
+                        statusToUse = "DISMISSED";
+                    } else {
+                        statusToUse = "PENDING";
+                    }
+                }
 
                 AdminReportItem item = new AdminReportItem(
                         reports.get(0).getId(),
@@ -529,6 +622,27 @@ public class AdminQnaFragment extends Fragment {
         } else {
             rvReports.setVisibility(View.VISIBLE);
             layoutEmptyState.setVisibility(View.GONE);
+        }
+    }
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        if (questionReportsListener != null) {
+            questionReportsListener.remove();
+            questionReportsListener = null;
+        }
+        if (answerReportsListener != null) {
+            answerReportsListener.remove();
+            answerReportsListener = null;
+        }
+    }
+
+    @Override
+    public void onHiddenChanged(boolean hidden) {
+        super.onHiddenChanged(hidden);
+        if (!hidden && isAdded()) {
+            applyFilterAndSearch();
         }
     }
 }
