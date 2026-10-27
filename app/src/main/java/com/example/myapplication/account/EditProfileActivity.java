@@ -1,6 +1,7 @@
 
 package com.example.myapplication.account;
 import android.text.InputType;
+import android.view.View;
 import android.widget.EditText;
 import androidx.appcompat.app.AlertDialog;
 import com.google.firebase.auth.EmailAuthProvider;
@@ -23,7 +24,13 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.DocumentSnapshot;
 import java.util.HashMap;
 import java.util.Map;
+import android.view.ViewGroup;
 
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
 public class EditProfileActivity extends AppCompatActivity {
 
     private TextInputLayout tilFullName;
@@ -46,10 +53,40 @@ public class EditProfileActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
-        // 1. Khởi tạo giao diện trước
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
         setContentView(R.layout.activity_edit_profile);
+        WindowInsetsControllerCompat insetsController =
+                WindowCompat.getInsetsController(
+                        getWindow(),
+                        getWindow().getDecorView()
+                );
 
+        insetsController.setAppearanceLightStatusBars(false);
+
+        View root = findViewById(R.id.root);
+        View statusBarSpacer = findViewById(R.id.status_bar_spacer);
+
+        ViewCompat.setOnApplyWindowInsetsListener(root, (v, windowInsets) -> {
+            Insets bars = windowInsets.getInsets(
+                    WindowInsetsCompat.Type.systemBars()
+                            | WindowInsetsCompat.Type.displayCutout()
+            );
+
+            ViewGroup.LayoutParams params =
+                    statusBarSpacer.getLayoutParams();
+
+            params.height = bars.top;
+            statusBarSpacer.setLayoutParams(params);
+
+            v.setPadding(
+                    bars.left,
+                    0,
+                    bars.right,
+                    bars.bottom
+            );
+
+            return WindowInsetsCompat.CONSUMED;
+        });
         // 2. Ánh xạ các View
         tilFullName = findViewById(R.id.til_full_name);
         tilUsername = findViewById(R.id.til_username);

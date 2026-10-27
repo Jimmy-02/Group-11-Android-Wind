@@ -2,12 +2,14 @@
 package com.example.myapplication.account;
 
 import android.os.Bundle;
+import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.view.WindowCompat;
 
 import com.example.myapplication.R;
 import com.google.firebase.auth.AuthCredential;
@@ -15,7 +17,13 @@ import com.google.firebase.auth.EmailAuthProvider;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.auth.UserInfo;
+import android.view.ViewGroup;
 
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
 public class ChangePasswordActivity extends AppCompatActivity {
 
     private EditText edtOldPassword;
@@ -74,8 +82,40 @@ public class ChangePasswordActivity extends AppCompatActivity {
             return;
         }
 
-        // Hiển thị màn hình đổi mật khẩu
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
         setContentView(R.layout.activity_change_password);
+        WindowInsetsControllerCompat insetsController =
+                WindowCompat.getInsetsController(
+                        getWindow(),
+                        getWindow().getDecorView()
+                );
+
+        insetsController.setAppearanceLightStatusBars(false);
+
+        View root = findViewById(R.id.root);
+        View statusBarSpacer = findViewById(R.id.status_bar_spacer);
+
+        ViewCompat.setOnApplyWindowInsetsListener(root, (v, windowInsets) -> {
+            Insets bars = windowInsets.getInsets(
+                    WindowInsetsCompat.Type.systemBars()
+                            | WindowInsetsCompat.Type.displayCutout()
+            );
+
+            ViewGroup.LayoutParams params =
+                    statusBarSpacer.getLayoutParams();
+
+            params.height = bars.top;
+            statusBarSpacer.setLayoutParams(params);
+
+            v.setPadding(
+                    bars.left,
+                    0,
+                    bars.right,
+                    bars.bottom
+            );
+
+            return WindowInsetsCompat.CONSUMED;
+        });
 
         edtOldPassword = findViewById(R.id.edtOldPassword);
         edtNewPassword = findViewById(R.id.edtNewPassword);
