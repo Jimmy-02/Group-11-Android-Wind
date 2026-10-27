@@ -60,6 +60,31 @@ public class AdminDiscussionsFragment extends Fragment {
     private List<DocumentSnapshot> latestCommentReportsDocs = null;
     private List<DocumentSnapshot> latestDeletedCommentsDocs = null;
 
+    private int discussionRebuildToken = 0;
+    private int commentRebuildToken = 0;
+
+    private void addOrUpdateDiscussionItem(AdminReportItem newItem) {
+        if (newItem == null || newItem.getContentId() == null) return;
+        for (int i = 0; i < allDiscussionItems.size(); i++) {
+            if (newItem.getContentId().equals(allDiscussionItems.get(i).getContentId())) {
+                allDiscussionItems.set(i, newItem);
+                return;
+            }
+        }
+        allDiscussionItems.add(newItem);
+    }
+
+    private void addOrUpdateCommentItem(AdminReportItem newItem) {
+        if (newItem == null || newItem.getContentId() == null) return;
+        for (int i = 0; i < allCommentItems.size(); i++) {
+            if (newItem.getContentId().equals(allCommentItems.get(i).getContentId())) {
+                allCommentItems.set(i, newItem);
+                return;
+            }
+        }
+        allCommentItems.add(newItem);
+    }
+
     private int currentTab = 0; // 0: Bài thảo luận, 1: Bình luận
     private String currentFilter = "ALL"; // ALL, PENDING, REPORTED_CONTENT_DELETED, DISMISSED
     private String currentSearchKeyword = "";
@@ -282,6 +307,7 @@ public class AdminDiscussionsFragment extends Fragment {
     }
 
     private void rebuildDiscussionItems() {
+        final int currentToken = ++discussionRebuildToken;
         allDiscussionItems.clear();
         Map<String, List<DocumentSnapshot>> reportMap = new HashMap<>();
         if (latestDiscussionReportsDocs != null) {
@@ -303,7 +329,7 @@ public class AdminDiscussionsFragment extends Fragment {
             List<DocumentSnapshot> reports = entry.getValue();
 
             db.collection("discussions").document(discussionId).get().addOnSuccessListener(dDoc -> {
-                if (!isAdded()) return;
+                if (!isAdded() || currentToken != discussionRebuildToken) return;
                 String title = dDoc.exists() ? dDoc.getString("title") : "Bài thảo luận vi phạm";
                 String category = dDoc.exists() ? dDoc.getString("category") : "Chung";
                 String authorName = dDoc.exists() ? dDoc.getString("authorName") : null;
@@ -371,14 +397,14 @@ public class AdminDiscussionsFragment extends Fragment {
                 );
                 item.setTimestamp(maxTime);
                 item.setImageUrl(imageUrl);
-                allDiscussionItems.add(item);
+                addOrUpdateDiscussionItem(item);
                 pbLoading.setVisibility(View.GONE);
                 if (currentTab == 0) applyFilterAndSearch();
 
                 if ((authorName == null || authorName.trim().isEmpty() || authorAvatar == null || authorAvatar.trim().isEmpty())
                         && userId != null && !userId.trim().isEmpty()) {
                     db.collection("users").document(userId).get().addOnSuccessListener(uDoc -> {
-                        if (!isAdded() || !uDoc.exists()) return;
+                        if (!isAdded() || currentToken != discussionRebuildToken || !uDoc.exists()) return;
                         String uName = uDoc.getString("fullName");
                         if (uName == null || uName.trim().isEmpty()) uName = uDoc.getString("username");
                         if (uName == null || uName.trim().isEmpty()) uName = uDoc.getString("email");
@@ -432,7 +458,7 @@ public class AdminDiscussionsFragment extends Fragment {
                 );
                 item.setTimestamp(delTime);
                 item.setImageUrl(imageUrl);
-                allDiscussionItems.add(item);
+                addOrUpdateDiscussionItem(item);
                 pbLoading.setVisibility(View.GONE);
                 if (currentTab == 0) applyFilterAndSearch();
             }
@@ -451,6 +477,7 @@ public class AdminDiscussionsFragment extends Fragment {
     }
 
     private void rebuildCommentItems() {
+        final int currentToken = ++commentRebuildToken;
         allCommentItems.clear();
         Map<String, List<DocumentSnapshot>> reportMap = new HashMap<>();
         if (latestCommentReportsDocs != null) {
@@ -472,7 +499,7 @@ public class AdminDiscussionsFragment extends Fragment {
             List<DocumentSnapshot> reports = entry.getValue();
 
             db.collection("comments").document(commentId).get().addOnSuccessListener(cDoc -> {
-                if (!isAdded()) return;
+                if (!isAdded() || currentToken != commentRebuildToken) return;
                 String content = cDoc.exists() ? cDoc.getString("content") : "Nội dung bình luận";
                 String discussionId = cDoc.exists() ? cDoc.getString("discussionId") : "";
                 String authorName = cDoc.exists() ? cDoc.getString("authorName") : null;
@@ -538,13 +565,13 @@ public class AdminDiscussionsFragment extends Fragment {
                         Arrays.asList("Bình luận")
                 );
                 item.setTimestamp(maxTime);
-                allCommentItems.add(item);
+                addOrUpdateCommentItem(item);
                 pbLoading.setVisibility(View.GONE);
                 if (currentTab == 1) applyFilterAndSearch();
 
                 if (discussionId != null && !discussionId.isEmpty()) {
                     db.collection("discussions").document(discussionId).get().addOnSuccessListener(dDoc -> {
-                        if (!isAdded() || !dDoc.exists()) return;
+                        if (!isAdded() || currentToken != commentRebuildToken || !dDoc.exists()) return;
                         String dTitle = dDoc.getString("title");
                         if (dTitle != null && !dTitle.trim().isEmpty()) {
                             item.setParentQuestionTitle(dTitle.trim());
@@ -586,13 +613,13 @@ public class AdminDiscussionsFragment extends Fragment {
                         Arrays.asList("Bình luận")
                 );
                 item.setTimestamp(delTime);
-                allCommentItems.add(item);
+                addOrUpdateCommentItem(item);
                 pbLoading.setVisibility(View.GONE);
                 if (currentTab == 1) applyFilterAndSearch();
 
                 if (discussionId != null && !discussionId.isEmpty()) {
                     db.collection("discussions").document(discussionId).get().addOnSuccessListener(dDoc -> {
-                        if (!isAdded() || !dDoc.exists()) return;
+                        if (!isAdded() || currentToken != commentRebuildToken || !dDoc.exists()) return;
                         String dTitle = dDoc.getString("title");
                         if (dTitle != null && !dTitle.trim().isEmpty()) {
                             item.setParentQuestionTitle(dTitle.trim());
