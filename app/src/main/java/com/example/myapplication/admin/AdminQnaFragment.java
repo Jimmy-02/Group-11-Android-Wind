@@ -60,6 +60,31 @@ public class AdminQnaFragment extends Fragment {
     private List<DocumentSnapshot> latestAnswerReportsDocs = null;
     private List<DocumentSnapshot> latestDeletedAnswersDocs = null;
 
+    private int questionRebuildToken = 0;
+    private int answerRebuildToken = 0;
+
+    private void addOrUpdateQuestionItem(AdminReportItem newItem) {
+        if (newItem == null || newItem.getContentId() == null) return;
+        for (int i = 0; i < allQuestionItems.size(); i++) {
+            if (newItem.getContentId().equals(allQuestionItems.get(i).getContentId())) {
+                allQuestionItems.set(i, newItem);
+                return;
+            }
+        }
+        allQuestionItems.add(newItem);
+    }
+
+    private void addOrUpdateAnswerItem(AdminReportItem newItem) {
+        if (newItem == null || newItem.getContentId() == null) return;
+        for (int i = 0; i < allAnswerItems.size(); i++) {
+            if (newItem.getContentId().equals(allAnswerItems.get(i).getContentId())) {
+                allAnswerItems.set(i, newItem);
+                return;
+            }
+        }
+        allAnswerItems.add(newItem);
+    }
+
     private int currentTab = 0; // 0: Câu hỏi, 1: Câu trả lời
     private String currentFilter = "ALL"; // ALL, PENDING, REPORTED_CONTENT_DELETED, DISMISSED
     private String currentSearchKeyword = "";
@@ -282,6 +307,7 @@ public class AdminQnaFragment extends Fragment {
     }
 
     private void rebuildQuestionItems() {
+        final int currentToken = ++questionRebuildToken;
         allQuestionItems.clear();
         Map<String, List<DocumentSnapshot>> reportMap = new HashMap<>();
         if (latestQuestionReportsDocs != null) {
@@ -303,7 +329,7 @@ public class AdminQnaFragment extends Fragment {
             List<DocumentSnapshot> reports = entry.getValue();
 
             db.collection("questions").document(questionId).get().addOnSuccessListener(qDoc -> {
-                if (!isAdded()) return;
+                if (!isAdded() || currentToken != questionRebuildToken) return;
                 String title = qDoc.exists() ? qDoc.getString("title") : "Câu hỏi vi phạm";
                 String category = qDoc.exists() ? qDoc.getString("category") : "Chung";
                 String authorName = qDoc.exists() ? qDoc.getString("authorName") : null;
@@ -371,14 +397,14 @@ public class AdminQnaFragment extends Fragment {
                 );
                 item.setTimestamp(maxTime);
                 item.setImageUrl(imageUrl);
-                allQuestionItems.add(item);
+                addOrUpdateQuestionItem(item);
                 pbLoading.setVisibility(View.GONE);
                 if (currentTab == 0) applyFilterAndSearch();
 
                 if ((authorName == null || authorName.trim().isEmpty() || authorAvatar == null || authorAvatar.trim().isEmpty())
                         && userId != null && !userId.trim().isEmpty()) {
                     db.collection("users").document(userId).get().addOnSuccessListener(uDoc -> {
-                        if (!isAdded() || !uDoc.exists()) return;
+                        if (!isAdded() || currentToken != questionRebuildToken || !uDoc.exists()) return;
                         String uName = uDoc.getString("fullName");
                         if (uName == null || uName.trim().isEmpty()) uName = uDoc.getString("username");
                         if (uName == null || uName.trim().isEmpty()) uName = uDoc.getString("email");
@@ -438,7 +464,7 @@ public class AdminQnaFragment extends Fragment {
                 );
                 item.setTimestamp(delTime);
                 item.setImageUrl(imageUrl);
-                allQuestionItems.add(item);
+                addOrUpdateQuestionItem(item);
                 pbLoading.setVisibility(View.GONE);
                 if (currentTab == 0) applyFilterAndSearch();
             }
@@ -457,6 +483,7 @@ public class AdminQnaFragment extends Fragment {
     }
 
     private void rebuildAnswerItems() {
+        final int currentToken = ++answerRebuildToken;
         allAnswerItems.clear();
         Map<String, List<DocumentSnapshot>> reportMap = new HashMap<>();
         if (latestAnswerReportsDocs != null) {
@@ -478,7 +505,7 @@ public class AdminQnaFragment extends Fragment {
             List<DocumentSnapshot> reports = entry.getValue();
 
             db.collection("answers").document(answerId).get().addOnSuccessListener(aDoc -> {
-                if (!isAdded()) return;
+                if (!isAdded() || currentToken != answerRebuildToken) return;
                 String content = aDoc.exists() ? aDoc.getString("content") : "Nội dung câu trả lời";
                 String questionId = aDoc.exists() ? aDoc.getString("questionId") : "";
                 String authorName = aDoc.exists() ? aDoc.getString("authorName") : null;
@@ -544,13 +571,13 @@ public class AdminQnaFragment extends Fragment {
                         Arrays.asList("Câu trả lời")
                 );
                 item.setTimestamp(maxTime);
-                allAnswerItems.add(item);
+                addOrUpdateAnswerItem(item);
                 pbLoading.setVisibility(View.GONE);
                 if (currentTab == 1) applyFilterAndSearch();
 
                 if (questionId != null && !questionId.isEmpty()) {
                     db.collection("questions").document(questionId).get().addOnSuccessListener(qDoc -> {
-                        if (!isAdded() || !qDoc.exists()) return;
+                        if (!isAdded() || currentToken != answerRebuildToken || !qDoc.exists()) return;
                         String qTitle = qDoc.getString("title");
                         if (qTitle != null && !qTitle.trim().isEmpty()) {
                             item.setParentQuestionTitle(qTitle.trim());
@@ -592,13 +619,13 @@ public class AdminQnaFragment extends Fragment {
                         Arrays.asList("Câu trả lời")
                 );
                 item.setTimestamp(delTime);
-                allAnswerItems.add(item);
+                addOrUpdateAnswerItem(item);
                 pbLoading.setVisibility(View.GONE);
                 if (currentTab == 1) applyFilterAndSearch();
 
                 if (questionId != null && !questionId.isEmpty()) {
                     db.collection("questions").document(questionId).get().addOnSuccessListener(qDoc -> {
-                        if (!isAdded() || !qDoc.exists()) return;
+                        if (!isAdded() || currentToken != answerRebuildToken || !qDoc.exists()) return;
                         String qTitle = qDoc.getString("title");
                         if (qTitle != null && !qTitle.trim().isEmpty()) {
                             item.setParentQuestionTitle(qTitle.trim());

@@ -80,6 +80,19 @@ public class AdminArticlesFragment extends Fragment
     private ListenerRegistration articlesListener;
     private ListenerRegistration reportsListener;
 
+    private int articleReportsRebuildToken = 0;
+
+    private void addOrUpdateReportItem(AdminReportItem newItem) {
+        if (newItem == null || newItem.getContentId() == null) return;
+        for (int i = 0; i < allReportItems.size(); i++) {
+            if (newItem.getContentId().equals(allReportItems.get(i).getContentId())) {
+                allReportItems.set(i, newItem);
+                return;
+            }
+        }
+        allReportItems.add(newItem);
+    }
+
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
@@ -360,6 +373,7 @@ public class AdminArticlesFragment extends Fragment
     }
 
     private void groupArticleReports(List<DocumentSnapshot> docs) {
+        final int currentToken = ++articleReportsRebuildToken;
         allReportItems.clear();
         Map<String, List<DocumentSnapshot>> map = new HashMap<>();
         for (DocumentSnapshot doc : docs) {
@@ -377,7 +391,7 @@ public class AdminArticlesFragment extends Fragment
 
             final String statusToUse = latestStatus;
             db.collection("articles").document(articleId).get().addOnSuccessListener(aDoc -> {
-                if (!isAdded()) return;
+                if (!isAdded() || currentToken != articleReportsRebuildToken) return;
                 String title = aDoc.exists() ? aDoc.getString("title") : "Bài báo khoa học";
                 String author = aDoc.exists() ? aDoc.getString("authorName") : "Tác giả";
                 String category = aDoc.exists() ? aDoc.getString("category") : "Khoa học";
@@ -399,7 +413,7 @@ public class AdminArticlesFragment extends Fragment
                 );
                 item.setImageUrl(imgUrl);
 
-                allReportItems.add(item);
+                addOrUpdateReportItem(item);
                 if (currentTab == 1) applyFilterAndSearch();
             });
         }
