@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#F5F6F8">
+
+    <!-- Thanh tiêu đề và nút Back -->
+    <LinearLayout
+        android:id="@+id/myDiscussionsBackLayout"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:background="#FFFFFF"
+        android:elevation="2dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp">
+
+        <ImageView
+            android:id="@+id/ivMyDiscussionsBack"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:contentDescription="Quay lại"
+            android:scaleType="centerInside"
+            android:src="@drawable/ic_arrow_back" />
+
+        <TextView
+            android:id="@+id/tvMyDiscussionsBack"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:gravity="center_vertical"
+            android:paddingStart="4dp"
+            android:text="Back"
+            android:textColor="#172B4D"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+    </LinearLayout>
+
+    <!-- Số lượng thảo luận -->
+    <TextView
+        android:id="@+id/tvMyDiscussionsSummary"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingStart="16dp"
+        android:paddingTop="12dp"
+        android:paddingEnd="16dp"
+        android:paddingBottom="8dp"
+        android:text="0 bài thảo luận"
+        android:textColor="#667085"
+        android:textSize="13sp" />
+
+    <!-- Loading -->
+    <ProgressBar
+        android:id="@+id/pbMyDiscussions"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="16dp"
+        android:visibility="gone" />
+
+    <!-- Thông báo danh sách trống hoặc lỗi -->
+    <TextView
+        android:id="@+id/tvMyDiscussionsEmpty"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:padding="24dp"
+        android:text="Bạn chưa có bài thảo luận nào."
+        android:textColor="#718096"
+        android:textSize="14sp"
+        android:visibility="gone" />
+
+    <!-- Danh sách thảo luận -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvMyDiscussions"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:clipToPadding="false"
+        android:paddingStart="16dp"
+        android:paddingTop="8dp"
+        android:paddingEnd="16dp"
+        android:paddingBottom="16dp" />
+
+</LinearLayout>

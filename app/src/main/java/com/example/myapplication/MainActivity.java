@@ -13,7 +13,6 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
-
 import com.example.myapplication.account.AccountActivity;
 import com.example.myapplication.authentication.AuthSessionManager;
 import com.example.myapplication.authentication.login.LoginActivity;
