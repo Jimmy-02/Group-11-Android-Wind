@@ -177,6 +177,7 @@ public class AdminDiscussionsFragment extends Fragment {
             intent.putExtra(AdminReportDetailActivity.EXTRA_POST_TIME, item.getTimeAgo());
             String tag = (item.getTags() != null && !item.getTags().isEmpty()) ? android.text.TextUtils.join(" • ", item.getTags()) : "";
             intent.putExtra(AdminReportDetailActivity.EXTRA_TAG, tag);
+            intent.putExtra(AdminReportDetailActivity.EXTRA_IMAGE_URL, item.getImageUrl());
             startActivity(intent);
         });
         rvReports.setAdapter(adapter);
@@ -238,6 +239,10 @@ public class AdminDiscussionsFragment extends Fragment {
                 if (!isAdded()) return;
                 String title = dDoc.exists() ? dDoc.getString("title") : "Bài thảo luận vi phạm";
                 String category = dDoc.exists() ? dDoc.getString("category") : "Chung";
+                String authorName = dDoc.exists() ? dDoc.getString("authorName") : null;
+                String authorAvatar = dDoc.exists() ? dDoc.getString("authorAvatar") : null;
+                String imageUrl = dDoc.exists() ? dDoc.getString("imageUrl") : null;
+                String userId = dDoc.exists() ? dDoc.getString("userId") : null;
 
                 AdminReportItem item = new AdminReportItem(
                         reports.get(0).getId(),
@@ -249,12 +254,34 @@ public class AdminDiscussionsFragment extends Fragment {
                         statusToUse,
                         reports.size(),
                         "Vừa xong",
-                        "Người dùng",
-                        null,
+                        (authorName != null && !authorName.trim().isEmpty()) ? authorName.trim() : "Người dùng",
+                        authorAvatar,
                         Arrays.asList(category != null ? category : "Thảo luận")
                 );
+                item.setImageUrl(imageUrl);
                 allDiscussionItems.add(item);
                 if (currentTab == 0) applyFilterAndSearch();
+
+                if ((authorName == null || authorName.trim().isEmpty() || authorAvatar == null || authorAvatar.trim().isEmpty())
+                        && userId != null && !userId.trim().isEmpty()) {
+                    db.collection("users").document(userId).get().addOnSuccessListener(uDoc -> {
+                        if (!isAdded() || !uDoc.exists()) return;
+                        String uName = uDoc.getString("fullName");
+                        if (uName == null || uName.trim().isEmpty()) uName = uDoc.getString("username");
+                        if (uName == null || uName.trim().isEmpty()) uName = uDoc.getString("email");
+                        String uAvatar = uDoc.getString("avatar");
+                        boolean changed = false;
+                        if (uName != null && !uName.trim().isEmpty() && "Người dùng".equals(item.getAuthorName())) {
+                            item.setAuthorName(uName.trim());
+                            changed = true;
+                        }
+                        if (uAvatar != null && !uAvatar.trim().isEmpty() && item.getAuthorAvatar() == null) {
+                            item.setAuthorAvatar(uAvatar.trim());
+                            changed = true;
+                        }
+                        if (changed && currentTab == 0) applyFilterAndSearch();
+                    });
+                }
             });
         }
     }
@@ -281,6 +308,9 @@ public class AdminDiscussionsFragment extends Fragment {
                 if (!isAdded()) return;
                 String content = cDoc.exists() ? cDoc.getString("content") : "Nội dung bình luận";
                 String discussionId = cDoc.exists() ? cDoc.getString("discussionId") : "";
+                String authorName = cDoc.exists() ? cDoc.getString("authorName") : null;
+                String authorAvatar = cDoc.exists() ? cDoc.getString("authorAvatar") : null;
+                String userId = cDoc.exists() ? cDoc.getString("userId") : null;
 
                 AdminReportItem item = new AdminReportItem(
                         reports.get(0).getId(),
@@ -292,10 +322,31 @@ public class AdminDiscussionsFragment extends Fragment {
                         statusToUse,
                         reports.size(),
                         "Vừa xong",
-                        "Người dùng",
-                        null,
+                        (authorName != null && !authorName.trim().isEmpty()) ? authorName.trim() : "Người dùng",
+                        authorAvatar,
                         new ArrayList<>()
                 );
+
+                if ((authorName == null || authorName.trim().isEmpty() || authorAvatar == null || authorAvatar.trim().isEmpty())
+                        && userId != null && !userId.trim().isEmpty()) {
+                    db.collection("users").document(userId).get().addOnSuccessListener(uDoc -> {
+                        if (!isAdded() || !uDoc.exists()) return;
+                        String uName = uDoc.getString("fullName");
+                        if (uName == null || uName.trim().isEmpty()) uName = uDoc.getString("username");
+                        if (uName == null || uName.trim().isEmpty()) uName = uDoc.getString("email");
+                        String uAvatar = uDoc.getString("avatar");
+                        boolean changed = false;
+                        if (uName != null && !uName.trim().isEmpty() && "Người dùng".equals(item.getAuthorName())) {
+                            item.setAuthorName(uName.trim());
+                            changed = true;
+                        }
+                        if (uAvatar != null && !uAvatar.trim().isEmpty() && item.getAuthorAvatar() == null) {
+                            item.setAuthorAvatar(uAvatar.trim());
+                            changed = true;
+                        }
+                        if (changed && currentTab == 1) applyFilterAndSearch();
+                    });
+                }
 
                 if (discussionId != null && !discussionId.isEmpty()) {
                     db.collection("discussions").document(discussionId).get().addOnSuccessListener(dDoc -> {

@@ -186,6 +186,15 @@
                         android:textSize="13sp"
                         android:textStyle="bold" />
 
+                    <ImageView
+                        android:id="@+id/ivDetailImage"
+                        android:layout_width="match_parent"
+                        android:layout_height="200dp"
+                        android:layout_marginTop="10dp"
+                        android:contentDescription="Post image"
+                        android:scaleType="centerCrop"
+                        android:visibility="gone" />
+
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 

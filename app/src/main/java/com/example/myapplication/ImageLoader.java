@@ -14,19 +14,22 @@ public final class ImageLoader {
     }
 
     public static void load(String imageUrl, ImageView imageView) {
+        load(imageUrl, imageView, R.drawable.ic_account);
+    }
+
+    public static void load(String imageUrl, ImageView imageView, int placeholderResId) {
+        if (imageView == null) return;
 
         if (imageUrl == null || imageUrl.trim().isEmpty()) {
             getPicasso(imageView.getContext()).cancelRequest(imageView);
-            imageView.setImageResource(
-                    android.R.drawable.ic_menu_gallery
-            );
+            imageView.setImageResource(placeholderResId);
             return;
         }
 
         getPicasso(imageView.getContext())
-                .load(imageUrl)
-                .placeholder(android.R.drawable.ic_menu_gallery)
-                .error(android.R.drawable.ic_menu_report_image)
+                .load(imageUrl.trim())
+                .placeholder(placeholderResId)
+                .error(placeholderResId)
                 .fit()
                 .centerCrop()
                 .into(imageView);

@@ -103,7 +103,7 @@ public class QuestionAdapter extends RecyclerView.Adapter<QuestionViewHolder> {
             holder.ivQuestionImage.setVisibility(View.VISIBLE);
 
             Picasso.get()
-                    .load(imageUrl)
+                    .load(imageUrl.trim())
                     .fit()
                     .centerCrop()
                     .into(holder.ivQuestionImage);
@@ -115,11 +115,39 @@ public class QuestionAdapter extends RecyclerView.Adapter<QuestionViewHolder> {
             holder.ivQuestionImage.setImageDrawable(null);
         }
 
+        String author = question.getAuthorName();
         holder.tvAuthor.setText(
-                question.getAuthorName() == null
-                        ? "Người dùng"
-                        : question.getAuthorName()
+                (author != null && !author.trim().isEmpty())
+                        ? author.trim()
+                        : "Người dùng"
         );
+
+        if ((author == null || author.trim().isEmpty() || avatarUrl == null || avatarUrl.trim().isEmpty())
+                && question.getUserId() != null && !question.getUserId().trim().isEmpty()) {
+            com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                    .collection("users")
+                    .document(question.getUserId())
+                    .get()
+                    .addOnSuccessListener(uDoc -> {
+                        if (uDoc.exists()) {
+                            String uName = uDoc.getString("fullName");
+                            if (uName == null || uName.trim().isEmpty()) uName = uDoc.getString("username");
+                            if (uName != null && !uName.trim().isEmpty() && "Người dùng".equals(holder.tvAuthor.getText().toString())) {
+                                holder.tvAuthor.setText(uName.trim());
+                            }
+                            String uAvatar = uDoc.getString("avatar");
+                            if (uAvatar != null && !uAvatar.trim().isEmpty() && (avatarUrl == null || avatarUrl.trim().isEmpty())) {
+                                Picasso.get()
+                                        .load(uAvatar.trim())
+                                        .placeholder(R.drawable.ic_account)
+                                        .error(R.drawable.ic_account)
+                                        .fit()
+                                        .centerCrop()
+                                        .into(holder.ivAuthorAvatar);
+                            }
+                        }
+                    });
+        }
 
         holder.tvDate.setText(formatTimeAgo(question.getCreatedAt()));
 

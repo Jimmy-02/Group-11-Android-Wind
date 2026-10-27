@@ -7,15 +7,16 @@ public class AdminReportItem {
 
     private String id;
     private String contentId;
-    private String contentType; // "QUESTION" or "ANSWER"
+    private String contentType; // "QUESTION" or "ANSWER" or "DISCUSSION" or "COMMENT" or "ARTICLE"
     private String title;
     private String content;
-    private String parentQuestionTitle; // Dùng cho Answer
+    private String parentQuestionTitle; // Dùng cho Answer hoặc Comment
     private String status; // "PENDING", "REPORTED_CONTENT_DELETED", "DISMISSED"
     private int reportCount;
     private String timeAgo;
     private String authorName;
     private String authorAvatar;
+    private String imageUrl;
     private List<String> tags;
 
     public AdminReportItem() {
@@ -72,6 +73,9 @@ public class AdminReportItem {
 
     public String getAuthorAvatar() { return authorAvatar; }
     public void setAuthorAvatar(String authorAvatar) { this.authorAvatar = authorAvatar; }
+
+    public String getImageUrl() { return imageUrl; }
+    public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
 
     public List<String> getTags() { return tags; }
     public void setTags(List<String> tags) { this.tags = tags; }

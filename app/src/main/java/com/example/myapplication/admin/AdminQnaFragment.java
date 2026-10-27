@@ -177,6 +177,7 @@ public class AdminQnaFragment extends Fragment {
             intent.putExtra(AdminReportDetailActivity.EXTRA_POST_TIME, item.getTimeAgo());
             String tag = (item.getTags() != null && !item.getTags().isEmpty()) ? android.text.TextUtils.join(" • ", item.getTags()) : "";
             intent.putExtra(AdminReportDetailActivity.EXTRA_TAG, tag);
+            intent.putExtra(AdminReportDetailActivity.EXTRA_IMAGE_URL, item.getImageUrl());
             startActivity(intent);
         });
         rvReports.setAdapter(adapter);
@@ -238,6 +239,10 @@ public class AdminQnaFragment extends Fragment {
                 if (!isAdded()) return;
                 String title = qDoc.exists() ? qDoc.getString("title") : "Câu hỏi vi phạm";
                 String category = qDoc.exists() ? qDoc.getString("category") : "Chung";
+                String authorName = qDoc.exists() ? qDoc.getString("authorName") : null;
+                String authorAvatar = qDoc.exists() ? qDoc.getString("authorAvatar") : null;
+                String imageUrl = qDoc.exists() ? qDoc.getString("imageUrl") : null;
+                String userId = qDoc.exists() ? qDoc.getString("userId") : null;
 
                 AdminReportItem item = new AdminReportItem(
                         reports.get(0).getId(),
@@ -249,12 +254,34 @@ public class AdminQnaFragment extends Fragment {
                         statusToUse,
                         reports.size(),
                         "Vừa xong",
-                        "Người dùng",
-                        null,
+                        (authorName != null && !authorName.trim().isEmpty()) ? authorName.trim() : "Người dùng",
+                        authorAvatar,
                         Arrays.asList(category != null ? category : "Q&A")
                 );
+                item.setImageUrl(imageUrl);
                 allQuestionItems.add(item);
                 if (currentTab == 0) applyFilterAndSearch();
+
+                if ((authorName == null || authorName.trim().isEmpty() || authorAvatar == null || authorAvatar.trim().isEmpty())
+                        && userId != null && !userId.trim().isEmpty()) {
+                    db.collection("users").document(userId).get().addOnSuccessListener(uDoc -> {
+                        if (!isAdded() || !uDoc.exists()) return;
+                        String uName = uDoc.getString("fullName");
+                        if (uName == null || uName.trim().isEmpty()) uName = uDoc.getString("username");
+                        if (uName == null || uName.trim().isEmpty()) uName = uDoc.getString("email");
+                        String uAvatar = uDoc.getString("avatar");
+                        boolean changed = false;
+                        if (uName != null && !uName.trim().isEmpty() && "Người dùng".equals(item.getAuthorName())) {
+                            item.setAuthorName(uName.trim());
+                            changed = true;
+                        }
+                        if (uAvatar != null && !uAvatar.trim().isEmpty() && item.getAuthorAvatar() == null) {
+                            item.setAuthorAvatar(uAvatar.trim());
+                            changed = true;
+                        }
+                        if (changed && currentTab == 0) applyFilterAndSearch();
+                    });
+                }
             });
         }
     }
@@ -281,6 +308,9 @@ public class AdminQnaFragment extends Fragment {
                 if (!isAdded()) return;
                 String content = aDoc.exists() ? aDoc.getString("content") : "Nội dung câu trả lời";
                 String questionId = aDoc.exists() ? aDoc.getString("questionId") : "";
+                String authorName = aDoc.exists() ? aDoc.getString("authorName") : null;
+                String authorAvatar = aDoc.exists() ? aDoc.getString("authorAvatar") : null;
+                String userId = aDoc.exists() ? aDoc.getString("userId") : null;
 
                 AdminReportItem item = new AdminReportItem(
                         reports.get(0).getId(),
@@ -292,10 +322,31 @@ public class AdminQnaFragment extends Fragment {
                         statusToUse,
                         reports.size(),
                         "Vừa xong",
-                        "Người dùng",
-                        null,
+                        (authorName != null && !authorName.trim().isEmpty()) ? authorName.trim() : "Người dùng",
+                        authorAvatar,
                         new ArrayList<>()
                 );
+
+                if ((authorName == null || authorName.trim().isEmpty() || authorAvatar == null || authorAvatar.trim().isEmpty())
+                        && userId != null && !userId.trim().isEmpty()) {
+                    db.collection("users").document(userId).get().addOnSuccessListener(uDoc -> {
+                        if (!isAdded() || !uDoc.exists()) return;
+                        String uName = uDoc.getString("fullName");
+                        if (uName == null || uName.trim().isEmpty()) uName = uDoc.getString("username");
+                        if (uName == null || uName.trim().isEmpty()) uName = uDoc.getString("email");
+                        String uAvatar = uDoc.getString("avatar");
+                        boolean changed = false;
+                        if (uName != null && !uName.trim().isEmpty() && "Người dùng".equals(item.getAuthorName())) {
+                            item.setAuthorName(uName.trim());
+                            changed = true;
+                        }
+                        if (uAvatar != null && !uAvatar.trim().isEmpty() && item.getAuthorAvatar() == null) {
+                            item.setAuthorAvatar(uAvatar.trim());
+                            changed = true;
+                        }
+                        if (changed && currentTab == 1) applyFilterAndSearch();
+                    });
+                }
 
                 if (questionId != null && !questionId.isEmpty()) {
                     db.collection("questions").document(questionId).get().addOnSuccessListener(qDoc -> {

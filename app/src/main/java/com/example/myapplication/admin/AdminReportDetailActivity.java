@@ -28,6 +28,7 @@ import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.WriteBatch;
+import com.squareup.picasso.Picasso;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -49,6 +50,7 @@ public class AdminReportDetailActivity extends AppCompatActivity {
     public static final String EXTRA_AUTHOR_AVATAR = "extra_author_avatar";
     public static final String EXTRA_POST_TIME = "extra_post_time";
     public static final String EXTRA_TAG = "extra_tag";
+    public static final String EXTRA_IMAGE_URL = "extra_image_url";
 
     private ImageView btnBack;
     private TextView tvStatusBadge;
@@ -60,6 +62,7 @@ public class AdminReportDetailActivity extends AppCompatActivity {
     private TextView tvPostTime;
     private TextView tvDetailContent;
     private TextView btnToggleExpandContent;
+    private ImageView ivDetailImage;
     private TextView tvReportListHeader;
     private ProgressBar pbReportsLoading;
     private TextView tvEmptyReports;
@@ -91,6 +94,7 @@ public class AdminReportDetailActivity extends AppCompatActivity {
         initViews();
         bindDataFromIntent();
         setupListeners();
+        loadTargetPostDetails();
         loadUserReportsFromFirestore();
     }
 
@@ -105,6 +109,7 @@ public class AdminReportDetailActivity extends AppCompatActivity {
         tvPostTime = findViewById(R.id.tvPostTime);
         tvDetailContent = findViewById(R.id.tvDetailContent);
         btnToggleExpandContent = findViewById(R.id.btnToggleExpandContent);
+        ivDetailImage = findViewById(R.id.ivDetailImage);
         tvReportListHeader = findViewById(R.id.tvReportListHeader);
         pbReportsLoading = findViewById(R.id.pbReportsLoading);
         tvEmptyReports = findViewById(R.id.tvEmptyReports);
@@ -154,10 +159,57 @@ public class AdminReportDetailActivity extends AppCompatActivity {
         }
 
         ImageLoader.load(authorAvatar, imgAuthorAvatar);
+
+        String imageUrl = getIntent().getStringExtra(EXTRA_IMAGE_URL);
+        if (imageUrl != null && !imageUrl.trim().isEmpty()) {
+            ivDetailImage.setVisibility(View.VISIBLE);
+            Picasso.get().load(imageUrl.trim()).fit().centerCrop().into(ivDetailImage);
+        } else {
+            ivDetailImage.setVisibility(View.GONE);
+        }
         updateStatusBadge(currentStatus);
         updateActionButtonsVisibility(currentStatus);
 
         tvReportListHeader.setText(String.format(Locale.getDefault(), "Danh sách báo cáo (%d)", reportCount));
+    }
+
+    private void loadTargetPostDetails() {
+        if (targetId == null || targetId.isEmpty()) return;
+        String collection = getTargetCollection();
+        FirebaseFirestore.getInstance().collection(collection).document(targetId).get().addOnSuccessListener(doc -> {
+            if (!doc.exists()) return;
+
+            String img = doc.getString("imageUrl");
+            if (img != null && !img.trim().isEmpty() && ivDetailImage != null && ivDetailImage.getVisibility() != View.VISIBLE) {
+                ivDetailImage.setVisibility(View.VISIBLE);
+                Picasso.get().load(img.trim()).fit().centerCrop().into(ivDetailImage);
+            }
+
+            String author = doc.getString("authorName");
+            String avatar = doc.getString("authorAvatar");
+            String userId = doc.getString("userId");
+
+            if (author != null && !author.trim().isEmpty() && "Người dùng".equals(tvAuthorName.getText().toString())) {
+                tvAuthorName.setText(author.trim());
+            }
+            if (avatar != null && !avatar.trim().isEmpty()) {
+                ImageLoader.load(avatar.trim(), imgAuthorAvatar);
+            } else if (userId != null && !userId.trim().isEmpty()) {
+                FirebaseFirestore.getInstance().collection("users").document(userId).get().addOnSuccessListener(uDoc -> {
+                    if (uDoc.exists()) {
+                        String uName = uDoc.getString("fullName");
+                        if (uName == null || uName.trim().isEmpty()) uName = uDoc.getString("username");
+                        if (uName != null && !uName.trim().isEmpty() && "Người dùng".equals(tvAuthorName.getText().toString())) {
+                            tvAuthorName.setText(uName.trim());
+                        }
+                        String uAvatar = uDoc.getString("avatar");
+                        if (uAvatar != null && !uAvatar.trim().isEmpty()) {
+                            ImageLoader.load(uAvatar.trim(), imgAuthorAvatar);
+                        }
+                    }
+                });
+            }
+        });
     }
 
     private String getTargetCollection() {
@@ -441,9 +493,15 @@ public class AdminReportDetailActivity extends AppCompatActivity {
                 db.collection("users").document(userId).get().addOnSuccessListener(userDoc -> {
                     if (userDoc.exists()) {
                         String name = userDoc.getString("fullName");
+                        if (name == null || name.trim().isEmpty()) {
+                            name = userDoc.getString("username");
+                        }
+                        if (name == null || name.trim().isEmpty()) {
+                            name = userDoc.getString("email");
+                        }
                         String avatar = userDoc.getString("avatar");
-                        if (name != null) item.setUserName(name);
-                        if (avatar != null) item.setUserAvatar(avatar);
+                        if (name != null && !name.trim().isEmpty()) item.setUserName(name.trim());
+                        if (avatar != null && !avatar.trim().isEmpty()) item.setUserAvatar(avatar.trim());
                     }
                     fetchedCount[0]++;
                     if (fetchedCount[0] == total) {
