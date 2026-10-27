@@ -4,8 +4,15 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
+    android:id="@+id/root"
     android:background="#F5F6F8">
 
+    <!-- Vùng status bar -->
+    <View
+        android:id="@+id/status_bar_spacer"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:background="#6750A4" />
     <!-- Thanh tiêu đề và nút Back -->
     <LinearLayout
         android:id="@+id/myDiscussionsBackLayout"

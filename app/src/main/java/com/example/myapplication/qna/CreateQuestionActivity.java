@@ -11,7 +11,6 @@ import android.widget.Spinner;
 import android.widget.Toast;
 import com.google.firebase.firestore.DocumentSnapshot;
 import androidx.appcompat.app.AppCompatActivity;
-
 import com.example.myapplication.R;
 import com.example.myapplication.articles.categories.ArticleCategory;
 import com.example.myapplication.articles.categories.ArticleCategoryRepository;
@@ -19,34 +18,71 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
+import android.view.View;
+import android.view.ViewGroup;
 
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 public class CreateQuestionActivity extends AppCompatActivity {
-
     private EditText etTitle;
     private EditText etContent;
     private EditText etImageUrl;
-
     private Spinner spinnerCategory;
-
     private Button btnSubmit;
     private Button btnCancel;
-
     private FirebaseFirestore firestore;
     private FirebaseAuth firebaseAuth;
-
     private ArticleCategoryRepository categoryRepository;
-
     private final List<ArticleCategory> categories = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+
         setContentView(R.layout.activity_create_question);
+
+        WindowInsetsControllerCompat insetsController =
+                WindowCompat.getInsetsController(
+                        getWindow(),
+                        getWindow().getDecorView()
+                );
+
+        insetsController.setAppearanceLightStatusBars(false);
+
+        View root = findViewById(R.id.root);
+        View statusBarSpacer = findViewById(R.id.status_bar_spacer);
+
+        ViewCompat.setOnApplyWindowInsetsListener(root, (v, windowInsets) -> {
+            Insets bars = windowInsets.getInsets(
+                    WindowInsetsCompat.Type.systemBars()
+                            | WindowInsetsCompat.Type.displayCutout()
+            );
+
+            ViewGroup.LayoutParams params =
+                    statusBarSpacer.getLayoutParams();
+
+            params.height = bars.top;
+            statusBarSpacer.setLayoutParams(params);
+
+            v.setPadding(
+                    bars.left,
+                    0,
+                    bars.right,
+                    bars.bottom
+            );
+
+            return WindowInsetsCompat.CONSUMED;
+        });
 
         etTitle = findViewById(R.id.et_question_title);
         etContent = findViewById(R.id.et_question_content);

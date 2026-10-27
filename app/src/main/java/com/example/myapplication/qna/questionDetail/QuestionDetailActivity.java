@@ -5,11 +5,18 @@ import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.util.Log;
+
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.appcompat.app.AppCompatActivity;
@@ -35,7 +42,7 @@ import java.util.Locale;
 import java.util.Map;
 import android.widget.ImageView;
 import com.squareup.picasso.Picasso;
-
+import com.google.firebase.firestore.ListenerRegistration;
 public class QuestionDetailActivity extends AppCompatActivity {
 
     public static final String EXTRA_QUESTION_ID = "question_id";
@@ -64,14 +71,49 @@ public class QuestionDetailActivity extends AppCompatActivity {
     private TextView tvQuestionDownVote;
 
     private AnswerAdapter answerAdapter;
-
+    private ListenerRegistration questionListener;
+    private ListenerRegistration answersListener;
     private final List<Answer> answerList = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+
         setContentView(R.layout.activity_question_detail);
+        WindowInsetsControllerCompat insetsController =
+                WindowCompat.getInsetsController(
+                        getWindow(),
+                        getWindow().getDecorView()
+                );
+
+        insetsController.setAppearanceLightStatusBars(false);
+
+        View root = findViewById(R.id.root);
+        View statusBarSpacer = findViewById(R.id.status_bar_spacer);
+
+        ViewCompat.setOnApplyWindowInsetsListener(root, (v, windowInsets) -> {
+            Insets bars = windowInsets.getInsets(
+                    WindowInsetsCompat.Type.systemBars()
+                            | WindowInsetsCompat.Type.displayCutout()
+            );
+
+            ViewGroup.LayoutParams params =
+                    statusBarSpacer.getLayoutParams();
+
+            params.height = bars.top;
+            statusBarSpacer.setLayoutParams(params);
+
+            v.setPadding(
+                    bars.left,
+                    0,
+                    bars.right,
+                    bars.bottom
+            );
+
+            return WindowInsetsCompat.CONSUMED;
+        });
         View qnaBackLayout = findViewById(R.id.QNAbackLayout);
 
         qnaBackLayout.setOnClickListener(v -> finish());
@@ -497,19 +539,43 @@ public class QuestionDetailActivity extends AppCompatActivity {
 
 
     private void loadQuestion() {
-        FirebaseFirestore.getInstance()
+        questionListener = FirebaseFirestore.getInstance()
                 .collection("questions")
                 .document(questionId)
-                .get()
-                .addOnSuccessListener(document -> {
+                .addSnapshotListener((document, error) -> {
+
                     if (!isActivityActive()) {
                         return;
                     }
 
-                    if (!document.exists()) {
+                    if (error != null) {
+                        Toast.makeText(
+                                this,
+                                "Không thể tải câu hỏi",
+                                Toast.LENGTH_SHORT
+                        ).show();
+                        return;
+                    }
+
+                    if (document == null || !document.exists()) {
                         Toast.makeText(
                                 this,
                                 "Câu hỏi không tồn tại",
+                                Toast.LENGTH_SHORT
+                        ).show();
+                        finish();
+                        return;
+                    }
+
+                    String status = document.getString("status");
+
+                    if ("DELETED".equalsIgnoreCase(status)
+                            || "DELETE".equalsIgnoreCase(status)
+                            || document.get("deletedAt") != null) {
+
+                        Toast.makeText(
+                                this,
+                                "Câu hỏi đã bị xóa",
                                 Toast.LENGTH_SHORT
                         ).show();
 
@@ -518,15 +584,11 @@ public class QuestionDetailActivity extends AppCompatActivity {
                     }
 
                     tvDetailTitle.setText(
-                            safeString(
-                                    document.getString("title")
-                            )
+                            safeString(document.getString("title"))
                     );
 
                     tvDetailBody.setText(
-                            safeString(
-                                    document.getString("content")
-                            )
+                            safeString(document.getString("content"))
                     );
 
                     String imageUrl = document.getString("imageUrl");
@@ -539,46 +601,40 @@ public class QuestionDetailActivity extends AppCompatActivity {
                                 .fit()
                                 .centerCrop()
                                 .into(ivDetailQuestionImage);
-
                     } else {
                         Picasso.get().cancelRequest(ivDetailQuestionImage);
                         ivDetailQuestionImage.setImageDrawable(null);
                         ivDetailQuestionImage.setVisibility(View.GONE);
                     }
 
-                    String status =
-                            document.getString("status");
-
                     questionStatus =
                             status == null || status.trim().isEmpty()
                                     ? "OPEN"
-                                    : status.trim().toUpperCase(
-                                    Locale.ROOT
-                            );
+                                    : status.trim().toUpperCase(Locale.ROOT);
 
                     tvDetailStatus.setText(questionStatus);
 
-                    if ("CLOSED".equals(questionStatus)) {
-                        tvDetailStatus.setBackgroundTintList(
-                                ColorStateList.valueOf(
-                                        Color.parseColor("#E5E7EB")
-                                )
-                        );
+                    boolean isClosed = "CLOSED".equals(questionStatus);
 
-                        tvDetailStatus.setTextColor(
-                                Color.parseColor("#475569")
-                        );
-                    }
+                    tvDetailStatus.setBackgroundTintList(
+                            ColorStateList.valueOf(
+                                    Color.parseColor(
+                                            isClosed ? "#E5E7EB" : "#DCFCE7"
+                                    )
+                            )
+                    );
 
-                    Timestamp createdAt =
-                            document.getTimestamp("createdAt");
+                    tvDetailStatus.setTextColor(
+                            Color.parseColor(
+                                    isClosed ? "#475569" : "#166534"
+                            )
+                    );
 
-                    String authorName =
-                            document.getString("authorName");
+                    Timestamp createdAt = document.getTimestamp("createdAt");
 
-                    if (authorName == null
-                            || authorName.trim().isEmpty()) {
+                    String authorName = document.getString("authorName");
 
+                    if (authorName == null || authorName.trim().isEmpty()) {
                         authorName = "Người dùng";
                     }
 
@@ -590,30 +646,15 @@ public class QuestionDetailActivity extends AppCompatActivity {
                                     : authorName + " • " + dateText
                     );
 
-                    Long voteCount =
-                            document.getLong("voteCount");
+                    Long voteCount = document.getLong("voteCount");
 
                     tvDetailVoteCount.setText(
-                            (voteCount == null ? 0L : voteCount)
-                                    + " vote"
+                            (voteCount == null ? 0L : voteCount) + " vote"
                     );
 
                     loadCategories(document);
 
-                    setAnswerInputEnabled(
-                            "OPEN".equals(questionStatus)
-                    );
-                })
-                .addOnFailureListener(error -> {
-                    if (!isActivityActive()) {
-                        return;
-                    }
-
-                    Toast.makeText(
-                            this,
-                            "Không thể tải câu hỏi",
-                            Toast.LENGTH_SHORT
-                    ).show();
+                    setAnswerInputEnabled("OPEN".equals(questionStatus));
                 });
     }
 
@@ -653,19 +694,42 @@ public class QuestionDetailActivity extends AppCompatActivity {
         pbDetailAnswers.setVisibility(View.VISIBLE);
         tvDetailAnswersEmpty.setVisibility(View.GONE);
 
-        FirebaseFirestore.getInstance()
+        answersListener = FirebaseFirestore.getInstance()
                 .collection("answers")
                 .whereEqualTo("questionId", questionId)
-                .get()
-                .addOnSuccessListener(snapshot -> {
+                .addSnapshotListener((snapshot, error) -> {
+
                     if (!isActivityActive()) {
+                        return;
+                    }
+
+                    if (error != null) {
+                        pbDetailAnswers.setVisibility(View.GONE);
+
+                        Toast.makeText(
+                                this,
+                                "Không thể tải câu trả lời",
+                                Toast.LENGTH_SHORT
+                        ).show();
+                        return;
+                    }
+
+                    if (snapshot == null) {
+                        pbDetailAnswers.setVisibility(View.GONE);
                         return;
                     }
 
                     answerList.clear();
 
-                    for (DocumentSnapshot document :
-                            snapshot.getDocuments()) {
+                    for (DocumentSnapshot document : snapshot.getDocuments()) {
+                        String status = document.getString("status");
+
+                        // Ẩn câu trả lời đã bị xóa.
+                        if ("DELETED".equalsIgnoreCase(status)
+                                || "DELETE".equalsIgnoreCase(status)
+                                || document.get("deletedAt") != null) {
+                            continue;
+                        }
 
                         Answer answer = new Answer();
 
@@ -702,8 +766,7 @@ public class QuestionDetailActivity extends AppCompatActivity {
                                 document.getTimestamp("createdAt")
                         );
 
-                        Long voteCount =
-                                document.getLong("voteCount");
+                        Long voteCount = document.getLong("voteCount");
 
                         answer.setVoteCount(
                                 voteCount == null ? 0L : voteCount
@@ -719,32 +782,17 @@ public class QuestionDetailActivity extends AppCompatActivity {
                             answerList.size() + " câu trả lời"
                     );
 
+                    boolean isEmpty = answerList.isEmpty();
+
                     tvDetailAnswersEmpty.setVisibility(
-                            answerList.isEmpty()
-                                    ? View.VISIBLE
-                                    : View.GONE
+                            isEmpty ? View.VISIBLE : View.GONE
                     );
 
                     rvDetailAnswers.setVisibility(
-                            answerList.isEmpty()
-                                    ? View.GONE
-                                    : View.VISIBLE
+                            isEmpty ? View.GONE : View.VISIBLE
                     );
 
                     pbDetailAnswers.setVisibility(View.GONE);
-                })
-                .addOnFailureListener(error -> {
-                    if (!isActivityActive()) {
-                        return;
-                    }
-
-                    pbDetailAnswers.setVisibility(View.GONE);
-
-                    Toast.makeText(
-                            this,
-                            "Không thể tải câu trả lời",
-                            Toast.LENGTH_SHORT
-                    ).show();
                 });
     }
 
@@ -881,6 +929,7 @@ public class QuestionDetailActivity extends AppCompatActivity {
                 resolveAnswerAuthorAvatar(user, userDocument)
         );
         answerData.put("content", content);
+        answerData.put("status", "ACTIVE");
         answerData.put("createdAt", FieldValue.serverTimestamp());
         answerData.put("voteCount", 0);
 
@@ -1026,5 +1075,19 @@ public class QuestionDetailActivity extends AppCompatActivity {
                 "dd/MM/yyyy HH:mm",
                 Locale.getDefault()
         ).format(date);
+    }
+    @Override
+    protected void onDestroy() {
+        if (questionListener != null) {
+            questionListener.remove();
+            questionListener = null;
+        }
+
+        if (answersListener != null) {
+            answersListener.remove();
+            answersListener = null;
+        }
+
+        super.onDestroy();
     }
 }
