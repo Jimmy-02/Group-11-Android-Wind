@@ -387,8 +387,19 @@ public class AdminReportDetailActivity extends AppCompatActivity {
                             if (onComplete != null) onComplete.run();
                         });
                     } else {
-                        // Nếu là dữ liệu mẫu hoặc không có document nào trên DB
-                        if (onComplete != null) onComplete.run();
+                        // Nếu chưa có document báo cáo nào trên DB, tạo 1 document báo cáo lưu vết "Đã xử lý"
+                        Map<String, Object> newRep = new HashMap<>();
+                        newRep.put(filterField, targetId);
+                        newRep.put("status", newStatus);
+                        newRep.put("reviewReason", reason);
+                        newRep.put("reviewedBy", adminId);
+                        newRep.put("reviewedAt", now);
+                        newRep.put("createdAt", now);
+                        newRep.put("reason", "Nội dung đã được Quản trị viên xử lý");
+                        newRep.put("detailReason", reason);
+                        db.collection(collection).add(newRep).addOnCompleteListener(t -> {
+                            if (onComplete != null) onComplete.run();
+                        });
                     }
                 });
     }
