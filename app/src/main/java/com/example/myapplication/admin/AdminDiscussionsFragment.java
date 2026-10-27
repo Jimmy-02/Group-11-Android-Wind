@@ -24,6 +24,7 @@ import com.example.myapplication.admin.models.AdminReportItem;
 import com.google.android.material.tabs.TabLayout;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.ListenerRegistration;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -45,6 +46,8 @@ public class AdminDiscussionsFragment extends Fragment {
     private AdminReportAdapter adapter;
     private final List<AdminReportItem> allDiscussionItems = new ArrayList<>();
     private final List<AdminReportItem> allCommentItems = new ArrayList<>();
+    private ListenerRegistration discussionReportsListener;
+    private ListenerRegistration commentReportsListener;
 
     private int currentTab = 0; // 0: Bài thảo luận, 1: Bình luận
     private String currentFilter = "ALL"; // ALL, PENDING, REPORTED_CONTENT_DELETED, DISMISSED
@@ -190,37 +193,51 @@ public class AdminDiscussionsFragment extends Fragment {
     }
 
     private void loadFirestoreReports() {
-        pbLoading.setVisibility(View.VISIBLE);
+        if (discussionReportsListener != null) {
+            discussionReportsListener.remove();
+            discussionReportsListener = null;
+        }
+        if (commentReportsListener != null) {
+            commentReportsListener.remove();
+            commentReportsListener = null;
+        }
 
+        pbLoading.setVisibility(View.VISIBLE);
         FirebaseFirestore db = FirebaseFirestore.getInstance();
 
-        // 1. Tải báo cáo Thảo luận (discussionReports)
-        db.collection("discussionReports").get().addOnCompleteListener(task -> {
-            if (isAdded()) {
-                if (task.isSuccessful() && task.getResult() != null && !task.getResult().isEmpty()) {
-                    groupDiscussionReports(task.getResult().getDocuments());
-                } else {
-                    createMockDiscussions();
-                }
+        // 1. Tải báo cáo Thảo luận (discussionReports) realtime
+        discussionReportsListener = db.collection("discussionReports")
+                .addSnapshotListener((snapshots, error) -> {
+                    if (!isAdded()) return;
+                    if (error != null || snapshots == null || snapshots.isEmpty()) {
+                        if (allDiscussionItems.isEmpty()) {
+                            createMockDiscussions();
+                        }
+                        if (currentTab == 0) {
+                            pbLoading.setVisibility(View.GONE);
+                            applyFilterAndSearch();
+                        }
+                        return;
+                    }
+                    groupDiscussionReports(snapshots.getDocuments());
+                });
 
-                // 2. Tải báo cáo Bình luận (commentReports)
-                loadCommentReports(db);
-            }
-        });
-    }
-
-    private void loadCommentReports(FirebaseFirestore db) {
-        db.collection("commentReports").get().addOnCompleteListener(task -> {
-            if (isAdded()) {
-                pbLoading.setVisibility(View.GONE);
-                if (task.isSuccessful() && task.getResult() != null && !task.getResult().isEmpty()) {
-                    groupCommentReports(task.getResult().getDocuments());
-                } else {
-                    createMockComments();
-                }
-                applyFilterAndSearch();
-            }
-        });
+        // 2. Tải báo cáo Bình luận (commentReports) realtime
+        commentReportsListener = db.collection("commentReports")
+                .addSnapshotListener((snapshots, error) -> {
+                    if (!isAdded()) return;
+                    if (error != null || snapshots == null || snapshots.isEmpty()) {
+                        if (allCommentItems.isEmpty()) {
+                            createMockComments();
+                        }
+                        if (currentTab == 1) {
+                            pbLoading.setVisibility(View.GONE);
+                            applyFilterAndSearch();
+                        }
+                        return;
+                    }
+                    groupCommentReports(snapshots.getDocuments());
+                });
     }
 
     private void groupDiscussionReports(List<DocumentSnapshot> docs) {
@@ -231,6 +248,14 @@ public class AdminDiscussionsFragment extends Fragment {
             if (dId == null || dId.isEmpty()) continue;
             if (!map.containsKey(dId)) map.put(dId, new ArrayList<>());
             map.get(dId).add(doc);
+        }
+
+        if (map.isEmpty()) {
+            if (currentTab == 0) {
+                pbLoading.setVisibility(View.GONE);
+                applyFilterAndSearch();
+            }
+            return;
         }
 
         FirebaseFirestore db = FirebaseFirestore.getInstance();
@@ -329,7 +354,15 @@ public class AdminDiscussionsFragment extends Fragment {
             map.get(cId).add(doc);
         }
 
-        FirebaseFirestore db = FirebaseFirestore.getInstance();
+if (map.isEmpty()) {
+            if (currentTab == 1) {
+                pbLoading.setVisibility(View.GONE);
+                applyFilterAndSearch();
+            }
+            return;
+        }
+
+                FirebaseFirestore db = FirebaseFirestore.getInstance();
         for (Map.Entry<String, List<DocumentSnapshot>> entry : map.entrySet()) {
             String commentId = entry.getKey();
             List<DocumentSnapshot> reports = entry.getValue();
@@ -588,6 +621,27 @@ public class AdminDiscussionsFragment extends Fragment {
         } else {
             rvReports.setVisibility(View.VISIBLE);
             layoutEmptyState.setVisibility(View.GONE);
+        }
+    }
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        if (discussionReportsListener != null) {
+            discussionReportsListener.remove();
+            discussionReportsListener = null;
+        }
+        if (commentReportsListener != null) {
+            commentReportsListener.remove();
+            commentReportsListener = null;
+        }
+    }
+
+    @Override
+    public void onHiddenChanged(boolean hidden) {
+        super.onHiddenChanged(hidden);
+        if (!hidden && isAdded()) {
+            applyFilterAndSearch();
         }
     }
 }

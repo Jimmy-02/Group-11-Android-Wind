@@ -24,6 +24,7 @@ import com.example.myapplication.admin.models.AdminReportItem;
 import com.google.android.material.tabs.TabLayout;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.ListenerRegistration;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -45,6 +46,8 @@ public class AdminQnaFragment extends Fragment {
     private AdminReportAdapter adapter;
     private final List<AdminReportItem> allQuestionItems = new ArrayList<>();
     private final List<AdminReportItem> allAnswerItems = new ArrayList<>();
+    private ListenerRegistration questionReportsListener;
+    private ListenerRegistration answerReportsListener;
 
     private int currentTab = 0; // 0: Câu hỏi, 1: Câu trả lời
     private String currentFilter = "ALL"; // ALL, PENDING, REPORTED_CONTENT_DELETED, DISMISSED
@@ -190,37 +193,51 @@ public class AdminQnaFragment extends Fragment {
     }
 
     private void loadFirestoreReports() {
-        pbLoading.setVisibility(View.VISIBLE);
+        if (questionReportsListener != null) {
+            questionReportsListener.remove();
+            questionReportsListener = null;
+        }
+        if (answerReportsListener != null) {
+            answerReportsListener.remove();
+            answerReportsListener = null;
+        }
 
+        pbLoading.setVisibility(View.VISIBLE);
         FirebaseFirestore db = FirebaseFirestore.getInstance();
 
-        // 1. Tải báo cáo Câu hỏi (questionReports)
-        db.collection("questionReports").get().addOnCompleteListener(task -> {
-            if (isAdded()) {
-                if (task.isSuccessful() && task.getResult() != null && !task.getResult().isEmpty()) {
-                    groupQuestionReports(task.getResult().getDocuments());
-                } else {
-                    createMockQuestions();
-                }
+        // 1. Tải báo cáo Câu hỏi (questionReports) realtime
+        questionReportsListener = db.collection("questionReports")
+                .addSnapshotListener((snapshots, error) -> {
+                    if (!isAdded()) return;
+                    if (error != null || snapshots == null || snapshots.isEmpty()) {
+                        if (allQuestionItems.isEmpty()) {
+                            createMockQuestions();
+                        }
+                        if (currentTab == 0) {
+                            pbLoading.setVisibility(View.GONE);
+                            applyFilterAndSearch();
+                        }
+                        return;
+                    }
+                    groupQuestionReports(snapshots.getDocuments());
+                });
 
-                // 2. Tải báo cáo Câu trả lời (answerReports)
-                loadAnswerReports(db);
-            }
-        });
-    }
-
-    private void loadAnswerReports(FirebaseFirestore db) {
-        db.collection("answerReports").get().addOnCompleteListener(task -> {
-            if (isAdded()) {
-                pbLoading.setVisibility(View.GONE);
-                if (task.isSuccessful() && task.getResult() != null && !task.getResult().isEmpty()) {
-                    groupAnswerReports(task.getResult().getDocuments());
-                } else {
-                    createMockAnswers();
-                }
-                applyFilterAndSearch();
-            }
-        });
+        // 2. Tải báo cáo Câu trả lời (answerReports) realtime
+        answerReportsListener = db.collection("answerReports")
+                .addSnapshotListener((snapshots, error) -> {
+                    if (!isAdded()) return;
+                    if (error != null || snapshots == null || snapshots.isEmpty()) {
+                        if (allAnswerItems.isEmpty()) {
+                            createMockAnswers();
+                        }
+                        if (currentTab == 1) {
+                            pbLoading.setVisibility(View.GONE);
+                            applyFilterAndSearch();
+                        }
+                        return;
+                    }
+                    groupAnswerReports(snapshots.getDocuments());
+                });
     }
 
     private void groupQuestionReports(List<DocumentSnapshot> docs) {
@@ -231,6 +248,14 @@ public class AdminQnaFragment extends Fragment {
             if (qId == null || qId.isEmpty()) continue;
             if (!map.containsKey(qId)) map.put(qId, new ArrayList<>());
             map.get(qId).add(doc);
+        }
+
+        if (map.isEmpty()) {
+            if (currentTab == 0) {
+                pbLoading.setVisibility(View.GONE);
+                applyFilterAndSearch();
+            }
+            return;
         }
 
         FirebaseFirestore db = FirebaseFirestore.getInstance();
@@ -329,7 +354,15 @@ public class AdminQnaFragment extends Fragment {
             map.get(aId).add(doc);
         }
 
-        FirebaseFirestore db = FirebaseFirestore.getInstance();
+if (map.isEmpty()) {
+            if (currentTab == 1) {
+                pbLoading.setVisibility(View.GONE);
+                applyFilterAndSearch();
+            }
+            return;
+        }
+
+                FirebaseFirestore db = FirebaseFirestore.getInstance();
         for (Map.Entry<String, List<DocumentSnapshot>> entry : map.entrySet()) {
             String answerId = entry.getKey();
             List<DocumentSnapshot> reports = entry.getValue();
@@ -589,6 +622,27 @@ public class AdminQnaFragment extends Fragment {
         } else {
             rvReports.setVisibility(View.VISIBLE);
             layoutEmptyState.setVisibility(View.GONE);
+        }
+    }
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        if (questionReportsListener != null) {
+            questionReportsListener.remove();
+            questionReportsListener = null;
+        }
+        if (answerReportsListener != null) {
+            answerReportsListener.remove();
+            answerReportsListener = null;
+        }
+    }
+
+    @Override
+    public void onHiddenChanged(boolean hidden) {
+        super.onHiddenChanged(hidden);
+        if (!hidden && isAdded()) {
+            applyFilterAndSearch();
         }
     }
 }
