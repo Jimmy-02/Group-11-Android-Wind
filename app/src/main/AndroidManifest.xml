@@ -76,6 +76,15 @@
         <activity
             android:name=".qna.report.ReportAnswerActivity"
             android:exported="false" />
+        <activity
+            android:name=".account.myarticles.MyArticlesActivity"
+            android:exported="false" />
+        <activity
+            android:name=".account.mydiscussion.MyDiscussionsActivity"
+            android:exported="false" />
+        <activity
+            android:name=".account.myqna.MyQnaActivity"
+            android:exported="false" />
     </application>
 
 </manifest>

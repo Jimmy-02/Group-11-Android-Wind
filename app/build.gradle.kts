@@ -49,6 +49,7 @@ dependencies {
     implementation(libs.googleid)
     implementation("com.squareup.picasso:picasso:2.8")
     implementation("com.github.marain87:AndroidPdfViewer:3.2.8")
+    implementation(libs.glide)
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)
