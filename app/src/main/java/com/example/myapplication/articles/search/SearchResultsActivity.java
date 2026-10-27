@@ -1,5 +1,6 @@
 package com.example.myapplication.articles.search;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.view.ViewGroup;
@@ -19,6 +20,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.myapplication.R;
 import com.example.myapplication.articles.Article;
 import com.example.myapplication.articles.ArticleRepository;
+import com.example.myapplication.articles.articlesDetail.ArticleDetailActivity;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -31,7 +33,6 @@ public class SearchResultsActivity extends AppCompatActivity {
     private TextView searchQuery;
     private TextView resultCount;
     private RecyclerView resultList;
-
     private SearchResultsAdapter searchAdapter;
     private ArticleRepository repository;
 
@@ -50,13 +51,10 @@ public class SearchResultsActivity extends AppCompatActivity {
 
         ViewCompat.setOnApplyWindowInsetsListener(root, (v, windowInsets) -> {
             Insets bars = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout());
-
             ViewGroup.LayoutParams params = statusBarSpacer.getLayoutParams();
             params.height = bars.top;
             statusBarSpacer.setLayoutParams(params);
-
             v.setPadding(bars.left, 0, bars.right, bars.bottom);
-
             return WindowInsetsCompat.CONSUMED;
         });
 
@@ -66,7 +64,6 @@ public class SearchResultsActivity extends AppCompatActivity {
         resultList = findViewById(R.id.rv_search_results);
 
         String query = getIntent().getStringExtra(EXTRA_QUERY);
-
         if (query == null) {
             query = "";
         }
@@ -75,7 +72,7 @@ public class SearchResultsActivity extends AppCompatActivity {
         searchQuery.setText("Results for \"" + query + "\"");
 
         resultList.setLayoutManager(new LinearLayoutManager(this));
-        searchAdapter = new SearchResultsAdapter();
+        searchAdapter = new SearchResultsAdapter(this::openArticleDetail);
         resultList.setAdapter(searchAdapter);
 
         repository = new ArticleRepository();
@@ -90,6 +87,22 @@ public class SearchResultsActivity extends AppCompatActivity {
         searchArticles(query);
     }
 
+    private void openArticleDetail(Article article) {
+        Intent intent = new Intent(this, ArticleDetailActivity.class);
+        intent.putExtra("articleId", article.getId());
+        intent.putExtra("title", article.getTitle());
+        intent.putExtra("authorName", article.getAuthorName());
+        intent.putExtra("categoryId", article.getCategoryId());
+        intent.putExtra("institution", article.getInstitution());
+        intent.putExtra("digitalObjectIdentifier", article.getDigitalObjectIdentifier());
+        intent.putExtra("description", article.getDescription());
+        intent.putExtra("imageUrl", article.getImageUrl());
+        intent.putExtra("sourceUrl", article.getSourceUrl());
+        intent.putExtra("contentUrl", article.getContentUrl());
+        intent.putExtra("createdAt", article.getCreatedAt());
+        startActivity(intent);
+    }
+
     private void searchArticles(String query) {
         resultCount.setText("Searching...");
         resultList.setVisibility(View.GONE);
@@ -98,7 +111,6 @@ public class SearchResultsActivity extends AppCompatActivity {
             @Override
             public void onSuccess(List<Article> articles) {
                 List<Article> matchedArticles = new ArrayList<>();
-
                 String keyword = query.toLowerCase(Locale.ROOT);
 
                 for (Article article : articles) {
@@ -119,7 +131,6 @@ public class SearchResultsActivity extends AppCompatActivity {
             @Override
             public void onError(Exception exception) {
                 android.util.Log.e("SearchResultsActivity", "Failed to search articles", exception);
-
                 resultCount.setText("Unable to search articles. Please try again.");
                 resultList.setVisibility(View.GONE);
             }

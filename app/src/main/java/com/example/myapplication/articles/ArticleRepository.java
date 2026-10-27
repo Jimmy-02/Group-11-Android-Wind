@@ -1,15 +1,14 @@
 package com.example.myapplication.articles;
 
+import com.google.firebase.Timestamp;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.Query;
-import com.google.firebase.Timestamp;
-import java.util.Date;
+import com.google.firebase.firestore.QuerySnapshot;
+
 import java.util.ArrayList;
 import java.util.List;
-
-
-//LỚP ARCICLE REPORSITORY SẼ Kết hợp Firestore và SQLite giúp cung cấp dữ liệu cho giao diện khi có mnjag hoặc ngắt mạng
 
 public class ArticleRepository {
 
@@ -19,71 +18,57 @@ public class ArticleRepository {
         firestore = FirebaseFirestore.getInstance();
     }
 
-    public void getLatestArticles(OnArticlesLoadedListener listener) {
-        firestore.collection("articles")
-                .whereEqualTo("status", "APPROVED")
-                .orderBy("createdAt", Query.Direction.DESCENDING)
-                .get()
-                .addOnSuccessListener(querySnapshot -> {
-                    List<Article> articles = new ArrayList<>();
+    public ListenerRegistration listenApprovedArticles(String categoryId, OnArticlesLoadedListener listener) {
+        Query query = firestore.collection("articles").whereEqualTo("status", "APPROVED");
 
-                    for (DocumentSnapshot document : querySnapshot.getDocuments()) {
-                        if (document.contains("deletedAt")
-                                && document.get("deletedAt") != null) {
-                            continue;
-                        }
+        if (categoryId != null && !categoryId.trim().isEmpty()) {
+            query = query.whereEqualTo("categoryId", categoryId);
+        }
 
-                        Article article = document.toObject(Article.class);
+        query = query.orderBy("createdAt", Query.Direction.DESCENDING);
 
-                        if (article != null) {
-                            article.setId(document.getId());
+        return query.addSnapshotListener((querySnapshot, error) -> {
+            if (error != null) {
+                listener.onError(error);
+                return;
+            }
 
-                            Timestamp timestamp = document.getTimestamp("createdAt");
+            if (querySnapshot == null) {
+                return;
+            }
 
-                            if (timestamp != null) {
-                                article.setCreatedAt(timestamp.toDate().getTime());
-                            }
+            List<Article> articles = new ArrayList<>();
 
-                            articles.add(article);
-                        }
+            for (DocumentSnapshot document : querySnapshot.getDocuments()) {
+                if (document.contains("deletedAt") && document.get("deletedAt") != null) {
+                    continue;
+                }
+
+                Article article = document.toObject(Article.class);
+
+                if (article != null) {
+                    article.setId(document.getId());
+
+                    Timestamp timestamp = document.getTimestamp("createdAt");
+
+                    if (timestamp != null) {
+                        article.setCreatedAt(timestamp.toDate().getTime());
                     }
 
-                    listener.onSuccess(articles);
-                })
-                .addOnFailureListener(listener::onError);
+                    articles.add(article);
+                }
+            }
+
+            listener.onSuccess(articles);
+        });
     }
+
+    public void getLatestArticles(OnArticlesLoadedListener listener) {
+        listenApprovedArticles(null, listener);
+    }
+
     public void getArticlesByCategory(String categoryId, OnArticlesLoadedListener listener) {
-        firestore.collection("articles")
-                .whereEqualTo("status", "APPROVED")
-                .whereEqualTo("categoryId", categoryId)
-                .orderBy("createdAt", Query.Direction.DESCENDING)
-                .get()
-                .addOnSuccessListener(querySnapshot -> {
-                    List<Article> articles = new ArrayList<>();
-
-                    for (DocumentSnapshot document : querySnapshot.getDocuments()) {
-                        if (document.contains("deletedAt") && document.get("deletedAt") != null) {
-                            continue;
-                        }
-
-                        Article article = document.toObject(Article.class);
-
-                        if (article != null) {
-                            article.setId(document.getId());
-
-                            Timestamp timestamp = document.getTimestamp("createdAt");
-
-                            if (timestamp != null) {
-                                article.setCreatedAt(timestamp.toDate().getTime());
-                            }
-
-                            articles.add(article);
-                        }
-                    }
-
-                    listener.onSuccess(articles);
-                })
-                .addOnFailureListener(listener::onError);
+        listenApprovedArticles(categoryId, listener);
     }
 
     public interface OnArticlesLoadedListener {
