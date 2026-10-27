@@ -28,10 +28,14 @@ import com.google.firebase.firestore.ListenerRegistration;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import com.google.firebase.Timestamp;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
+import java.util.HashSet;
 
 public class AdminDiscussionsFragment extends Fragment {
 
@@ -48,6 +52,13 @@ public class AdminDiscussionsFragment extends Fragment {
     private final List<AdminReportItem> allCommentItems = new ArrayList<>();
     private ListenerRegistration discussionReportsListener;
     private ListenerRegistration commentReportsListener;
+    private ListenerRegistration deletedDiscussionsListener;
+    private ListenerRegistration deletedCommentsListener;
+
+    private List<DocumentSnapshot> latestDiscussionReportsDocs = null;
+    private List<DocumentSnapshot> latestDeletedDiscussionsDocs = null;
+    private List<DocumentSnapshot> latestCommentReportsDocs = null;
+    private List<DocumentSnapshot> latestDeletedCommentsDocs = null;
 
     private int currentTab = 0; // 0: Bài thảo luận, 1: Bình luận
     private String currentFilter = "ALL"; // ALL, PENDING, REPORTED_CONTENT_DELETED, DISMISSED
@@ -201,67 +212,96 @@ public class AdminDiscussionsFragment extends Fragment {
             commentReportsListener.remove();
             commentReportsListener = null;
         }
+        if (deletedDiscussionsListener != null) {
+            deletedDiscussionsListener.remove();
+            deletedDiscussionsListener = null;
+        }
+        if (deletedCommentsListener != null) {
+            deletedCommentsListener.remove();
+            deletedCommentsListener = null;
+        }
+        if (deletedDiscussionsListener != null) {
+            deletedDiscussionsListener.remove();
+            deletedDiscussionsListener = null;
+        }
+        if (deletedCommentsListener != null) {
+            deletedCommentsListener.remove();
+            deletedCommentsListener = null;
+        }
 
         pbLoading.setVisibility(View.VISIBLE);
         FirebaseFirestore db = FirebaseFirestore.getInstance();
 
-        // 1. Tải báo cáo Thảo luận (discussionReports) realtime
+        // 1. Lắng nghe báo cáo Thảo luận realtime
         discussionReportsListener = db.collection("discussionReports")
                 .addSnapshotListener((snapshots, error) -> {
                     if (!isAdded()) return;
-                    if (error != null || snapshots == null || snapshots.isEmpty()) {
-                        if (allDiscussionItems.isEmpty()) {
-                            createMockDiscussions();
-                        }
-                        if (currentTab == 0) {
-                            pbLoading.setVisibility(View.GONE);
-                            applyFilterAndSearch();
-                        }
-                        return;
-                    }
-                    groupDiscussionReports(snapshots.getDocuments());
+                    latestDiscussionReportsDocs = (snapshots != null) ? snapshots.getDocuments() : null;
+                    rebuildDiscussionItems();
                 });
 
-        // 2. Tải báo cáo Bình luận (commentReports) realtime
+        // 2. Lắng nghe thảo luận đã bị xóa realtime (để giữ trong admin và gán nhãn "Đã xử lý")
+        deletedDiscussionsListener = db.collection("discussions")
+                .whereEqualTo("status", "DELETED")
+                .addSnapshotListener((snapshots, error) -> {
+                    if (!isAdded()) return;
+                    latestDeletedDiscussionsDocs = (snapshots != null) ? snapshots.getDocuments() : null;
+                    rebuildDiscussionItems();
+                });
+
+        // 3. Lắng nghe báo cáo Bình luận realtime
         commentReportsListener = db.collection("commentReports")
                 .addSnapshotListener((snapshots, error) -> {
                     if (!isAdded()) return;
-                    if (error != null || snapshots == null || snapshots.isEmpty()) {
-                        if (allCommentItems.isEmpty()) {
-                            createMockComments();
-                        }
-                        if (currentTab == 1) {
-                            pbLoading.setVisibility(View.GONE);
-                            applyFilterAndSearch();
-                        }
-                        return;
-                    }
-                    groupCommentReports(snapshots.getDocuments());
+                    latestCommentReportsDocs = (snapshots != null) ? snapshots.getDocuments() : null;
+                    rebuildCommentItems();
+                });
+
+        // 4. Lắng nghe bình luận đã bị xóa realtime
+        deletedCommentsListener = db.collection("comments")
+                .whereEqualTo("status", "DELETED")
+                .addSnapshotListener((snapshots, error) -> {
+                    if (!isAdded()) return;
+                    latestDeletedCommentsDocs = (snapshots != null) ? snapshots.getDocuments() : null;
+                    rebuildCommentItems();
                 });
     }
 
-    private void groupDiscussionReports(List<DocumentSnapshot> docs) {
+    private String formatTimestamp(long timeMillis) {
+        if (timeMillis <= 0) return "Vừa xong";
+        long diff = System.currentTimeMillis() - timeMillis;
+        if (diff < 0) diff = 0;
+        long minutes = diff / (1000 * 60);
+        long hours = minutes / 60;
+        long days = hours / 24;
+
+        if (days > 0) return days + " ngày trước";
+        if (hours > 0) return hours + " giờ trước";
+        if (minutes > 0) return minutes + " phút trước";
+        return "Vừa xong";
+    }
+
+    private void rebuildDiscussionItems() {
         allDiscussionItems.clear();
-        Map<String, List<DocumentSnapshot>> map = new HashMap<>();
-        for (DocumentSnapshot doc : docs) {
-            String dId = doc.getString("discussionId");
-            if (dId == null || dId.isEmpty()) continue;
-            if (!map.containsKey(dId)) map.put(dId, new ArrayList<>());
-            map.get(dId).add(doc);
-        }
-
-        if (map.isEmpty()) {
-            if (currentTab == 0) {
-                pbLoading.setVisibility(View.GONE);
-                applyFilterAndSearch();
+        Map<String, List<DocumentSnapshot>> reportMap = new HashMap<>();
+        if (latestDiscussionReportsDocs != null) {
+            for (DocumentSnapshot doc : latestDiscussionReportsDocs) {
+                String dId = doc.getString("discussionId");
+                if (dId == null || dId.isEmpty()) continue;
+                if (!reportMap.containsKey(dId)) reportMap.put(dId, new ArrayList<>());
+                reportMap.get(dId).add(doc);
             }
-            return;
         }
 
+        Set<String> processedDiscussionIds = new HashSet<>();
         FirebaseFirestore db = FirebaseFirestore.getInstance();
-        for (Map.Entry<String, List<DocumentSnapshot>> entry : map.entrySet()) {
+
+        // 1. Thêm các thảo luận có báo cáo
+        for (Map.Entry<String, List<DocumentSnapshot>> entry : reportMap.entrySet()) {
             String discussionId = entry.getKey();
+            processedDiscussionIds.add(discussionId);
             List<DocumentSnapshot> reports = entry.getValue();
+
             db.collection("discussions").document(discussionId).get().addOnSuccessListener(dDoc -> {
                 if (!isAdded()) return;
                 String title = dDoc.exists() ? dDoc.getString("title") : "Bài thảo luận vi phạm";
@@ -274,7 +314,7 @@ public class AdminDiscussionsFragment extends Fragment {
 
                 String statusToUse;
                 if ("DELETED".equalsIgnoreCase(dStatus) || (dDoc.exists() && dDoc.get("deletedAt") != null)) {
-                    statusToUse = "REPORTED_CONTENT_DELETED";
+                    statusToUse = "REPORTED_CONTENT_DELETED"; // Luôn gán nhãn "Đã xử lý"
                 } else {
                     boolean hasPending = false;
                     boolean hasDeleted = false;
@@ -302,6 +342,19 @@ public class AdminDiscussionsFragment extends Fragment {
                     }
                 }
 
+                long maxTime = 0;
+                for (DocumentSnapshot rDoc : reports) {
+                    Timestamp ts = rDoc.getTimestamp("createdAt");
+                    if (ts != null && ts.toDate().getTime() > maxTime) {
+                        maxTime = ts.toDate().getTime();
+                    }
+                }
+                if (maxTime == 0 && dDoc.exists()) {
+                    Timestamp dTs = dDoc.getTimestamp("createdAt");
+                    if (dTs != null) maxTime = dTs.toDate().getTime();
+                }
+                if (maxTime == 0) maxTime = System.currentTimeMillis();
+
                 AdminReportItem item = new AdminReportItem(
                         reports.get(0).getId(),
                         discussionId,
@@ -311,13 +364,15 @@ public class AdminDiscussionsFragment extends Fragment {
                         null,
                         statusToUse,
                         reports.size(),
-                        "Vừa xong",
+                        formatTimestamp(maxTime),
                         (authorName != null && !authorName.trim().isEmpty()) ? authorName.trim() : "Người dùng",
                         authorAvatar,
                         Arrays.asList(category != null ? category : "Thảo luận")
                 );
+                item.setTimestamp(maxTime);
                 item.setImageUrl(imageUrl);
                 allDiscussionItems.add(item);
+                pbLoading.setVisibility(View.GONE);
                 if (currentTab == 0) applyFilterAndSearch();
 
                 if ((authorName == null || authorName.trim().isEmpty() || authorAvatar == null || authorAvatar.trim().isEmpty())
@@ -342,30 +397,80 @@ public class AdminDiscussionsFragment extends Fragment {
                 }
             });
         }
-    }
 
-    private void groupCommentReports(List<DocumentSnapshot> docs) {
-        allCommentItems.clear();
-        Map<String, List<DocumentSnapshot>> map = new HashMap<>();
-        for (DocumentSnapshot doc : docs) {
-            String cId = doc.getString("commentId");
-            if (cId == null || cId.isEmpty()) continue;
-            if (!map.containsKey(cId)) map.put(cId, new ArrayList<>());
-            map.get(cId).add(doc);
+        // 2. Thêm các thảo luận đã bị xóa (kể cả chưa có báo cáo)
+        if (latestDeletedDiscussionsDocs != null) {
+            for (DocumentSnapshot dDoc : latestDeletedDiscussionsDocs) {
+                String discussionId = dDoc.getId();
+                if (processedDiscussionIds.contains(discussionId)) continue;
+                processedDiscussionIds.add(discussionId);
+
+                String title = dDoc.getString("title");
+                String content = dDoc.getString("content");
+                String authorName = dDoc.getString("authorName");
+                String authorAvatar = dDoc.getString("authorAvatar");
+                String imageUrl = dDoc.getString("imageUrl");
+                String category = dDoc.getString("category");
+
+                Timestamp delTs = dDoc.getTimestamp("deletedAt");
+                if (delTs == null) delTs = dDoc.getTimestamp("createdAt");
+                long delTime = (delTs != null) ? delTs.toDate().getTime() : System.currentTimeMillis();
+
+                AdminReportItem item = new AdminReportItem(
+                        "del_" + discussionId,
+                        discussionId,
+                        "DISCUSSION",
+                        (title != null && !title.isEmpty()) ? title : "Bài thảo luận đã xóa",
+                        (content != null) ? content : "",
+                        null,
+                        "REPORTED_CONTENT_DELETED", // Gán nhãn "Đã xử lý"
+                        0,
+                        formatTimestamp(delTime),
+                        (authorName != null && !authorName.trim().isEmpty()) ? authorName.trim() : "Người dùng",
+                        authorAvatar,
+                        Arrays.asList(category != null ? category : "Thảo luận")
+                );
+                item.setTimestamp(delTime);
+                item.setImageUrl(imageUrl);
+                allDiscussionItems.add(item);
+                pbLoading.setVisibility(View.GONE);
+                if (currentTab == 0) applyFilterAndSearch();
+            }
         }
 
-if (map.isEmpty()) {
-            if (currentTab == 1) {
+        if (processedDiscussionIds.isEmpty()) {
+            if ((latestDiscussionReportsDocs == null || latestDiscussionReportsDocs.isEmpty())
+                    && (latestDeletedDiscussionsDocs == null || latestDeletedDiscussionsDocs.isEmpty())) {
+                createMockDiscussions();
+            }
+            if (currentTab == 0) {
                 pbLoading.setVisibility(View.GONE);
                 applyFilterAndSearch();
             }
-            return;
+        }
+    }
+
+    private void rebuildCommentItems() {
+        allCommentItems.clear();
+        Map<String, List<DocumentSnapshot>> reportMap = new HashMap<>();
+        if (latestCommentReportsDocs != null) {
+            for (DocumentSnapshot doc : latestCommentReportsDocs) {
+                String cId = doc.getString("commentId");
+                if (cId == null || cId.isEmpty()) continue;
+                if (!reportMap.containsKey(cId)) reportMap.put(cId, new ArrayList<>());
+                reportMap.get(cId).add(doc);
+            }
         }
 
-                FirebaseFirestore db = FirebaseFirestore.getInstance();
-        for (Map.Entry<String, List<DocumentSnapshot>> entry : map.entrySet()) {
+        Set<String> processedCommentIds = new HashSet<>();
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+
+        // 1. Thêm các bình luận có báo cáo
+        for (Map.Entry<String, List<DocumentSnapshot>> entry : reportMap.entrySet()) {
             String commentId = entry.getKey();
+            processedCommentIds.add(commentId);
             List<DocumentSnapshot> reports = entry.getValue();
+
             db.collection("comments").document(commentId).get().addOnSuccessListener(cDoc -> {
                 if (!isAdded()) return;
                 String content = cDoc.exists() ? cDoc.getString("content") : "Nội dung bình luận";
@@ -377,7 +482,7 @@ if (map.isEmpty()) {
 
                 String statusToUse;
                 if ("DELETED".equalsIgnoreCase(cStatus) || (cDoc.exists() && cDoc.get("deletedAt") != null)) {
-                    statusToUse = "REPORTED_CONTENT_DELETED";
+                    statusToUse = "REPORTED_CONTENT_DELETED"; // Luôn gán nhãn "Đã xử lý"
                 } else {
                     boolean hasPending = false;
                     boolean hasDeleted = false;
@@ -405,62 +510,112 @@ if (map.isEmpty()) {
                     }
                 }
 
+                long maxTime = 0;
+                for (DocumentSnapshot rDoc : reports) {
+                    Timestamp ts = rDoc.getTimestamp("createdAt");
+                    if (ts != null && ts.toDate().getTime() > maxTime) {
+                        maxTime = ts.toDate().getTime();
+                    }
+                }
+                if (maxTime == 0 && cDoc.exists()) {
+                    Timestamp cTs = cDoc.getTimestamp("createdAt");
+                    if (cTs != null) maxTime = cTs.toDate().getTime();
+                }
+                if (maxTime == 0) maxTime = System.currentTimeMillis();
+
                 AdminReportItem item = new AdminReportItem(
                         reports.get(0).getId(),
                         commentId,
                         "COMMENT",
                         content,
                         content,
-                        null,
+                        "Bài thảo luận liên quan",
                         statusToUse,
                         reports.size(),
-                        "Vừa xong",
+                        formatTimestamp(maxTime),
                         (authorName != null && !authorName.trim().isEmpty()) ? authorName.trim() : "Người dùng",
                         authorAvatar,
-                        new ArrayList<>()
+                        Arrays.asList("Bình luận")
                 );
-
-                if ((authorName == null || authorName.trim().isEmpty() || authorAvatar == null || authorAvatar.trim().isEmpty())
-                        && userId != null && !userId.trim().isEmpty()) {
-                    db.collection("users").document(userId).get().addOnSuccessListener(uDoc -> {
-                        if (!isAdded() || !uDoc.exists()) return;
-                        String uName = uDoc.getString("fullName");
-                        if (uName == null || uName.trim().isEmpty()) uName = uDoc.getString("username");
-                        if (uName == null || uName.trim().isEmpty()) uName = uDoc.getString("email");
-                        String uAvatar = uDoc.getString("avatar");
-                        boolean changed = false;
-                        if (uName != null && !uName.trim().isEmpty() && "Người dùng".equals(item.getAuthorName())) {
-                            item.setAuthorName(uName.trim());
-                            changed = true;
-                        }
-                        if (uAvatar != null && !uAvatar.trim().isEmpty() && item.getAuthorAvatar() == null) {
-                            item.setAuthorAvatar(uAvatar.trim());
-                            changed = true;
-                        }
-                        if (changed && currentTab == 1) applyFilterAndSearch();
-                    });
-                }
+                item.setTimestamp(maxTime);
+                allCommentItems.add(item);
+                pbLoading.setVisibility(View.GONE);
+                if (currentTab == 1) applyFilterAndSearch();
 
                 if (discussionId != null && !discussionId.isEmpty()) {
                     db.collection("discussions").document(discussionId).get().addOnSuccessListener(dDoc -> {
-                        if (dDoc.exists()) {
-                            item.setParentQuestionTitle(dDoc.getString("title"));
+                        if (!isAdded() || !dDoc.exists()) return;
+                        String dTitle = dDoc.getString("title");
+                        if (dTitle != null && !dTitle.trim().isEmpty()) {
+                            item.setParentQuestionTitle(dTitle.trim());
+                            if (currentTab == 1) applyFilterAndSearch();
                         }
-                        allCommentItems.add(item);
-                        if (currentTab == 1) applyFilterAndSearch();
-                    }).addOnFailureListener(e -> {
-                        allCommentItems.add(item);
-                        if (currentTab == 1) applyFilterAndSearch();
                     });
-                } else {
-                    allCommentItems.add(item);
-                    if (currentTab == 1) applyFilterAndSearch();
                 }
             });
         }
+
+        // 2. Thêm các bình luận đã bị xóa
+        if (latestDeletedCommentsDocs != null) {
+            for (DocumentSnapshot cDoc : latestDeletedCommentsDocs) {
+                String commentId = cDoc.getId();
+                if (processedCommentIds.contains(commentId)) continue;
+                processedCommentIds.add(commentId);
+
+                String content = cDoc.getString("content");
+                String authorName = cDoc.getString("authorName");
+                String authorAvatar = cDoc.getString("authorAvatar");
+                String discussionId = cDoc.getString("discussionId");
+
+                Timestamp delTs = cDoc.getTimestamp("deletedAt");
+                if (delTs == null) delTs = cDoc.getTimestamp("createdAt");
+                long delTime = (delTs != null) ? delTs.toDate().getTime() : System.currentTimeMillis();
+
+                AdminReportItem item = new AdminReportItem(
+                        "del_" + commentId,
+                        commentId,
+                        "COMMENT",
+                        (content != null && !content.isEmpty()) ? content : "Bình luận đã xóa",
+                        (content != null) ? content : "",
+                        "Bài thảo luận liên quan",
+                        "REPORTED_CONTENT_DELETED", // Gán nhãn "Đã xử lý"
+                        0,
+                        formatTimestamp(delTime),
+                        (authorName != null && !authorName.trim().isEmpty()) ? authorName.trim() : "Người dùng",
+                        authorAvatar,
+                        Arrays.asList("Bình luận")
+                );
+                item.setTimestamp(delTime);
+                allCommentItems.add(item);
+                pbLoading.setVisibility(View.GONE);
+                if (currentTab == 1) applyFilterAndSearch();
+
+                if (discussionId != null && !discussionId.isEmpty()) {
+                    db.collection("discussions").document(discussionId).get().addOnSuccessListener(dDoc -> {
+                        if (!isAdded() || !dDoc.exists()) return;
+                        String dTitle = dDoc.getString("title");
+                        if (dTitle != null && !dTitle.trim().isEmpty()) {
+                            item.setParentQuestionTitle(dTitle.trim());
+                            if (currentTab == 1) applyFilterAndSearch();
+                        }
+                    });
+                }
+            }
+        }
+
+        if (processedCommentIds.isEmpty()) {
+            if ((latestCommentReportsDocs == null || latestCommentReportsDocs.isEmpty())
+                    && (latestDeletedCommentsDocs == null || latestDeletedCommentsDocs.isEmpty())) {
+                createMockComments();
+            }
+            if (currentTab == 1) {
+                pbLoading.setVisibility(View.GONE);
+                applyFilterAndSearch();
+            }
+        }
     }
 
-    private void createMockDiscussions() {
+        private void createMockDiscussions() {
         allDiscussionItems.clear();
         allDiscussionItems.add(new AdminReportItem(
                 "disc_rep_1",
@@ -612,6 +767,17 @@ if (map.isEmpty()) {
                 filteredList.add(item);
             }
         }
+
+        // Sắp xếp: Báo cáo "Chờ xử lý" (PENDING) luôn nằm ở đầu,
+        // và nội dung mới bị report (timestamp mới nhất) luôn nằm trên cùng
+        Collections.sort(filteredList, (a, b) -> {
+            boolean aPending = "PENDING".equalsIgnoreCase(a.getStatus());
+            boolean bPending = "PENDING".equalsIgnoreCase(b.getStatus());
+            if (aPending != bPending) {
+                return aPending ? -1 : 1;
+            }
+            return Long.compare(b.getTimestamp(), a.getTimestamp());
+        });
 
         adapter.setItems(filteredList);
 

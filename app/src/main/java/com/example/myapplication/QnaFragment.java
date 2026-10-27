@@ -929,8 +929,8 @@ public class QnaFragment extends Fragment {
                     updates.put("status", "DELETED");
                     updates.put("deletedAt", FieldValue.serverTimestamp());
 
-                    FirebaseFirestore.getInstance()
-                            .collection("questions")
+                    FirebaseFirestore db = FirebaseFirestore.getInstance();
+                    db.collection("questions")
                             .document(question.getId())
                             .update(updates)
                             .addOnSuccessListener(unused -> {
@@ -939,6 +939,22 @@ public class QnaFragment extends Fragment {
                                 allQuestions.remove(question);
                                 applyFilterAndSort();
                                 Toast.makeText(requireContext(), "Đã xóa câu hỏi", Toast.LENGTH_SHORT).show();
+
+                                // Cập nhật trạng thái "Đã xử lý" cho các báo cáo liên quan nếu có
+                                db.collection("questionReports")
+                                        .whereEqualTo("questionId", question.getId())
+                                        .get()
+                                        .addOnSuccessListener(rSnap -> {
+                                            if (rSnap != null && !rSnap.isEmpty()) {
+                                                for (DocumentSnapshot doc : rSnap.getDocuments()) {
+                                                    doc.getReference().update(
+                                                            "status", "REPORTED_CONTENT_DELETED",
+                                                            "reviewedAt", FieldValue.serverTimestamp(),
+                                                            "reviewReason", "Tác giả đã xóa câu hỏi"
+                                                    );
+                                                }
+                                            }
+                                        });
                             })
                             .addOnFailureListener(error -> {
                                 if (!isAdded()) return;

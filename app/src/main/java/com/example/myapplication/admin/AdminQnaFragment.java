@@ -28,10 +28,14 @@ import com.google.firebase.firestore.ListenerRegistration;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import com.google.firebase.Timestamp;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
+import java.util.HashSet;
 
 public class AdminQnaFragment extends Fragment {
 
@@ -48,6 +52,13 @@ public class AdminQnaFragment extends Fragment {
     private final List<AdminReportItem> allAnswerItems = new ArrayList<>();
     private ListenerRegistration questionReportsListener;
     private ListenerRegistration answerReportsListener;
+    private ListenerRegistration deletedQuestionsListener;
+    private ListenerRegistration deletedAnswersListener;
+
+    private List<DocumentSnapshot> latestQuestionReportsDocs = null;
+    private List<DocumentSnapshot> latestDeletedQuestionsDocs = null;
+    private List<DocumentSnapshot> latestAnswerReportsDocs = null;
+    private List<DocumentSnapshot> latestDeletedAnswersDocs = null;
 
     private int currentTab = 0; // 0: Câu hỏi, 1: Câu trả lời
     private String currentFilter = "ALL"; // ALL, PENDING, REPORTED_CONTENT_DELETED, DISMISSED
@@ -201,67 +212,96 @@ public class AdminQnaFragment extends Fragment {
             answerReportsListener.remove();
             answerReportsListener = null;
         }
+        if (deletedQuestionsListener != null) {
+            deletedQuestionsListener.remove();
+            deletedQuestionsListener = null;
+        }
+        if (deletedAnswersListener != null) {
+            deletedAnswersListener.remove();
+            deletedAnswersListener = null;
+        }
+        if (deletedQuestionsListener != null) {
+            deletedQuestionsListener.remove();
+            deletedQuestionsListener = null;
+        }
+        if (deletedAnswersListener != null) {
+            deletedAnswersListener.remove();
+            deletedAnswersListener = null;
+        }
 
         pbLoading.setVisibility(View.VISIBLE);
         FirebaseFirestore db = FirebaseFirestore.getInstance();
 
-        // 1. Tải báo cáo Câu hỏi (questionReports) realtime
+        // 1. Lắng nghe báo cáo Câu hỏi realtime
         questionReportsListener = db.collection("questionReports")
                 .addSnapshotListener((snapshots, error) -> {
                     if (!isAdded()) return;
-                    if (error != null || snapshots == null || snapshots.isEmpty()) {
-                        if (allQuestionItems.isEmpty()) {
-                            createMockQuestions();
-                        }
-                        if (currentTab == 0) {
-                            pbLoading.setVisibility(View.GONE);
-                            applyFilterAndSearch();
-                        }
-                        return;
-                    }
-                    groupQuestionReports(snapshots.getDocuments());
+                    latestQuestionReportsDocs = (snapshots != null) ? snapshots.getDocuments() : null;
+                    rebuildQuestionItems();
                 });
 
-        // 2. Tải báo cáo Câu trả lời (answerReports) realtime
+        // 2. Lắng nghe các câu hỏi đã bị xóa realtime (để giữ trong admin và gán nhãn "Đã xử lý")
+        deletedQuestionsListener = db.collection("questions")
+                .whereEqualTo("status", "DELETED")
+                .addSnapshotListener((snapshots, error) -> {
+                    if (!isAdded()) return;
+                    latestDeletedQuestionsDocs = (snapshots != null) ? snapshots.getDocuments() : null;
+                    rebuildQuestionItems();
+                });
+
+        // 3. Lắng nghe báo cáo Câu trả lời realtime
         answerReportsListener = db.collection("answerReports")
                 .addSnapshotListener((snapshots, error) -> {
                     if (!isAdded()) return;
-                    if (error != null || snapshots == null || snapshots.isEmpty()) {
-                        if (allAnswerItems.isEmpty()) {
-                            createMockAnswers();
-                        }
-                        if (currentTab == 1) {
-                            pbLoading.setVisibility(View.GONE);
-                            applyFilterAndSearch();
-                        }
-                        return;
-                    }
-                    groupAnswerReports(snapshots.getDocuments());
+                    latestAnswerReportsDocs = (snapshots != null) ? snapshots.getDocuments() : null;
+                    rebuildAnswerItems();
+                });
+
+        // 4. Lắng nghe các câu trả lời đã bị xóa realtime
+        deletedAnswersListener = db.collection("answers")
+                .whereEqualTo("status", "DELETED")
+                .addSnapshotListener((snapshots, error) -> {
+                    if (!isAdded()) return;
+                    latestDeletedAnswersDocs = (snapshots != null) ? snapshots.getDocuments() : null;
+                    rebuildAnswerItems();
                 });
     }
 
-    private void groupQuestionReports(List<DocumentSnapshot> docs) {
+    private String formatTimestamp(long timeMillis) {
+        if (timeMillis <= 0) return "Vừa xong";
+        long diff = System.currentTimeMillis() - timeMillis;
+        if (diff < 0) diff = 0;
+        long minutes = diff / (1000 * 60);
+        long hours = minutes / 60;
+        long days = hours / 24;
+
+        if (days > 0) return days + " ngày trước";
+        if (hours > 0) return hours + " giờ trước";
+        if (minutes > 0) return minutes + " phút trước";
+        return "Vừa xong";
+    }
+
+    private void rebuildQuestionItems() {
         allQuestionItems.clear();
-        Map<String, List<DocumentSnapshot>> map = new HashMap<>();
-        for (DocumentSnapshot doc : docs) {
-            String qId = doc.getString("questionId");
-            if (qId == null || qId.isEmpty()) continue;
-            if (!map.containsKey(qId)) map.put(qId, new ArrayList<>());
-            map.get(qId).add(doc);
-        }
-
-        if (map.isEmpty()) {
-            if (currentTab == 0) {
-                pbLoading.setVisibility(View.GONE);
-                applyFilterAndSearch();
+        Map<String, List<DocumentSnapshot>> reportMap = new HashMap<>();
+        if (latestQuestionReportsDocs != null) {
+            for (DocumentSnapshot doc : latestQuestionReportsDocs) {
+                String qId = doc.getString("questionId");
+                if (qId == null || qId.isEmpty()) continue;
+                if (!reportMap.containsKey(qId)) reportMap.put(qId, new ArrayList<>());
+                reportMap.get(qId).add(doc);
             }
-            return;
         }
 
+        Set<String> processedQuestionIds = new HashSet<>();
         FirebaseFirestore db = FirebaseFirestore.getInstance();
-        for (Map.Entry<String, List<DocumentSnapshot>> entry : map.entrySet()) {
+
+        // 1. Xử lý các câu hỏi có báo cáo
+        for (Map.Entry<String, List<DocumentSnapshot>> entry : reportMap.entrySet()) {
             String questionId = entry.getKey();
+            processedQuestionIds.add(questionId);
             List<DocumentSnapshot> reports = entry.getValue();
+
             db.collection("questions").document(questionId).get().addOnSuccessListener(qDoc -> {
                 if (!isAdded()) return;
                 String title = qDoc.exists() ? qDoc.getString("title") : "Câu hỏi vi phạm";
@@ -274,7 +314,7 @@ public class AdminQnaFragment extends Fragment {
 
                 String statusToUse;
                 if ("DELETED".equalsIgnoreCase(qStatus) || (qDoc.exists() && qDoc.get("deletedAt") != null)) {
-                    statusToUse = "REPORTED_CONTENT_DELETED";
+                    statusToUse = "REPORTED_CONTENT_DELETED"; // Luôn gán nhãn "Đã xử lý"
                 } else {
                     boolean hasPending = false;
                     boolean hasDeleted = false;
@@ -302,6 +342,19 @@ public class AdminQnaFragment extends Fragment {
                     }
                 }
 
+                long maxTime = 0;
+                for (DocumentSnapshot rDoc : reports) {
+                    Timestamp ts = rDoc.getTimestamp("createdAt");
+                    if (ts != null && ts.toDate().getTime() > maxTime) {
+                        maxTime = ts.toDate().getTime();
+                    }
+                }
+                if (maxTime == 0 && qDoc.exists()) {
+                    Timestamp qTs = qDoc.getTimestamp("createdAt");
+                    if (qTs != null) maxTime = qTs.toDate().getTime();
+                }
+                if (maxTime == 0) maxTime = System.currentTimeMillis();
+
                 AdminReportItem item = new AdminReportItem(
                         reports.get(0).getId(),
                         questionId,
@@ -311,13 +364,15 @@ public class AdminQnaFragment extends Fragment {
                         null,
                         statusToUse,
                         reports.size(),
-                        "Vừa xong",
+                        formatTimestamp(maxTime),
                         (authorName != null && !authorName.trim().isEmpty()) ? authorName.trim() : "Người dùng",
                         authorAvatar,
                         Arrays.asList(category != null ? category : "Q&A")
                 );
+                item.setTimestamp(maxTime);
                 item.setImageUrl(imageUrl);
                 allQuestionItems.add(item);
+                pbLoading.setVisibility(View.GONE);
                 if (currentTab == 0) applyFilterAndSearch();
 
                 if ((authorName == null || authorName.trim().isEmpty() || authorAvatar == null || authorAvatar.trim().isEmpty())
@@ -342,30 +397,86 @@ public class AdminQnaFragment extends Fragment {
                 }
             });
         }
-    }
 
-    private void groupAnswerReports(List<DocumentSnapshot> docs) {
-        allAnswerItems.clear();
-        Map<String, List<DocumentSnapshot>> map = new HashMap<>();
-        for (DocumentSnapshot doc : docs) {
-            String aId = doc.getString("answerId");
-            if (aId == null || aId.isEmpty()) continue;
-            if (!map.containsKey(aId)) map.put(aId, new ArrayList<>());
-            map.get(aId).add(doc);
+        // 2. Thêm các câu hỏi đã xóa (kể cả chưa có báo cáo) để admin vẫn giữ và hiển thị "Đã xử lý"
+        if (latestDeletedQuestionsDocs != null) {
+            for (DocumentSnapshot qDoc : latestDeletedQuestionsDocs) {
+                String questionId = qDoc.getId();
+                if (processedQuestionIds.contains(questionId)) continue;
+                processedQuestionIds.add(questionId);
+
+                String title = qDoc.getString("title");
+                String content = qDoc.getString("content");
+                String authorName = qDoc.getString("authorName");
+                String authorAvatar = qDoc.getString("authorAvatar");
+                String imageUrl = qDoc.getString("imageUrl");
+                Object catObj = qDoc.get("category");
+                List<String> tags = new ArrayList<>();
+                if (catObj instanceof String) tags.add((String) catObj);
+                else if (catObj instanceof List<?>) {
+                    for (Object o : (List<?>) catObj) if (o instanceof String) tags.add((String) o);
+                }
+                if (tags.isEmpty()) tags.add("Q&A");
+
+                Timestamp delTs = qDoc.getTimestamp("deletedAt");
+                if (delTs == null) delTs = qDoc.getTimestamp("createdAt");
+                long delTime = (delTs != null) ? delTs.toDate().getTime() : System.currentTimeMillis();
+
+                AdminReportItem item = new AdminReportItem(
+                        "del_" + questionId,
+                        questionId,
+                        "QUESTION",
+                        (title != null && !title.isEmpty()) ? title : "Câu hỏi đã xóa",
+                        (content != null) ? content : "",
+                        null,
+                        "REPORTED_CONTENT_DELETED", // Gán nhãn "Đã xử lý"
+                        0,
+                        formatTimestamp(delTime),
+                        (authorName != null && !authorName.trim().isEmpty()) ? authorName.trim() : "Người dùng",
+                        authorAvatar,
+                        tags
+                );
+                item.setTimestamp(delTime);
+                item.setImageUrl(imageUrl);
+                allQuestionItems.add(item);
+                pbLoading.setVisibility(View.GONE);
+                if (currentTab == 0) applyFilterAndSearch();
+            }
         }
 
-if (map.isEmpty()) {
-            if (currentTab == 1) {
+        if (processedQuestionIds.isEmpty()) {
+            if ((latestQuestionReportsDocs == null || latestQuestionReportsDocs.isEmpty())
+                    && (latestDeletedQuestionsDocs == null || latestDeletedQuestionsDocs.isEmpty())) {
+                createMockQuestions();
+            }
+            if (currentTab == 0) {
                 pbLoading.setVisibility(View.GONE);
                 applyFilterAndSearch();
             }
-            return;
+        }
+    }
+
+    private void rebuildAnswerItems() {
+        allAnswerItems.clear();
+        Map<String, List<DocumentSnapshot>> reportMap = new HashMap<>();
+        if (latestAnswerReportsDocs != null) {
+            for (DocumentSnapshot doc : latestAnswerReportsDocs) {
+                String aId = doc.getString("answerId");
+                if (aId == null || aId.isEmpty()) continue;
+                if (!reportMap.containsKey(aId)) reportMap.put(aId, new ArrayList<>());
+                reportMap.get(aId).add(doc);
+            }
         }
 
-                FirebaseFirestore db = FirebaseFirestore.getInstance();
-        for (Map.Entry<String, List<DocumentSnapshot>> entry : map.entrySet()) {
+        Set<String> processedAnswerIds = new HashSet<>();
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+
+        // 1. Thêm các câu trả lời có báo cáo
+        for (Map.Entry<String, List<DocumentSnapshot>> entry : reportMap.entrySet()) {
             String answerId = entry.getKey();
+            processedAnswerIds.add(answerId);
             List<DocumentSnapshot> reports = entry.getValue();
+
             db.collection("answers").document(answerId).get().addOnSuccessListener(aDoc -> {
                 if (!isAdded()) return;
                 String content = aDoc.exists() ? aDoc.getString("content") : "Nội dung câu trả lời";
@@ -377,7 +488,7 @@ if (map.isEmpty()) {
 
                 String statusToUse;
                 if ("DELETED".equalsIgnoreCase(aStatus) || (aDoc.exists() && aDoc.get("deletedAt") != null)) {
-                    statusToUse = "REPORTED_CONTENT_DELETED";
+                    statusToUse = "REPORTED_CONTENT_DELETED"; // Luôn gán nhãn "Đã xử lý"
                 } else {
                     boolean hasPending = false;
                     boolean hasDeleted = false;
@@ -405,62 +516,112 @@ if (map.isEmpty()) {
                     }
                 }
 
+                long maxTime = 0;
+                for (DocumentSnapshot rDoc : reports) {
+                    Timestamp ts = rDoc.getTimestamp("createdAt");
+                    if (ts != null && ts.toDate().getTime() > maxTime) {
+                        maxTime = ts.toDate().getTime();
+                    }
+                }
+                if (maxTime == 0 && aDoc.exists()) {
+                    Timestamp aTs = aDoc.getTimestamp("createdAt");
+                    if (aTs != null) maxTime = aTs.toDate().getTime();
+                }
+                if (maxTime == 0) maxTime = System.currentTimeMillis();
+
                 AdminReportItem item = new AdminReportItem(
                         reports.get(0).getId(),
                         answerId,
                         "ANSWER",
                         content,
                         content,
-                        null,
+                        "Câu hỏi liên quan",
                         statusToUse,
                         reports.size(),
-                        "Vừa xong",
+                        formatTimestamp(maxTime),
                         (authorName != null && !authorName.trim().isEmpty()) ? authorName.trim() : "Người dùng",
                         authorAvatar,
-                        new ArrayList<>()
+                        Arrays.asList("Câu trả lời")
                 );
-
-                if ((authorName == null || authorName.trim().isEmpty() || authorAvatar == null || authorAvatar.trim().isEmpty())
-                        && userId != null && !userId.trim().isEmpty()) {
-                    db.collection("users").document(userId).get().addOnSuccessListener(uDoc -> {
-                        if (!isAdded() || !uDoc.exists()) return;
-                        String uName = uDoc.getString("fullName");
-                        if (uName == null || uName.trim().isEmpty()) uName = uDoc.getString("username");
-                        if (uName == null || uName.trim().isEmpty()) uName = uDoc.getString("email");
-                        String uAvatar = uDoc.getString("avatar");
-                        boolean changed = false;
-                        if (uName != null && !uName.trim().isEmpty() && "Người dùng".equals(item.getAuthorName())) {
-                            item.setAuthorName(uName.trim());
-                            changed = true;
-                        }
-                        if (uAvatar != null && !uAvatar.trim().isEmpty() && item.getAuthorAvatar() == null) {
-                            item.setAuthorAvatar(uAvatar.trim());
-                            changed = true;
-                        }
-                        if (changed && currentTab == 1) applyFilterAndSearch();
-                    });
-                }
+                item.setTimestamp(maxTime);
+                allAnswerItems.add(item);
+                pbLoading.setVisibility(View.GONE);
+                if (currentTab == 1) applyFilterAndSearch();
 
                 if (questionId != null && !questionId.isEmpty()) {
                     db.collection("questions").document(questionId).get().addOnSuccessListener(qDoc -> {
-                        if (qDoc.exists()) {
-                            item.setParentQuestionTitle(qDoc.getString("title"));
+                        if (!isAdded() || !qDoc.exists()) return;
+                        String qTitle = qDoc.getString("title");
+                        if (qTitle != null && !qTitle.trim().isEmpty()) {
+                            item.setParentQuestionTitle(qTitle.trim());
+                            if (currentTab == 1) applyFilterAndSearch();
                         }
-                        allAnswerItems.add(item);
-                        if (currentTab == 1) applyFilterAndSearch();
-                    }).addOnFailureListener(e -> {
-                        allAnswerItems.add(item);
-                        if (currentTab == 1) applyFilterAndSearch();
                     });
-                } else {
-                    allAnswerItems.add(item);
-                    if (currentTab == 1) applyFilterAndSearch();
                 }
             });
         }
+
+        // 2. Thêm các câu trả lời đã bị xóa
+        if (latestDeletedAnswersDocs != null) {
+            for (DocumentSnapshot aDoc : latestDeletedAnswersDocs) {
+                String answerId = aDoc.getId();
+                if (processedAnswerIds.contains(answerId)) continue;
+                processedAnswerIds.add(answerId);
+
+                String content = aDoc.getString("content");
+                String authorName = aDoc.getString("authorName");
+                String authorAvatar = aDoc.getString("authorAvatar");
+                String questionId = aDoc.getString("questionId");
+
+                Timestamp delTs = aDoc.getTimestamp("deletedAt");
+                if (delTs == null) delTs = aDoc.getTimestamp("createdAt");
+                long delTime = (delTs != null) ? delTs.toDate().getTime() : System.currentTimeMillis();
+
+                AdminReportItem item = new AdminReportItem(
+                        "del_" + answerId,
+                        answerId,
+                        "ANSWER",
+                        (content != null && !content.isEmpty()) ? content : "Câu trả lời đã xóa",
+                        (content != null) ? content : "",
+                        "Câu hỏi liên quan",
+                        "REPORTED_CONTENT_DELETED", // Gán nhãn "Đã xử lý"
+                        0,
+                        formatTimestamp(delTime),
+                        (authorName != null && !authorName.trim().isEmpty()) ? authorName.trim() : "Người dùng",
+                        authorAvatar,
+                        Arrays.asList("Câu trả lời")
+                );
+                item.setTimestamp(delTime);
+                allAnswerItems.add(item);
+                pbLoading.setVisibility(View.GONE);
+                if (currentTab == 1) applyFilterAndSearch();
+
+                if (questionId != null && !questionId.isEmpty()) {
+                    db.collection("questions").document(questionId).get().addOnSuccessListener(qDoc -> {
+                        if (!isAdded() || !qDoc.exists()) return;
+                        String qTitle = qDoc.getString("title");
+                        if (qTitle != null && !qTitle.trim().isEmpty()) {
+                            item.setParentQuestionTitle(qTitle.trim());
+                            if (currentTab == 1) applyFilterAndSearch();
+                        }
+                    });
+                }
+            }
+        }
+
+        if (processedAnswerIds.isEmpty()) {
+            if ((latestAnswerReportsDocs == null || latestAnswerReportsDocs.isEmpty())
+                    && (latestDeletedAnswersDocs == null || latestDeletedAnswersDocs.isEmpty())) {
+                createMockAnswers();
+            }
+            if (currentTab == 1) {
+                pbLoading.setVisibility(View.GONE);
+                applyFilterAndSearch();
+            }
+        }
     }
 
-    // Dữ liệu ví dụ mẫu phong phú phục vụ kiểm thử giao diện theo thiết kế image1.png
+        // Dữ liệu ví dụ mẫu phong phú phục vụ kiểm thử giao diện theo thiết kế image1.png
     private void createMockQuestions() {
         allQuestionItems.clear();
         allQuestionItems.add(new AdminReportItem(
@@ -613,6 +774,17 @@ if (map.isEmpty()) {
                 filteredList.add(item);
             }
         }
+
+        // Sắp xếp: Báo cáo "Chờ xử lý" (PENDING) luôn nằm ở đầu,
+        // và nội dung mới bị report (timestamp mới nhất) luôn nằm trên cùng
+        Collections.sort(filteredList, (a, b) -> {
+            boolean aPending = "PENDING".equalsIgnoreCase(a.getStatus());
+            boolean bPending = "PENDING".equalsIgnoreCase(b.getStatus());
+            if (aPending != bPending) {
+                return aPending ? -1 : 1;
+            }
+            return Long.compare(b.getTimestamp(), a.getTimestamp());
+        });
 
         adapter.setItems(filteredList);
 
