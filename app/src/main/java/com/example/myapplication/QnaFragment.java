@@ -62,7 +62,8 @@ public class QnaFragment extends Fragment {
 
     private final List<Question> allQuestions = new ArrayList<>();
     private ListenerRegistration questionsListener;
-
+    private ListenerRegistration answersListener;
+    private final Map<String, Integer> answerCounts = new HashMap<>();
     private String currentFilter = "ALL";
     private int currentSort = 0;
     private TextInputEditText etSearchQuestions;
@@ -477,9 +478,8 @@ public class QnaFragment extends Fragment {
             if (voteSnapshot.exists()
                     && oldValue == requestedValue) {
 
-                // Nhấn lại lựa chọn đang chọn: bỏ vote.
-                transaction.delete(voteRef);
-                updatedCount = currentCount - oldValue;
+                // Đã chọn UP hoặc DOWN rồi thì không cho bấm lại.
+                return currentCount;
 
             } else if (voteSnapshot.exists()) {
 
@@ -624,6 +624,14 @@ public class QnaFragment extends Fragment {
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
 
         if (user == null) {
+            if (answersListener != null) {
+                answersListener.remove();
+                answersListener = null;
+            }
+
+            answerCounts.clear();
+            allQuestions.clear();
+
             allQuestions.clear();
 
             if (adapter != null) {
@@ -655,6 +663,8 @@ public class QnaFragment extends Fragment {
         tvEmptyQuestions.setVisibility(View.GONE);
 
         FirebaseFirestore db = FirebaseFirestore.getInstance();
+
+        listenAnswerCounts(db);
 
         questionsListener = db.collection("questions")
                 .addSnapshotListener((snapshot, error) -> {
@@ -723,38 +733,59 @@ public class QnaFragment extends Fragment {
                         allQuestions.add(question);
                     }
 
-                    loadAnswerCounts(db);
+                    applyAnswerCountsToQuestions();
+
+                    pbQuestions.setVisibility(View.GONE);
+                    applyFilterAndSort();
                 });
     }
+    private void listenAnswerCounts(FirebaseFirestore db) {
+        // Không tạo listener trùng lặp.
+        if (answersListener != null) {
+            return;
+        }
 
-    private void loadAnswerCounts(FirebaseFirestore db) {
-        db.collection("answers")
-                .get()
-                .addOnSuccessListener(snapshot -> {
-                    if (!isAdded()) return;
+        answersListener = db.collection("answers")
+                .addSnapshotListener((snapshot, error) -> {
 
-                    Map<String, Integer> answerCounts =
-                            new HashMap<>();
+                    if (!isAdded() || getView() == null) {
+                        return;
+                    }
 
-                    for (DocumentSnapshot doc :
-                            snapshot.getDocuments()) {
+                    if (error != null) {
+                        android.util.Log.e(
+                                "QnaFragment",
+                                "Không thể theo dõi câu trả lời",
+                                error
+                        );
+                        return;
+                    }
 
+                    if (snapshot == null) {
+                        return;
+                    }
+
+                    answerCounts.clear();
+
+                    for (DocumentSnapshot doc : snapshot.getDocuments()) {
                         String status = doc.getString("status");
 
+                        // Bỏ qua câu trả lời đã bị xóa mềm.
                         if ("DELETE".equalsIgnoreCase(status)
                                 || "DELETED".equalsIgnoreCase(status)
                                 || doc.get("deletedAt") != null) {
                             continue;
                         }
 
-                        String questionId =
-                                readFirstString(
-                                        doc,
-                                        "questionId",
-                                        "questionID"
-                                );
+                        String questionId = readFirstString(
+                                doc,
+                                "questionId",
+                                "questionID"
+                        );
 
-                        if (questionId == null) continue;
+                        if (questionId == null) {
+                            continue;
+                        }
 
                         int count = answerCounts.containsKey(questionId)
                                 ? answerCounts.get(questionId) + 1
@@ -763,36 +794,23 @@ public class QnaFragment extends Fragment {
                         answerCounts.put(questionId, count);
                     }
 
-                    for (Question question : allQuestions) {
-                        int count = answerCounts.containsKey(
-                                question.getId()
-                        )
-                                ? answerCounts.get(question.getId())
-                                : 0;
+                    // Cập nhật số câu trả lời của từng câu hỏi.
+                    applyAnswerCountsToQuestions();
 
-                        question.setAnswerCount(count);
-                    }
-
-                    pbQuestions.setVisibility(View.GONE);
+                    // Áp dụng lại bộ lọc, đặc biệt là "Chưa trả lời"
+                    // và "Đã trả lời".
                     applyFilterAndSort();
-                })
-                .addOnFailureListener(error -> {
-                    if (!isAdded()) return;
-
-                    // Vẫn hiển thị câu hỏi nếu không tải được answers.
-                    for (Question question : allQuestions) {
-                        question.setAnswerCount(0);
-                    }
-
-                    pbQuestions.setVisibility(View.GONE);
-                    applyFilterAndSort();
-
-                    Toast.makeText(
-                            requireContext(),
-                            "Không thể tải số câu trả lời",
-                            Toast.LENGTH_SHORT
-                    ).show();
                 });
+    }
+
+    private void applyAnswerCountsToQuestions() {
+        for (Question question : allQuestions) {
+            int count = answerCounts.containsKey(question.getId())
+                    ? answerCounts.get(question.getId())
+                    : 0;
+
+            question.setAnswerCount(count);
+        }
     }
 
     private void applyFilterAndSort() {
@@ -1020,6 +1038,12 @@ public class QnaFragment extends Fragment {
     @Override
     public void onDestroyView() {
         removeQuestionsListener();
+
+        if (answersListener != null) {
+            answersListener.remove();
+            answersListener = null;
+        }
+
         super.onDestroyView();
     }
 
