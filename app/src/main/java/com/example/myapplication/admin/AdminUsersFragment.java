@@ -352,6 +352,14 @@ public class AdminUsersFragment extends Fragment implements AdminUserAdapter.OnU
     }
 
     @Override
+    public void onHiddenChanged(boolean hidden) {
+        super.onHiddenChanged(hidden);
+        if (!hidden && isAdded()) {
+            applyFilterAndSearch();
+        }
+    }
+
+    @Override
     public void onDestroyView() {
         super.onDestroyView();
         if (usersListener != null) {

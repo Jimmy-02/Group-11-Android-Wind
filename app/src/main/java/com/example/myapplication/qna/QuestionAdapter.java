@@ -221,11 +221,9 @@ public class QuestionAdapter extends RecyclerView.Adapter<QuestionViewHolder> {
         boolean isOwner = currentUserId != null
                 && currentUserId.equals(question.getUserId());
 
-        // Chủ câu hỏi mới nhìn thấy nút đóng
+        // Chủ câu hỏi mới nhìn thấy nút quản lý (đóng / xóa)
         holder.btnCloseQuestion.setVisibility(
-                isOwner && "OPEN".equals(status)
-                        ? View.VISIBLE
-                        : View.GONE
+                isOwner ? View.VISIBLE : View.GONE
         );
 
         // Không hiện nút báo cáo cho câu hỏi của chính mình
@@ -247,11 +245,9 @@ public class QuestionAdapter extends RecyclerView.Adapter<QuestionViewHolder> {
             }
         });
 
-        // Đóng câu hỏi
+        // Quản lý / Đóng / Xóa câu hỏi
         holder.btnCloseQuestion.setOnClickListener(v -> {
-            if (isOwner
-                    && "OPEN".equals(status)
-                    && listener != null) {
+            if (isOwner && listener != null) {
                 listener.onCloseClick(question);
             }
         });

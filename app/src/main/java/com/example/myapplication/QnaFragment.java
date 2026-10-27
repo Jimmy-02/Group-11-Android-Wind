@@ -24,6 +24,7 @@ import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.ListenerRegistration;
 import java.util.Locale;
 import java.util.HashMap;
 import java.util.Map;
@@ -60,6 +61,7 @@ public class QnaFragment extends Fragment {
     private QuestionAdapter adapter;
 
     private final List<Question> allQuestions = new ArrayList<>();
+    private ListenerRegistration questionsListener;
 
     private String currentFilter = "ALL";
     private int currentSort = 0;
@@ -617,112 +619,78 @@ public class QnaFragment extends Fragment {
     }
 
     private void loadQuestions() {
+        if (questionsListener != null) {
+            questionsListener.remove();
+            questionsListener = null;
+        }
+
         pbQuestions.setVisibility(View.VISIBLE);
         rvQuestions.setVisibility(View.GONE);
         tvEmptyQuestions.setVisibility(View.GONE);
 
-        FirebaseFirestore db =
-                FirebaseFirestore.getInstance();
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
 
-        db.collection("questions")
-                .get()
-                .addOnSuccessListener(snapshot -> {
+        questionsListener = db.collection("questions")
+                .addSnapshotListener((snapshot, error) -> {
                     if (!isAdded()) return;
+
+                    if (error != null) {
+                        pbQuestions.setVisibility(View.GONE);
+                        Toast.makeText(
+                                requireContext(),
+                                "Không thể tải câu hỏi: " + error.getMessage(),
+                                Toast.LENGTH_LONG
+                        ).show();
+                        return;
+                    }
+
+                    if (snapshot == null) return;
 
                     allQuestions.clear();
 
-                    for (DocumentSnapshot doc :
-                            snapshot.getDocuments()) {
-
+                    for (DocumentSnapshot doc : snapshot.getDocuments()) {
                         Question question = new Question();
-
                         question.setId(doc.getId());
-
-                        question.setTitle(
-                                doc.getString("title")
-                        );
-
-                        question.setContent(
-                                doc.getString("content")
-                        );
-
-                        question.setImageUrl(
-                                doc.getString("imageUrl")
-                        );
-
-                        question.setUserId(
-                                readFirstString(
-                                        doc,
-                                        "userId",
-                                        "authorId",
-                                        "uid"
-                                )
-                        );
-
-                        question.setAuthorName(
-                                readFirstString(
-                                        doc,
-                                        "authorName",
-                                        "userName",
-                                        "username"
-                                )
-                        );
-
-                        question.setAuthorAvatar(
-                                doc.getString("authorAvatar")
-                        );
+                        question.setTitle(doc.getString("title"));
+                        question.setContent(doc.getString("content"));
+                        question.setImageUrl(doc.getString("imageUrl"));
+                        question.setUserId(readFirstString(doc, "userId", "authorId", "uid"));
+                        question.setAuthorName(readFirstString(doc, "authorName", "userName", "username"));
+                        question.setAuthorAvatar(doc.getString("authorAvatar"));
 
                         String status = doc.getString("status");
-
                         if (status == null || status.isEmpty()) {
                             status = "OPEN";
                         }
-
-                        question.setStatus(
-                                status.toUpperCase(Locale.ROOT)
-                        );
+                        question.setStatus(status.toUpperCase(Locale.ROOT));
 
                         // Không hiển thị câu hỏi đã bị xóa.
                         if ("DELETED".equalsIgnoreCase(status)) {
                             continue;
                         }
 
-                        question.setCreatedAt(
-                                doc.getTimestamp("createdAt")
-                        );
+                        question.setCreatedAt(doc.getTimestamp("createdAt"));
 
                         Object voteValue = doc.get("voteCount");
-
                         if (voteValue instanceof Number) {
-                            question.setVoteCount(
-                                    ((Number) voteValue).longValue()
-                            );
+                            question.setVoteCount(((Number) voteValue).longValue());
                         }
 
                         // Category có thể là String hoặc List.
                         List<String> categories = new ArrayList<>();
-
                         Object categoryValue = doc.get("category");
-
                         if (categoryValue instanceof String) {
-                            String category =
-                                    ((String) categoryValue).trim();
-
+                            String category = ((String) categoryValue).trim();
                             if (!category.isEmpty()) {
                                 categories.add(category);
                             }
-
                         } else if (categoryValue instanceof List<?>) {
-
-                            for (Object item :
-                                    (List<?>) categoryValue) {
-
+                            for (Object item : (List<?>) categoryValue) {
                                 if (item instanceof String) {
                                     categories.add((String) item);
                                 }
                             }
                         }
-
                         question.setCategories(categories);
 
                         allQuestions.add(question);
@@ -730,19 +698,6 @@ public class QnaFragment extends Fragment {
 
                     // Tải số câu trả lời cho từng câu hỏi.
                     loadAnswerCounts(db);
-
-                })
-                .addOnFailureListener(error -> {
-                    if (!isAdded()) return;
-
-                    pbQuestions.setVisibility(View.GONE);
-
-                    Toast.makeText(
-                            requireContext(),
-                            "Không thể tải câu hỏi: "
-                                    + error.getMessage(),
-                            Toast.LENGTH_LONG
-                    ).show();
                 });
     }
 
@@ -941,40 +896,95 @@ public class QnaFragment extends Fragment {
     }
 
     private void confirmCloseQuestion(Question question) {
+        if (question == null || question.getId() == null) return;
+        String currentStatus = question.getStatus() != null ? question.getStatus().toUpperCase(Locale.ROOT) : "OPEN";
+        boolean isOpen = "OPEN".equals(currentStatus);
+
+        String[] options;
+        if (isOpen) {
+            options = new String[]{"Xóa câu hỏi", "Đóng câu hỏi (Ngừng nhận trả lời)"};
+        } else {
+            options = new String[]{"Xóa câu hỏi", "Mở lại câu hỏi"};
+        }
+
         new AlertDialog.Builder(requireContext())
-                .setTitle("Đóng câu hỏi")
-                .setMessage(
-                        "Bạn có chắc muốn đóng câu hỏi này không? " +
-                                "Người dùng sẽ không thể gửi thêm câu trả lời."
-                )
-                .setPositiveButton("Có", (dialog, which) -> {
+                .setTitle("Tùy chọn câu hỏi")
+                .setItems(options, (dialog, which) -> {
+                    if (which == 0) {
+                        promptDeleteQuestion(question);
+                    } else if (which == 1) {
+                        toggleQuestionCloseStatus(question, isOpen ? "CLOSED" : "OPEN");
+                    }
+                })
+                .setNegativeButton("Hủy", null)
+                .show();
+    }
+
+    private void promptDeleteQuestion(Question question) {
+        new AlertDialog.Builder(requireContext())
+                .setTitle("Xác nhận xóa câu hỏi")
+                .setMessage("Bạn có chắc chắn muốn xóa câu hỏi này không? Câu hỏi sẽ bị xóa vĩnh viễn khỏi danh sách.")
+                .setPositiveButton("Xóa", (dialog, which) -> {
+                    Map<String, Object> updates = new HashMap<>();
+                    updates.put("status", "DELETED");
+                    updates.put("deletedAt", FieldValue.serverTimestamp());
+
                     FirebaseFirestore.getInstance()
                             .collection("questions")
                             .document(question.getId())
-                            .update("status", "CLOSED")
+                            .update(updates)
                             .addOnSuccessListener(unused -> {
                                 if (!isAdded()) return;
-
-                                question.setStatus("CLOSED");
+                                question.setStatus("DELETED");
+                                allQuestions.remove(question);
                                 applyFilterAndSort();
-
-                                Toast.makeText(
-                                        requireContext(),
-                                        "Đã đóng câu hỏi",
-                                        Toast.LENGTH_SHORT
-                                ).show();
+                                Toast.makeText(requireContext(), "Đã xóa câu hỏi", Toast.LENGTH_SHORT).show();
                             })
                             .addOnFailureListener(error -> {
                                 if (!isAdded()) return;
-
-                                Toast.makeText(
-                                        requireContext(),
-                                        "Không thể đóng câu hỏi",
-                                        Toast.LENGTH_SHORT
-                                ).show();
+                                Toast.makeText(requireContext(), "Không thể xóa câu hỏi: " + error.getMessage(), Toast.LENGTH_SHORT).show();
                             });
                 })
-                .setNegativeButton("Không", null)
+                .setNegativeButton("Hủy", null)
                 .show();
+    }
+
+    private void toggleQuestionCloseStatus(Question question, String targetStatus) {
+        FirebaseFirestore.getInstance()
+                .collection("questions")
+                .document(question.getId())
+                .update("status", targetStatus)
+                .addOnSuccessListener(unused -> {
+                    if (!isAdded()) return;
+                    question.setStatus(targetStatus);
+                    applyFilterAndSort();
+                    String msg = "CLOSED".equals(targetStatus) ? "Đã đóng câu hỏi" : "Đã mở lại câu hỏi";
+                    Toast.makeText(requireContext(), msg, Toast.LENGTH_SHORT).show();
+                })
+                .addOnFailureListener(error -> {
+                    if (!isAdded()) return;
+                    Toast.makeText(requireContext(), "Thao tác thất bại", Toast.LENGTH_SHORT).show();
+                });
+    }
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        if (questionsListener != null) {
+            questionsListener.remove();
+            questionsListener = null;
+        }
+    }
+
+    @Override
+    public void onHiddenChanged(boolean hidden) {
+        super.onHiddenChanged(hidden);
+        if (!hidden && isAdded()) {
+            if (questionsListener == null) {
+                loadQuestions();
+            } else {
+                applyFilterAndSort();
+            }
+        }
     }
 }

@@ -24,6 +24,7 @@ import com.example.myapplication.admin.models.AdminReportItem;
 import com.google.android.material.tabs.TabLayout;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.ListenerRegistration;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -45,6 +46,8 @@ public class AdminDiscussionsFragment extends Fragment {
     private AdminReportAdapter adapter;
     private final List<AdminReportItem> allDiscussionItems = new ArrayList<>();
     private final List<AdminReportItem> allCommentItems = new ArrayList<>();
+    private ListenerRegistration discussionReportsListener;
+    private ListenerRegistration commentReportsListener;
 
     private int currentTab = 0; // 0: Bài thảo luận, 1: Bình luận
     private String currentFilter = "ALL"; // ALL, PENDING, REPORTED_CONTENT_DELETED, DISMISSED
@@ -63,6 +66,12 @@ public class AdminDiscussionsFragment extends Fragment {
         loadFirestoreReports();
 
         return view;
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        loadFirestoreReports();
     }
 
     private void initViews(View view) {
@@ -184,37 +193,51 @@ public class AdminDiscussionsFragment extends Fragment {
     }
 
     private void loadFirestoreReports() {
-        pbLoading.setVisibility(View.VISIBLE);
+        if (discussionReportsListener != null) {
+            discussionReportsListener.remove();
+            discussionReportsListener = null;
+        }
+        if (commentReportsListener != null) {
+            commentReportsListener.remove();
+            commentReportsListener = null;
+        }
 
+        pbLoading.setVisibility(View.VISIBLE);
         FirebaseFirestore db = FirebaseFirestore.getInstance();
 
-        // 1. Tải báo cáo Thảo luận (discussionReports)
-        db.collection("discussionReports").get().addOnCompleteListener(task -> {
-            if (isAdded()) {
-                if (task.isSuccessful() && task.getResult() != null && !task.getResult().isEmpty()) {
-                    groupDiscussionReports(task.getResult().getDocuments());
-                } else {
-                    createMockDiscussions();
-                }
+        // 1. Tải báo cáo Thảo luận (discussionReports) realtime
+        discussionReportsListener = db.collection("discussionReports")
+                .addSnapshotListener((snapshots, error) -> {
+                    if (!isAdded()) return;
+                    if (error != null || snapshots == null || snapshots.isEmpty()) {
+                        if (allDiscussionItems.isEmpty()) {
+                            createMockDiscussions();
+                        }
+                        if (currentTab == 0) {
+                            pbLoading.setVisibility(View.GONE);
+                            applyFilterAndSearch();
+                        }
+                        return;
+                    }
+                    groupDiscussionReports(snapshots.getDocuments());
+                });
 
-                // 2. Tải báo cáo Bình luận (commentReports)
-                loadCommentReports(db);
-            }
-        });
-    }
-
-    private void loadCommentReports(FirebaseFirestore db) {
-        db.collection("commentReports").get().addOnCompleteListener(task -> {
-            if (isAdded()) {
-                pbLoading.setVisibility(View.GONE);
-                if (task.isSuccessful() && task.getResult() != null && !task.getResult().isEmpty()) {
-                    groupCommentReports(task.getResult().getDocuments());
-                } else {
-                    createMockComments();
-                }
-                applyFilterAndSearch();
-            }
-        });
+        // 2. Tải báo cáo Bình luận (commentReports) realtime
+        commentReportsListener = db.collection("commentReports")
+                .addSnapshotListener((snapshots, error) -> {
+                    if (!isAdded()) return;
+                    if (error != null || snapshots == null || snapshots.isEmpty()) {
+                        if (allCommentItems.isEmpty()) {
+                            createMockComments();
+                        }
+                        if (currentTab == 1) {
+                            pbLoading.setVisibility(View.GONE);
+                            applyFilterAndSearch();
+                        }
+                        return;
+                    }
+                    groupCommentReports(snapshots.getDocuments());
+                });
     }
 
     private void groupDiscussionReports(List<DocumentSnapshot> docs) {
@@ -227,14 +250,18 @@ public class AdminDiscussionsFragment extends Fragment {
             map.get(dId).add(doc);
         }
 
+        if (map.isEmpty()) {
+            if (currentTab == 0) {
+                pbLoading.setVisibility(View.GONE);
+                applyFilterAndSearch();
+            }
+            return;
+        }
+
         FirebaseFirestore db = FirebaseFirestore.getInstance();
         for (Map.Entry<String, List<DocumentSnapshot>> entry : map.entrySet()) {
             String discussionId = entry.getKey();
             List<DocumentSnapshot> reports = entry.getValue();
-            String latestStatus = reports.get(0).getString("status");
-            if (latestStatus == null || latestStatus.isEmpty()) latestStatus = "PENDING";
-
-            final String statusToUse = latestStatus;
             db.collection("discussions").document(discussionId).get().addOnSuccessListener(dDoc -> {
                 if (!isAdded()) return;
                 String title = dDoc.exists() ? dDoc.getString("title") : "Bài thảo luận vi phạm";
@@ -243,6 +270,37 @@ public class AdminDiscussionsFragment extends Fragment {
                 String authorAvatar = dDoc.exists() ? dDoc.getString("authorAvatar") : null;
                 String imageUrl = dDoc.exists() ? dDoc.getString("imageUrl") : null;
                 String userId = dDoc.exists() ? dDoc.getString("userId") : null;
+                String dStatus = dDoc.exists() ? dDoc.getString("status") : null;
+
+                String statusToUse;
+                if ("DELETED".equalsIgnoreCase(dStatus) || (dDoc.exists() && dDoc.get("deletedAt") != null)) {
+                    statusToUse = "REPORTED_CONTENT_DELETED";
+                } else {
+                    boolean hasPending = false;
+                    boolean hasDeleted = false;
+                    boolean allDismissed = true;
+                    for (DocumentSnapshot rDoc : reports) {
+                        String s = rDoc.getString("status");
+                        if ("PENDING".equalsIgnoreCase(s) || s == null || s.isEmpty()) {
+                            hasPending = true;
+                            allDismissed = false;
+                        } else if ("REPORTED_CONTENT_DELETED".equalsIgnoreCase(s)) {
+                            hasDeleted = true;
+                            allDismissed = false;
+                        } else if (!"DISMISSED".equalsIgnoreCase(s)) {
+                            allDismissed = false;
+                        }
+                    }
+                    if (hasPending) {
+                        statusToUse = "PENDING";
+                    } else if (hasDeleted) {
+                        statusToUse = "REPORTED_CONTENT_DELETED";
+                    } else if (allDismissed && !reports.isEmpty()) {
+                        statusToUse = "DISMISSED";
+                    } else {
+                        statusToUse = "PENDING";
+                    }
+                }
 
                 AdminReportItem item = new AdminReportItem(
                         reports.get(0).getId(),
@@ -296,14 +354,18 @@ public class AdminDiscussionsFragment extends Fragment {
             map.get(cId).add(doc);
         }
 
-        FirebaseFirestore db = FirebaseFirestore.getInstance();
+if (map.isEmpty()) {
+            if (currentTab == 1) {
+                pbLoading.setVisibility(View.GONE);
+                applyFilterAndSearch();
+            }
+            return;
+        }
+
+                FirebaseFirestore db = FirebaseFirestore.getInstance();
         for (Map.Entry<String, List<DocumentSnapshot>> entry : map.entrySet()) {
             String commentId = entry.getKey();
             List<DocumentSnapshot> reports = entry.getValue();
-            String latestStatus = reports.get(0).getString("status");
-            if (latestStatus == null || latestStatus.isEmpty()) latestStatus = "PENDING";
-
-            final String statusToUse = latestStatus;
             db.collection("comments").document(commentId).get().addOnSuccessListener(cDoc -> {
                 if (!isAdded()) return;
                 String content = cDoc.exists() ? cDoc.getString("content") : "Nội dung bình luận";
@@ -311,6 +373,37 @@ public class AdminDiscussionsFragment extends Fragment {
                 String authorName = cDoc.exists() ? cDoc.getString("authorName") : null;
                 String authorAvatar = cDoc.exists() ? cDoc.getString("authorAvatar") : null;
                 String userId = cDoc.exists() ? cDoc.getString("userId") : null;
+                String cStatus = cDoc.exists() ? cDoc.getString("status") : null;
+
+                String statusToUse;
+                if ("DELETED".equalsIgnoreCase(cStatus) || (cDoc.exists() && cDoc.get("deletedAt") != null)) {
+                    statusToUse = "REPORTED_CONTENT_DELETED";
+                } else {
+                    boolean hasPending = false;
+                    boolean hasDeleted = false;
+                    boolean allDismissed = true;
+                    for (DocumentSnapshot rDoc : reports) {
+                        String s = rDoc.getString("status");
+                        if ("PENDING".equalsIgnoreCase(s) || s == null || s.isEmpty()) {
+                            hasPending = true;
+                            allDismissed = false;
+                        } else if ("REPORTED_CONTENT_DELETED".equalsIgnoreCase(s)) {
+                            hasDeleted = true;
+                            allDismissed = false;
+                        } else if (!"DISMISSED".equalsIgnoreCase(s)) {
+                            allDismissed = false;
+                        }
+                    }
+                    if (hasPending) {
+                        statusToUse = "PENDING";
+                    } else if (hasDeleted) {
+                        statusToUse = "REPORTED_CONTENT_DELETED";
+                    } else if (allDismissed && !reports.isEmpty()) {
+                        statusToUse = "DISMISSED";
+                    } else {
+                        statusToUse = "PENDING";
+                    }
+                }
 
                 AdminReportItem item = new AdminReportItem(
                         reports.get(0).getId(),
@@ -528,6 +621,27 @@ public class AdminDiscussionsFragment extends Fragment {
         } else {
             rvReports.setVisibility(View.VISIBLE);
             layoutEmptyState.setVisibility(View.GONE);
+        }
+    }
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        if (discussionReportsListener != null) {
+            discussionReportsListener.remove();
+            discussionReportsListener = null;
+        }
+        if (commentReportsListener != null) {
+            commentReportsListener.remove();
+            commentReportsListener = null;
+        }
+    }
+
+    @Override
+    public void onHiddenChanged(boolean hidden) {
+        super.onHiddenChanged(hidden);
+        if (!hidden && isAdded()) {
+            applyFilterAndSearch();
         }
     }
 }
