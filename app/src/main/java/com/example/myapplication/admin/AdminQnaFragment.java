@@ -28,6 +28,8 @@ import com.google.firebase.firestore.ListenerRegistration;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import com.google.firebase.Timestamp;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -265,6 +267,20 @@ public class AdminQnaFragment extends Fragment {
                 });
     }
 
+    private String formatTimestamp(long timeMillis) {
+        if (timeMillis <= 0) return "Vừa xong";
+        long diff = System.currentTimeMillis() - timeMillis;
+        if (diff < 0) diff = 0;
+        long minutes = diff / (1000 * 60);
+        long hours = minutes / 60;
+        long days = hours / 24;
+
+        if (days > 0) return days + " ngày trước";
+        if (hours > 0) return hours + " giờ trước";
+        if (minutes > 0) return minutes + " phút trước";
+        return "Vừa xong";
+    }
+
     private void rebuildQuestionItems() {
         allQuestionItems.clear();
         Map<String, List<DocumentSnapshot>> reportMap = new HashMap<>();
@@ -326,6 +342,19 @@ public class AdminQnaFragment extends Fragment {
                     }
                 }
 
+                long maxTime = 0;
+                for (DocumentSnapshot rDoc : reports) {
+                    Timestamp ts = rDoc.getTimestamp("createdAt");
+                    if (ts != null && ts.toDate().getTime() > maxTime) {
+                        maxTime = ts.toDate().getTime();
+                    }
+                }
+                if (maxTime == 0 && qDoc.exists()) {
+                    Timestamp qTs = qDoc.getTimestamp("createdAt");
+                    if (qTs != null) maxTime = qTs.toDate().getTime();
+                }
+                if (maxTime == 0) maxTime = System.currentTimeMillis();
+
                 AdminReportItem item = new AdminReportItem(
                         reports.get(0).getId(),
                         questionId,
@@ -335,11 +364,12 @@ public class AdminQnaFragment extends Fragment {
                         null,
                         statusToUse,
                         reports.size(),
-                        "Vừa xong",
+                        formatTimestamp(maxTime),
                         (authorName != null && !authorName.trim().isEmpty()) ? authorName.trim() : "Người dùng",
                         authorAvatar,
                         Arrays.asList(category != null ? category : "Q&A")
                 );
+                item.setTimestamp(maxTime);
                 item.setImageUrl(imageUrl);
                 allQuestionItems.add(item);
                 pbLoading.setVisibility(View.GONE);
@@ -388,6 +418,10 @@ public class AdminQnaFragment extends Fragment {
                 }
                 if (tags.isEmpty()) tags.add("Q&A");
 
+                Timestamp delTs = qDoc.getTimestamp("deletedAt");
+                if (delTs == null) delTs = qDoc.getTimestamp("createdAt");
+                long delTime = (delTs != null) ? delTs.toDate().getTime() : System.currentTimeMillis();
+
                 AdminReportItem item = new AdminReportItem(
                         "del_" + questionId,
                         questionId,
@@ -397,11 +431,12 @@ public class AdminQnaFragment extends Fragment {
                         null,
                         "REPORTED_CONTENT_DELETED", // Gán nhãn "Đã xử lý"
                         0,
-                        "Đã xóa",
+                        formatTimestamp(delTime),
                         (authorName != null && !authorName.trim().isEmpty()) ? authorName.trim() : "Người dùng",
                         authorAvatar,
                         tags
                 );
+                item.setTimestamp(delTime);
                 item.setImageUrl(imageUrl);
                 allQuestionItems.add(item);
                 pbLoading.setVisibility(View.GONE);
@@ -481,6 +516,19 @@ public class AdminQnaFragment extends Fragment {
                     }
                 }
 
+                long maxTime = 0;
+                for (DocumentSnapshot rDoc : reports) {
+                    Timestamp ts = rDoc.getTimestamp("createdAt");
+                    if (ts != null && ts.toDate().getTime() > maxTime) {
+                        maxTime = ts.toDate().getTime();
+                    }
+                }
+                if (maxTime == 0 && aDoc.exists()) {
+                    Timestamp aTs = aDoc.getTimestamp("createdAt");
+                    if (aTs != null) maxTime = aTs.toDate().getTime();
+                }
+                if (maxTime == 0) maxTime = System.currentTimeMillis();
+
                 AdminReportItem item = new AdminReportItem(
                         reports.get(0).getId(),
                         answerId,
@@ -490,11 +538,12 @@ public class AdminQnaFragment extends Fragment {
                         "Câu hỏi liên quan",
                         statusToUse,
                         reports.size(),
-                        "Vừa xong",
+                        formatTimestamp(maxTime),
                         (authorName != null && !authorName.trim().isEmpty()) ? authorName.trim() : "Người dùng",
                         authorAvatar,
                         Arrays.asList("Câu trả lời")
                 );
+                item.setTimestamp(maxTime);
                 allAnswerItems.add(item);
                 pbLoading.setVisibility(View.GONE);
                 if (currentTab == 1) applyFilterAndSearch();
@@ -524,6 +573,10 @@ public class AdminQnaFragment extends Fragment {
                 String authorAvatar = aDoc.getString("authorAvatar");
                 String questionId = aDoc.getString("questionId");
 
+                Timestamp delTs = aDoc.getTimestamp("deletedAt");
+                if (delTs == null) delTs = aDoc.getTimestamp("createdAt");
+                long delTime = (delTs != null) ? delTs.toDate().getTime() : System.currentTimeMillis();
+
                 AdminReportItem item = new AdminReportItem(
                         "del_" + answerId,
                         answerId,
@@ -533,11 +586,12 @@ public class AdminQnaFragment extends Fragment {
                         "Câu hỏi liên quan",
                         "REPORTED_CONTENT_DELETED", // Gán nhãn "Đã xử lý"
                         0,
-                        "Đã xóa",
+                        formatTimestamp(delTime),
                         (authorName != null && !authorName.trim().isEmpty()) ? authorName.trim() : "Người dùng",
                         authorAvatar,
                         Arrays.asList("Câu trả lời")
                 );
+                item.setTimestamp(delTime);
                 allAnswerItems.add(item);
                 pbLoading.setVisibility(View.GONE);
                 if (currentTab == 1) applyFilterAndSearch();
@@ -720,6 +774,17 @@ public class AdminQnaFragment extends Fragment {
                 filteredList.add(item);
             }
         }
+
+        // Sắp xếp: Báo cáo "Chờ xử lý" (PENDING) luôn nằm ở đầu,
+        // và nội dung mới bị report (timestamp mới nhất) luôn nằm trên cùng
+        Collections.sort(filteredList, (a, b) -> {
+            boolean aPending = "PENDING".equalsIgnoreCase(a.getStatus());
+            boolean bPending = "PENDING".equalsIgnoreCase(b.getStatus());
+            if (aPending != bPending) {
+                return aPending ? -1 : 1;
+            }
+            return Long.compare(b.getTimestamp(), a.getTimestamp());
+        });
 
         adapter.setItems(filteredList);
 

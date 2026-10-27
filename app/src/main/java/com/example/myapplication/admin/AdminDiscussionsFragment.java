@@ -28,6 +28,8 @@ import com.google.firebase.firestore.ListenerRegistration;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import com.google.firebase.Timestamp;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -265,6 +267,20 @@ public class AdminDiscussionsFragment extends Fragment {
                 });
     }
 
+    private String formatTimestamp(long timeMillis) {
+        if (timeMillis <= 0) return "Vừa xong";
+        long diff = System.currentTimeMillis() - timeMillis;
+        if (diff < 0) diff = 0;
+        long minutes = diff / (1000 * 60);
+        long hours = minutes / 60;
+        long days = hours / 24;
+
+        if (days > 0) return days + " ngày trước";
+        if (hours > 0) return hours + " giờ trước";
+        if (minutes > 0) return minutes + " phút trước";
+        return "Vừa xong";
+    }
+
     private void rebuildDiscussionItems() {
         allDiscussionItems.clear();
         Map<String, List<DocumentSnapshot>> reportMap = new HashMap<>();
@@ -326,6 +342,19 @@ public class AdminDiscussionsFragment extends Fragment {
                     }
                 }
 
+                long maxTime = 0;
+                for (DocumentSnapshot rDoc : reports) {
+                    Timestamp ts = rDoc.getTimestamp("createdAt");
+                    if (ts != null && ts.toDate().getTime() > maxTime) {
+                        maxTime = ts.toDate().getTime();
+                    }
+                }
+                if (maxTime == 0 && dDoc.exists()) {
+                    Timestamp dTs = dDoc.getTimestamp("createdAt");
+                    if (dTs != null) maxTime = dTs.toDate().getTime();
+                }
+                if (maxTime == 0) maxTime = System.currentTimeMillis();
+
                 AdminReportItem item = new AdminReportItem(
                         reports.get(0).getId(),
                         discussionId,
@@ -335,11 +364,12 @@ public class AdminDiscussionsFragment extends Fragment {
                         null,
                         statusToUse,
                         reports.size(),
-                        "Vừa xong",
+                        formatTimestamp(maxTime),
                         (authorName != null && !authorName.trim().isEmpty()) ? authorName.trim() : "Người dùng",
                         authorAvatar,
                         Arrays.asList(category != null ? category : "Thảo luận")
                 );
+                item.setTimestamp(maxTime);
                 item.setImageUrl(imageUrl);
                 allDiscussionItems.add(item);
                 pbLoading.setVisibility(View.GONE);
@@ -382,6 +412,10 @@ public class AdminDiscussionsFragment extends Fragment {
                 String imageUrl = dDoc.getString("imageUrl");
                 String category = dDoc.getString("category");
 
+                Timestamp delTs = dDoc.getTimestamp("deletedAt");
+                if (delTs == null) delTs = dDoc.getTimestamp("createdAt");
+                long delTime = (delTs != null) ? delTs.toDate().getTime() : System.currentTimeMillis();
+
                 AdminReportItem item = new AdminReportItem(
                         "del_" + discussionId,
                         discussionId,
@@ -391,11 +425,12 @@ public class AdminDiscussionsFragment extends Fragment {
                         null,
                         "REPORTED_CONTENT_DELETED", // Gán nhãn "Đã xử lý"
                         0,
-                        "Đã xóa",
+                        formatTimestamp(delTime),
                         (authorName != null && !authorName.trim().isEmpty()) ? authorName.trim() : "Người dùng",
                         authorAvatar,
                         Arrays.asList(category != null ? category : "Thảo luận")
                 );
+                item.setTimestamp(delTime);
                 item.setImageUrl(imageUrl);
                 allDiscussionItems.add(item);
                 pbLoading.setVisibility(View.GONE);
@@ -475,6 +510,19 @@ public class AdminDiscussionsFragment extends Fragment {
                     }
                 }
 
+                long maxTime = 0;
+                for (DocumentSnapshot rDoc : reports) {
+                    Timestamp ts = rDoc.getTimestamp("createdAt");
+                    if (ts != null && ts.toDate().getTime() > maxTime) {
+                        maxTime = ts.toDate().getTime();
+                    }
+                }
+                if (maxTime == 0 && cDoc.exists()) {
+                    Timestamp cTs = cDoc.getTimestamp("createdAt");
+                    if (cTs != null) maxTime = cTs.toDate().getTime();
+                }
+                if (maxTime == 0) maxTime = System.currentTimeMillis();
+
                 AdminReportItem item = new AdminReportItem(
                         reports.get(0).getId(),
                         commentId,
@@ -484,11 +532,12 @@ public class AdminDiscussionsFragment extends Fragment {
                         "Bài thảo luận liên quan",
                         statusToUse,
                         reports.size(),
-                        "Vừa xong",
+                        formatTimestamp(maxTime),
                         (authorName != null && !authorName.trim().isEmpty()) ? authorName.trim() : "Người dùng",
                         authorAvatar,
                         Arrays.asList("Bình luận")
                 );
+                item.setTimestamp(maxTime);
                 allCommentItems.add(item);
                 pbLoading.setVisibility(View.GONE);
                 if (currentTab == 1) applyFilterAndSearch();
@@ -518,6 +567,10 @@ public class AdminDiscussionsFragment extends Fragment {
                 String authorAvatar = cDoc.getString("authorAvatar");
                 String discussionId = cDoc.getString("discussionId");
 
+                Timestamp delTs = cDoc.getTimestamp("deletedAt");
+                if (delTs == null) delTs = cDoc.getTimestamp("createdAt");
+                long delTime = (delTs != null) ? delTs.toDate().getTime() : System.currentTimeMillis();
+
                 AdminReportItem item = new AdminReportItem(
                         "del_" + commentId,
                         commentId,
@@ -527,11 +580,12 @@ public class AdminDiscussionsFragment extends Fragment {
                         "Bài thảo luận liên quan",
                         "REPORTED_CONTENT_DELETED", // Gán nhãn "Đã xử lý"
                         0,
-                        "Đã xóa",
+                        formatTimestamp(delTime),
                         (authorName != null && !authorName.trim().isEmpty()) ? authorName.trim() : "Người dùng",
                         authorAvatar,
                         Arrays.asList("Bình luận")
                 );
+                item.setTimestamp(delTime);
                 allCommentItems.add(item);
                 pbLoading.setVisibility(View.GONE);
                 if (currentTab == 1) applyFilterAndSearch();
@@ -713,6 +767,17 @@ public class AdminDiscussionsFragment extends Fragment {
                 filteredList.add(item);
             }
         }
+
+        // Sắp xếp: Báo cáo "Chờ xử lý" (PENDING) luôn nằm ở đầu,
+        // và nội dung mới bị report (timestamp mới nhất) luôn nằm trên cùng
+        Collections.sort(filteredList, (a, b) -> {
+            boolean aPending = "PENDING".equalsIgnoreCase(a.getStatus());
+            boolean bPending = "PENDING".equalsIgnoreCase(b.getStatus());
+            if (aPending != bPending) {
+                return aPending ? -1 : 1;
+            }
+            return Long.compare(b.getTimestamp(), a.getTimestamp());
+        });
 
         adapter.setItems(filteredList);
 

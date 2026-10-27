@@ -40,6 +40,8 @@ import com.google.firebase.firestore.ListenerRegistration;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import com.google.firebase.Timestamp;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -487,6 +489,15 @@ public class AdminArticlesFragment extends Fragment
                 }
                 filtered.add(item);
             }
+
+            Collections.sort(filtered, (a, b) -> {
+                boolean aPending = "PENDING".equalsIgnoreCase(a.getStatus());
+                boolean bPending = "PENDING".equalsIgnoreCase(b.getStatus());
+                if (aPending != bPending) {
+                    return aPending ? -1 : 1;
+                }
+                return Long.compare(b.getTimestamp(), a.getTimestamp());
+            });
 
             reportAdapter.setItems(filtered);
 
