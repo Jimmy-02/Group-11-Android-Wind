@@ -223,6 +223,7 @@ public class AdminDiscussionsFragment extends Fragment {
             String tag = (item.getTags() != null && !item.getTags().isEmpty()) ? android.text.TextUtils.join(" • ", item.getTags()) : "";
             intent.putExtra(AdminReportDetailActivity.EXTRA_TAG, tag);
             intent.putExtra(AdminReportDetailActivity.EXTRA_IMAGE_URL, item.getImageUrl());
+            intent.putExtra(AdminReportDetailActivity.EXTRA_DISCUSSION_ID, item.getParentId());
             startActivity(intent);
         });
         rvReports.setAdapter(adapter);
@@ -395,6 +396,7 @@ public class AdminDiscussionsFragment extends Fragment {
                         authorAvatar,
                         Arrays.asList(category != null ? category : "Thảo luận")
                 );
+                item.setParentId(discussionId);
                 item.setTimestamp(maxTime);
                 item.setImageUrl(imageUrl);
                 addOrUpdateDiscussionItem(item);
@@ -456,6 +458,7 @@ public class AdminDiscussionsFragment extends Fragment {
                         authorAvatar,
                         Arrays.asList(category != null ? category : "Thảo luận")
                 );
+                item.setParentId(discussionId);
                 item.setTimestamp(delTime);
                 item.setImageUrl(imageUrl);
                 addOrUpdateDiscussionItem(item);
@@ -564,6 +567,7 @@ public class AdminDiscussionsFragment extends Fragment {
                         authorAvatar,
                         Arrays.asList("Bình luận")
                 );
+                item.setParentId(discussionId);
                 item.setTimestamp(maxTime);
                 addOrUpdateCommentItem(item);
                 pbLoading.setVisibility(View.GONE);
@@ -612,6 +616,7 @@ public class AdminDiscussionsFragment extends Fragment {
                         authorAvatar,
                         Arrays.asList("Bình luận")
                 );
+                item.setParentId(discussionId);
                 item.setTimestamp(delTime);
                 addOrUpdateCommentItem(item);
                 pbLoading.setVisibility(View.GONE);
