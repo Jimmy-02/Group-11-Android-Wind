@@ -619,9 +619,35 @@ public class QnaFragment extends Fragment {
     }
 
     private void loadQuestions() {
-        if (questionsListener != null) {
-            questionsListener.remove();
-            questionsListener = null;
+        removeQuestionsListener();
+
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+
+        if (user == null) {
+            allQuestions.clear();
+
+            if (adapter != null) {
+                adapter.setQuestions(new ArrayList<>());
+            }
+
+            if (pbQuestions != null) {
+                pbQuestions.setVisibility(View.GONE);
+            }
+
+            if (rvQuestions != null) {
+                rvQuestions.setVisibility(View.GONE);
+            }
+
+            if (tvEmptyQuestions != null) {
+                tvEmptyQuestions.setVisibility(View.VISIBLE);
+                tvEmptyQuestions.setText("Vui lòng đăng nhập để xem câu hỏi");
+            }
+
+            return;
+        }
+
+        if (!isAdded() || getView() == null) {
+            return;
         }
 
         pbQuestions.setVisibility(View.VISIBLE);
@@ -632,19 +658,20 @@ public class QnaFragment extends Fragment {
 
         questionsListener = db.collection("questions")
                 .addSnapshotListener((snapshot, error) -> {
-                    if (!isAdded()) return;
-
-                    if (error != null) {
-                        pbQuestions.setVisibility(View.GONE);
-                        Toast.makeText(
-                                requireContext(),
-                                "Không thể tải câu hỏi: " + error.getMessage(),
-                                Toast.LENGTH_LONG
-                        ).show();
+                    if (!isAdded() || getView() == null) {
                         return;
                     }
 
-                    if (snapshot == null) return;
+                    if (error != null) {
+                        pbQuestions.setVisibility(View.GONE);
+                        android.util.Log.e("QnaFragment", "Không thể tải câu hỏi", error);
+                        Toast.makeText(requireContext(), "Không thể tải câu hỏi.", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+
+                    if (snapshot == null) {
+                        return;
+                    }
 
                     allQuestions.clear();
 
@@ -662,9 +689,9 @@ public class QnaFragment extends Fragment {
                         if (status == null || status.isEmpty()) {
                             status = "OPEN";
                         }
+
                         question.setStatus(status.toUpperCase(Locale.ROOT));
 
-                        // Không hiển thị câu hỏi đã bị xóa.
                         if ("DELETED".equalsIgnoreCase(status)) {
                             continue;
                         }
@@ -676,9 +703,9 @@ public class QnaFragment extends Fragment {
                             question.setVoteCount(((Number) voteValue).longValue());
                         }
 
-                        // Category có thể là String hoặc List.
                         List<String> categories = new ArrayList<>();
                         Object categoryValue = doc.get("category");
+
                         if (categoryValue instanceof String) {
                             String category = ((String) categoryValue).trim();
                             if (!category.isEmpty()) {
@@ -691,12 +718,11 @@ public class QnaFragment extends Fragment {
                                 }
                             }
                         }
-                        question.setCategories(categories);
 
+                        question.setCategories(categories);
                         allQuestions.add(question);
                     }
 
-                    // Tải số câu trả lời cho từng câu hỏi.
                     loadAnswerCounts(db);
                 });
     }
@@ -993,11 +1019,8 @@ public class QnaFragment extends Fragment {
 
     @Override
     public void onDestroyView() {
+        removeQuestionsListener();
         super.onDestroyView();
-        if (questionsListener != null) {
-            questionsListener.remove();
-            questionsListener = null;
-        }
     }
 
     @Override
@@ -1009,6 +1032,13 @@ public class QnaFragment extends Fragment {
             } else {
                 applyFilterAndSort();
             }
+        }
+    }
+
+    public void removeQuestionsListener() {
+        if (questionsListener != null) {
+            questionsListener.remove();
+            questionsListener = null;
         }
     }
 }

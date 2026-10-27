@@ -1,28 +1,29 @@
 package com.example.myapplication;
 
 import android.content.Intent;
-import java.util.Locale;
 import android.os.Bundle;
+import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
-import android.view.View;
-import androidx.appcompat.app.AlertDialog;
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
+
 import com.example.myapplication.account.AccountActivity;
-import com.example.myapplication.authentication.AuthSessionManager;
 import com.example.myapplication.authentication.login.LoginActivity;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.navigation.NavigationView;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
+
+import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -122,14 +123,7 @@ public class MainActivity extends AppCompatActivity {
             } else if (id == R.id.drawer_about) {
                 showAboutDialog();
             } else if (id == R.id.drawer_logout) {
-                new AlertDialog.Builder(MainActivity.this)
-                        .setTitle("Xác nhận đăng xuất")
-                        .setMessage("Bạn có chắc chắn muốn đăng xuất?")
-                        .setNegativeButton("Hủy", (dialog, which) -> dialog.dismiss())
-                        .setPositiveButton("Đăng xuất", (dialog, which) -> {
-                            AuthSessionManager.logout(MainActivity.this);
-                        })
-                        .show();
+                showLogoutConfirmation();
             } else {
                 return false;
             }
@@ -138,7 +132,8 @@ public class MainActivity extends AppCompatActivity {
             return true;
         });
 
-        ViewHeaderSetup();
+        setupDrawerHeader();
+
         int selectedItem = savedInstanceState != null
                 ? savedInstanceState.getInt("selected_nav_item", R.id.nav_home)
                 : R.id.nav_home;
@@ -150,19 +145,12 @@ public class MainActivity extends AppCompatActivity {
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
 
-        BottomNavigationView bottomNavigation =
-                findViewById(R.id.bottom_navigation);
-
-        outState.putInt(
-                "selected_nav_item",
-                bottomNavigation.getSelectedItemId()
-        );
+        BottomNavigationView bottomNavigation = findViewById(R.id.bottom_navigation);
+        outState.putInt("selected_nav_item", bottomNavigation.getSelectedItemId());
     }
 
-    private void ViewHeaderSetup() {
-        TextView tvEmail = navigationView.getHeaderView(0)
-                .findViewById(R.id.tv_drawer_email);
-
+    private void setupDrawerHeader() {
+        TextView tvEmail = navigationView.getHeaderView(0).findViewById(R.id.tv_drawer_email);
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
 
         if (user != null && user.getEmail() != null) {
@@ -199,6 +187,44 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private void showLogoutConfirmation() {
+        new AlertDialog.Builder(this)
+                .setTitle("Xác nhận đăng xuất")
+                .setMessage("Bạn có chắc chắn muốn đăng xuất?")
+                .setNegativeButton("Hủy", (dialog, which) -> dialog.dismiss())
+                .setPositiveButton("Đăng xuất", (dialog, which) -> logoutAndNavigateToLogin())
+                .show();
+    }
+
+    public void logoutAndNavigateToLogin() {
+        if (isRedirectingToLogin || isFinishing() || isDestroyed()) {
+            return;
+        }
+
+        isRedirectingToLogin = true;
+
+        removeAccountStatusListener();
+
+        if (homeFragment instanceof HomeFragment) {
+            ((HomeFragment) homeFragment).removeArticleListener();
+        }
+
+        if (accountFragment instanceof AccountActivity) {
+            ((AccountActivity) accountFragment).removeFirestoreListenersForLogout();
+        }
+
+        if (qnaFragment instanceof QnaFragment) {
+            ((QnaFragment) qnaFragment).removeQuestionsListener();
+        }
+
+        FirebaseAuth.getInstance().signOut();
+
+        Intent intent = new Intent(this, LoginActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        startActivity(intent);
+        finish();
+    }
+
     @Override
     protected void onResume() {
         super.onResume();
@@ -213,8 +239,11 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onStop() {
+        removeAccountStatusListener();
         super.onStop();
+    }
 
+    private void removeAccountStatusListener() {
         if (accountListener != null) {
             accountListener.remove();
             accountListener = null;
@@ -224,6 +253,7 @@ public class MainActivity extends AppCompatActivity {
     private void updateAdminDrawerVisibility(String role) {
         if (navigationView != null) {
             android.view.MenuItem adminItem = navigationView.getMenu().findItem(R.id.drawer_admin);
+
             if (adminItem != null) {
                 boolean isAdmin = "ADMIN".equalsIgnoreCase(role != null ? role.trim() : "");
                 adminItem.setVisible(isAdmin);
@@ -256,8 +286,7 @@ public class MainActivity extends AppCompatActivity {
                         return;
                     }
 
-                    if (!task.isSuccessful() || task.getResult() == null
-                            || !task.getResult().exists()) {
+                    if (!task.isSuccessful() || task.getResult() == null || !task.getResult().exists()) {
                         redirectToLogin("Không thể xác minh tài khoản. Vui lòng đăng nhập lại.");
                         return;
                     }
@@ -274,6 +303,7 @@ public class MainActivity extends AppCompatActivity {
                     }
 
                     String normalizedRole = role == null ? "" : role.trim().toUpperCase(Locale.ROOT);
+
                     if (!"USER".equals(normalizedRole) && !"ADMIN".equals(normalizedRole)) {
                         redirectToLogin("Tài khoản không được phép truy cập màn hình này.");
                     }
@@ -281,15 +311,12 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void startAccountStatusListener() {
+        removeAccountStatusListener();
+
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
 
-        if (user == null) {
-            redirectToLogin(null);
+        if (user == null || isRedirectingToLogin) {
             return;
-        }
-
-        if (accountListener != null) {
-            accountListener.remove();
         }
 
         accountListener = FirebaseFirestore.getInstance()
@@ -321,6 +348,7 @@ public class MainActivity extends AppCompatActivity {
                     }
 
                     String normalizedRole = role == null ? "" : role.trim().toUpperCase(Locale.ROOT);
+
                     if (!"USER".equals(normalizedRole) && !"ADMIN".equals(normalizedRole)) {
                         redirectToLogin("Tài khoản không được phép truy cập màn hình này.");
                     }
@@ -345,25 +373,10 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
-        isRedirectingToLogin = true;
-
-        if (accountListener != null) {
-            accountListener.remove();
-            accountListener = null;
-        }
-
-        updateAdminDrawerVisibility(null);
-
-        FirebaseAuth.getInstance().signOut();
-
-        Intent intent = new Intent(this, LoginActivity.class);
-        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-        startActivity(intent);
-
         if (message != null) {
             Toast.makeText(this, message, Toast.LENGTH_LONG).show();
         }
 
-        finish();
+        logoutAndNavigateToLogin();
     }
 }
