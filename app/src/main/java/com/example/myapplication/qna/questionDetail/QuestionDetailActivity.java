@@ -294,10 +294,8 @@ public class QuestionDetailActivity extends AppCompatActivity {
             if (voteSnapshot.exists()
                     && oldValue == requestedValue) {
 
-                // Nhấn lại cùng lựa chọn: bỏ vote.
-                transaction.delete(voteRef);
-
-                updatedCount = currentCount - oldValue;
+                // Đã chọn cùng chiều vote: giữ nguyên vote hiện tại.
+                return currentCount;
 
             } else if (voteSnapshot.exists()) {
 
@@ -427,9 +425,8 @@ public class QuestionDetailActivity extends AppCompatActivity {
             if (voteSnapshot.exists()
                     && oldValue == requestedValue) {
 
-                // Nhấn lại cùng lựa chọn: bỏ vote.
-                transaction.delete(voteRef);
-                updatedCount = currentCount - oldValue;
+                // Đã chọn cùng chiều vote: giữ nguyên vote hiện tại.
+                return currentCount;
 
             } else if (voteSnapshot.exists()) {
 
