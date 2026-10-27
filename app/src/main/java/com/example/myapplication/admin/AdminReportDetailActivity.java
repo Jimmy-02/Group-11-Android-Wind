@@ -334,6 +334,7 @@ public class AdminReportDetailActivity extends AppCompatActivity {
                             if (bottomSheet != null && bottomSheet.isAdded()) {
                                 bottomSheet.dismiss();
                             }
+                            setResult(RESULT_OK);
                             showSuccessDialog("Đã xóa nội dung", "Nội dung vi phạm và các báo cáo liên quan đã được xóa thành công.");
                         });
                     });
@@ -356,6 +357,7 @@ public class AdminReportDetailActivity extends AppCompatActivity {
             if (bottomSheet != null && bottomSheet.isAdded()) {
                 bottomSheet.dismiss();
             }
+            setResult(RESULT_OK);
             showSuccessDialog("Đã bỏ qua báo cáo", "Các báo cáo liên quan đã được bác bỏ thành công.");
         });
     }

@@ -65,6 +65,12 @@ public class AdminDiscussionsFragment extends Fragment {
         return view;
     }
 
+    @Override
+    public void onResume() {
+        super.onResume();
+        loadFirestoreReports();
+    }
+
     private void initViews(View view) {
         tabLayout = view.findViewById(R.id.tab_admin_discussions);
         etSearch = view.findViewById(R.id.et_admin_search_discussions);
@@ -231,10 +237,6 @@ public class AdminDiscussionsFragment extends Fragment {
         for (Map.Entry<String, List<DocumentSnapshot>> entry : map.entrySet()) {
             String discussionId = entry.getKey();
             List<DocumentSnapshot> reports = entry.getValue();
-            String latestStatus = reports.get(0).getString("status");
-            if (latestStatus == null || latestStatus.isEmpty()) latestStatus = "PENDING";
-
-            final String statusToUse = latestStatus;
             db.collection("discussions").document(discussionId).get().addOnSuccessListener(dDoc -> {
                 if (!isAdded()) return;
                 String title = dDoc.exists() ? dDoc.getString("title") : "Bài thảo luận vi phạm";
@@ -243,6 +245,37 @@ public class AdminDiscussionsFragment extends Fragment {
                 String authorAvatar = dDoc.exists() ? dDoc.getString("authorAvatar") : null;
                 String imageUrl = dDoc.exists() ? dDoc.getString("imageUrl") : null;
                 String userId = dDoc.exists() ? dDoc.getString("userId") : null;
+                String dStatus = dDoc.exists() ? dDoc.getString("status") : null;
+
+                String statusToUse;
+                if ("DELETED".equalsIgnoreCase(dStatus) || (dDoc.exists() && dDoc.get("deletedAt") != null)) {
+                    statusToUse = "REPORTED_CONTENT_DELETED";
+                } else {
+                    boolean hasPending = false;
+                    boolean hasDeleted = false;
+                    boolean allDismissed = true;
+                    for (DocumentSnapshot rDoc : reports) {
+                        String s = rDoc.getString("status");
+                        if ("PENDING".equalsIgnoreCase(s) || s == null || s.isEmpty()) {
+                            hasPending = true;
+                            allDismissed = false;
+                        } else if ("REPORTED_CONTENT_DELETED".equalsIgnoreCase(s)) {
+                            hasDeleted = true;
+                            allDismissed = false;
+                        } else if (!"DISMISSED".equalsIgnoreCase(s)) {
+                            allDismissed = false;
+                        }
+                    }
+                    if (hasPending) {
+                        statusToUse = "PENDING";
+                    } else if (hasDeleted) {
+                        statusToUse = "REPORTED_CONTENT_DELETED";
+                    } else if (allDismissed && !reports.isEmpty()) {
+                        statusToUse = "DISMISSED";
+                    } else {
+                        statusToUse = "PENDING";
+                    }
+                }
 
                 AdminReportItem item = new AdminReportItem(
                         reports.get(0).getId(),
@@ -300,10 +333,6 @@ public class AdminDiscussionsFragment extends Fragment {
         for (Map.Entry<String, List<DocumentSnapshot>> entry : map.entrySet()) {
             String commentId = entry.getKey();
             List<DocumentSnapshot> reports = entry.getValue();
-            String latestStatus = reports.get(0).getString("status");
-            if (latestStatus == null || latestStatus.isEmpty()) latestStatus = "PENDING";
-
-            final String statusToUse = latestStatus;
             db.collection("comments").document(commentId).get().addOnSuccessListener(cDoc -> {
                 if (!isAdded()) return;
                 String content = cDoc.exists() ? cDoc.getString("content") : "Nội dung bình luận";
@@ -311,6 +340,37 @@ public class AdminDiscussionsFragment extends Fragment {
                 String authorName = cDoc.exists() ? cDoc.getString("authorName") : null;
                 String authorAvatar = cDoc.exists() ? cDoc.getString("authorAvatar") : null;
                 String userId = cDoc.exists() ? cDoc.getString("userId") : null;
+                String cStatus = cDoc.exists() ? cDoc.getString("status") : null;
+
+                String statusToUse;
+                if ("DELETED".equalsIgnoreCase(cStatus) || (cDoc.exists() && cDoc.get("deletedAt") != null)) {
+                    statusToUse = "REPORTED_CONTENT_DELETED";
+                } else {
+                    boolean hasPending = false;
+                    boolean hasDeleted = false;
+                    boolean allDismissed = true;
+                    for (DocumentSnapshot rDoc : reports) {
+                        String s = rDoc.getString("status");
+                        if ("PENDING".equalsIgnoreCase(s) || s == null || s.isEmpty()) {
+                            hasPending = true;
+                            allDismissed = false;
+                        } else if ("REPORTED_CONTENT_DELETED".equalsIgnoreCase(s)) {
+                            hasDeleted = true;
+                            allDismissed = false;
+                        } else if (!"DISMISSED".equalsIgnoreCase(s)) {
+                            allDismissed = false;
+                        }
+                    }
+                    if (hasPending) {
+                        statusToUse = "PENDING";
+                    } else if (hasDeleted) {
+                        statusToUse = "REPORTED_CONTENT_DELETED";
+                    } else if (allDismissed && !reports.isEmpty()) {
+                        statusToUse = "DISMISSED";
+                    } else {
+                        statusToUse = "PENDING";
+                    }
+                }
 
                 AdminReportItem item = new AdminReportItem(
                         reports.get(0).getId(),

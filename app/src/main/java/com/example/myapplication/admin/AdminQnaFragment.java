@@ -65,6 +65,12 @@ public class AdminQnaFragment extends Fragment {
         return view;
     }
 
+    @Override
+    public void onResume() {
+        super.onResume();
+        loadFirestoreReports();
+    }
+
     private void initViews(View view) {
         tabLayout = view.findViewById(R.id.tab_admin_qna);
         etSearch = view.findViewById(R.id.et_admin_search);
@@ -231,10 +237,6 @@ public class AdminQnaFragment extends Fragment {
         for (Map.Entry<String, List<DocumentSnapshot>> entry : map.entrySet()) {
             String questionId = entry.getKey();
             List<DocumentSnapshot> reports = entry.getValue();
-            String latestStatus = reports.get(0).getString("status");
-            if (latestStatus == null || latestStatus.isEmpty()) latestStatus = "PENDING";
-
-            final String statusToUse = latestStatus;
             db.collection("questions").document(questionId).get().addOnSuccessListener(qDoc -> {
                 if (!isAdded()) return;
                 String title = qDoc.exists() ? qDoc.getString("title") : "Câu hỏi vi phạm";
@@ -243,6 +245,37 @@ public class AdminQnaFragment extends Fragment {
                 String authorAvatar = qDoc.exists() ? qDoc.getString("authorAvatar") : null;
                 String imageUrl = qDoc.exists() ? qDoc.getString("imageUrl") : null;
                 String userId = qDoc.exists() ? qDoc.getString("userId") : null;
+                String qStatus = qDoc.exists() ? qDoc.getString("status") : null;
+
+                String statusToUse;
+                if ("DELETED".equalsIgnoreCase(qStatus) || (qDoc.exists() && qDoc.get("deletedAt") != null)) {
+                    statusToUse = "REPORTED_CONTENT_DELETED";
+                } else {
+                    boolean hasPending = false;
+                    boolean hasDeleted = false;
+                    boolean allDismissed = true;
+                    for (DocumentSnapshot rDoc : reports) {
+                        String s = rDoc.getString("status");
+                        if ("PENDING".equalsIgnoreCase(s) || s == null || s.isEmpty()) {
+                            hasPending = true;
+                            allDismissed = false;
+                        } else if ("REPORTED_CONTENT_DELETED".equalsIgnoreCase(s)) {
+                            hasDeleted = true;
+                            allDismissed = false;
+                        } else if (!"DISMISSED".equalsIgnoreCase(s)) {
+                            allDismissed = false;
+                        }
+                    }
+                    if (hasPending) {
+                        statusToUse = "PENDING";
+                    } else if (hasDeleted) {
+                        statusToUse = "REPORTED_CONTENT_DELETED";
+                    } else if (allDismissed && !reports.isEmpty()) {
+                        statusToUse = "DISMISSED";
+                    } else {
+                        statusToUse = "PENDING";
+                    }
+                }
 
                 AdminReportItem item = new AdminReportItem(
                         reports.get(0).getId(),
@@ -300,10 +333,6 @@ public class AdminQnaFragment extends Fragment {
         for (Map.Entry<String, List<DocumentSnapshot>> entry : map.entrySet()) {
             String answerId = entry.getKey();
             List<DocumentSnapshot> reports = entry.getValue();
-            String latestStatus = reports.get(0).getString("status");
-            if (latestStatus == null || latestStatus.isEmpty()) latestStatus = "PENDING";
-
-            final String statusToUse = latestStatus;
             db.collection("answers").document(answerId).get().addOnSuccessListener(aDoc -> {
                 if (!isAdded()) return;
                 String content = aDoc.exists() ? aDoc.getString("content") : "Nội dung câu trả lời";
@@ -311,6 +340,37 @@ public class AdminQnaFragment extends Fragment {
                 String authorName = aDoc.exists() ? aDoc.getString("authorName") : null;
                 String authorAvatar = aDoc.exists() ? aDoc.getString("authorAvatar") : null;
                 String userId = aDoc.exists() ? aDoc.getString("userId") : null;
+                String aStatus = aDoc.exists() ? aDoc.getString("status") : null;
+
+                String statusToUse;
+                if ("DELETED".equalsIgnoreCase(aStatus) || (aDoc.exists() && aDoc.get("deletedAt") != null)) {
+                    statusToUse = "REPORTED_CONTENT_DELETED";
+                } else {
+                    boolean hasPending = false;
+                    boolean hasDeleted = false;
+                    boolean allDismissed = true;
+                    for (DocumentSnapshot rDoc : reports) {
+                        String s = rDoc.getString("status");
+                        if ("PENDING".equalsIgnoreCase(s) || s == null || s.isEmpty()) {
+                            hasPending = true;
+                            allDismissed = false;
+                        } else if ("REPORTED_CONTENT_DELETED".equalsIgnoreCase(s)) {
+                            hasDeleted = true;
+                            allDismissed = false;
+                        } else if (!"DISMISSED".equalsIgnoreCase(s)) {
+                            allDismissed = false;
+                        }
+                    }
+                    if (hasPending) {
+                        statusToUse = "PENDING";
+                    } else if (hasDeleted) {
+                        statusToUse = "REPORTED_CONTENT_DELETED";
+                    } else if (allDismissed && !reports.isEmpty()) {
+                        statusToUse = "DISMISSED";
+                    } else {
+                        statusToUse = "PENDING";
+                    }
+                }
 
                 AdminReportItem item = new AdminReportItem(
                         reports.get(0).getId(),

@@ -941,40 +941,74 @@ public class QnaFragment extends Fragment {
     }
 
     private void confirmCloseQuestion(Question question) {
+        if (question == null || question.getId() == null) return;
+        String currentStatus = question.getStatus() != null ? question.getStatus().toUpperCase(Locale.ROOT) : "OPEN";
+        boolean isOpen = "OPEN".equals(currentStatus);
+
+        String[] options;
+        if (isOpen) {
+            options = new String[]{"Xóa câu hỏi", "Đóng câu hỏi (Ngừng nhận trả lời)"};
+        } else {
+            options = new String[]{"Xóa câu hỏi", "Mở lại câu hỏi"};
+        }
+
         new AlertDialog.Builder(requireContext())
-                .setTitle("Đóng câu hỏi")
-                .setMessage(
-                        "Bạn có chắc muốn đóng câu hỏi này không? " +
-                                "Người dùng sẽ không thể gửi thêm câu trả lời."
-                )
-                .setPositiveButton("Có", (dialog, which) -> {
+                .setTitle("Tùy chọn câu hỏi")
+                .setItems(options, (dialog, which) -> {
+                    if (which == 0) {
+                        promptDeleteQuestion(question);
+                    } else if (which == 1) {
+                        toggleQuestionCloseStatus(question, isOpen ? "CLOSED" : "OPEN");
+                    }
+                })
+                .setNegativeButton("Hủy", null)
+                .show();
+    }
+
+    private void promptDeleteQuestion(Question question) {
+        new AlertDialog.Builder(requireContext())
+                .setTitle("Xác nhận xóa câu hỏi")
+                .setMessage("Bạn có chắc chắn muốn xóa câu hỏi này không? Câu hỏi sẽ bị xóa vĩnh viễn khỏi danh sách.")
+                .setPositiveButton("Xóa", (dialog, which) -> {
+                    Map<String, Object> updates = new HashMap<>();
+                    updates.put("status", "DELETED");
+                    updates.put("deletedAt", FieldValue.serverTimestamp());
+
                     FirebaseFirestore.getInstance()
                             .collection("questions")
                             .document(question.getId())
-                            .update("status", "CLOSED")
+                            .update(updates)
                             .addOnSuccessListener(unused -> {
                                 if (!isAdded()) return;
-
-                                question.setStatus("CLOSED");
+                                question.setStatus("DELETED");
+                                allQuestions.remove(question);
                                 applyFilterAndSort();
-
-                                Toast.makeText(
-                                        requireContext(),
-                                        "Đã đóng câu hỏi",
-                                        Toast.LENGTH_SHORT
-                                ).show();
+                                Toast.makeText(requireContext(), "Đã xóa câu hỏi", Toast.LENGTH_SHORT).show();
                             })
                             .addOnFailureListener(error -> {
                                 if (!isAdded()) return;
-
-                                Toast.makeText(
-                                        requireContext(),
-                                        "Không thể đóng câu hỏi",
-                                        Toast.LENGTH_SHORT
-                                ).show();
+                                Toast.makeText(requireContext(), "Không thể xóa câu hỏi: " + error.getMessage(), Toast.LENGTH_SHORT).show();
                             });
                 })
-                .setNegativeButton("Không", null)
+                .setNegativeButton("Hủy", null)
                 .show();
+    }
+
+    private void toggleQuestionCloseStatus(Question question, String targetStatus) {
+        FirebaseFirestore.getInstance()
+                .collection("questions")
+                .document(question.getId())
+                .update("status", targetStatus)
+                .addOnSuccessListener(unused -> {
+                    if (!isAdded()) return;
+                    question.setStatus(targetStatus);
+                    applyFilterAndSort();
+                    String msg = "CLOSED".equals(targetStatus) ? "Đã đóng câu hỏi" : "Đã mở lại câu hỏi";
+                    Toast.makeText(requireContext(), msg, Toast.LENGTH_SHORT).show();
+                })
+                .addOnFailureListener(error -> {
+                    if (!isAdded()) return;
+                    Toast.makeText(requireContext(), "Thao tác thất bại", Toast.LENGTH_SHORT).show();
+                });
     }
 }
