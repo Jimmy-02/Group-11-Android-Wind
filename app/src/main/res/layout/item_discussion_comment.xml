@@ -63,7 +63,6 @@
                 android:layout_height="wrap_content"
                 android:padding="8dp"
                 android:text="!"
-                android:textColor="#D92D20"
                 android:textSize="16sp"
                 android:textStyle="bold" />
 

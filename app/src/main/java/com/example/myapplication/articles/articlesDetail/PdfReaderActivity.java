@@ -44,17 +44,14 @@ public class PdfReaderActivity extends AppCompatActivity {
         WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
         setContentView(R.layout.activity_pdf_reader);
 
-        // Status bar nền tím nên icon màu trắng
-        WindowInsetsControllerCompat insetsController =
-                WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
+        WindowInsetsControllerCompat insetsController = WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
         insetsController.setAppearanceLightStatusBars(false);
 
         View root = findViewById(R.id.root);
         View statusBarSpacer = findViewById(R.id.status_bar_spacer);
 
         ViewCompat.setOnApplyWindowInsetsListener(root, (v, windowInsets) -> {
-            Insets bars = windowInsets.getInsets(
-                    WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout());
+            Insets bars = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout());
 
             ViewGroup.LayoutParams params = statusBarSpacer.getLayoutParams();
             params.height = bars.top;
@@ -154,6 +151,7 @@ public class PdfReaderActivity extends AppCompatActivity {
                 runOnUiThread(() -> {
                     if (!isFinishing() && !isDestroyed()) {
                         progressPdf.setVisibility(View.GONE);
+
                         pdfViewer.fromFile(finalPdfFile)
                                 .enableSwipe(true)
                                 .swipeHorizontal(false)
