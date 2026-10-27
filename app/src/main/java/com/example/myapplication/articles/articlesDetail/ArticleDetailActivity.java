@@ -7,6 +7,7 @@ import android.view.ViewGroup;
 import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.net.Uri;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
@@ -34,6 +35,8 @@ public class ArticleDetailActivity extends AppCompatActivity {
     private TextView tvInstitution;
     private TextView tvDoi;
     private TextView tvDate;
+    private TextView tvSourceUrl;
+    private TextView tvContentUrl;
     private MaterialButton btnReadArticle;
 
     @Override
@@ -68,6 +71,8 @@ public class ArticleDetailActivity extends AppCompatActivity {
         tvDoi = findViewById(R.id.tv_detail_doi);
         tvDate = findViewById(R.id.tv_detail_date);
         btnReadArticle = findViewById(R.id.btn_read_article);
+        tvSourceUrl = findViewById(R.id.tv_detail_source_url);
+        tvContentUrl = findViewById(R.id.tv_detail_content_url);
 
         btnBack.setOnClickListener(v -> finish());
 
@@ -79,6 +84,7 @@ public class ArticleDetailActivity extends AppCompatActivity {
         String institution = intent.getStringExtra("institution");
         String doi = intent.getStringExtra("digitalObjectIdentifier");
         String contentUrl = intent.getStringExtra("contentUrl");
+        String sourceUrl = intent.getStringExtra("sourceUrl");
         long createdAt = intent.getLongExtra("createdAt", -1L);
 
         tvTitle.setText(valueOrDefault(title, "Untitled Article"));
@@ -86,6 +92,10 @@ public class ArticleDetailActivity extends AppCompatActivity {
         tvDescription.setText(valueOrDefault(description, "No description available."));
         tvInstitution.setText(valueOrDefault(institution, "Not provided"));
         tvDoi.setText(valueOrDefault(doi, "Not provided"));
+        tvSourceUrl.setText(valueOrDefault(sourceUrl, "Not provided"));
+        tvContentUrl.setText(valueOrDefault(contentUrl, "Not provided"));
+        tvSourceUrl.setOnClickListener(v -> openUrl(sourceUrl));
+        tvContentUrl.setOnClickListener(v -> openUrl(contentUrl));
 
         loadCategoryName(categoryId);
 
@@ -101,7 +111,15 @@ public class ArticleDetailActivity extends AppCompatActivity {
                 return;
             }
 
+            String articleId = getIntent().getStringExtra("articleId");
+
+            if (articleId == null || articleId.trim().isEmpty()) {
+                Toast.makeText(this, "Không xác định được bài báo.", Toast.LENGTH_LONG).show();
+                return;
+            }
+
             Intent pdfIntent = new Intent(this, PdfReaderActivity.class);
+            pdfIntent.putExtra("articleId", articleId);
             pdfIntent.putExtra("contentUrl", contentUrl);
             pdfIntent.putExtra("articleTitle", title);
             startActivity(pdfIntent);
@@ -143,6 +161,20 @@ public class ArticleDetailActivity extends AppCompatActivity {
                 }
             }
         });
+    }
+
+    private void openUrl(String url) {
+        if (url == null || url.trim().isEmpty()) {
+            Toast.makeText(this, "URL is unavailable.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        try {
+            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url.trim()));
+            startActivity(intent);
+        } catch (Exception e) {
+            Toast.makeText(this, "Unable to open URL.", Toast.LENGTH_SHORT).show();
+        }
     }
 
     private String valueOrDefault(String value, String defaultValue) {

@@ -6,7 +6,12 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Toast;
+import android.database.sqlite.SQLiteDatabase;
+import android.util.Log;
 
+import com.example.myapplication.data.local.AppDatabaseHelper;
+import com.example.myapplication.data.local.ArticleLocalDataSource;
+import com.google.firebase.auth.FirebaseAuth;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
@@ -21,6 +26,7 @@ import com.example.myapplication.articles.reports.ReportArticleActivity;
 import com.example.myapplication.articles.creation.CreateArticleActivity;
 import com.google.firebase.firestore.ListenerRegistration;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class HomeFragment extends Fragment {
@@ -29,6 +35,8 @@ public class HomeFragment extends Fragment {
     private ArticleAdapter articleAdapter;
     private ArticleRepository repository;
     private ListenerRegistration articleListener;
+    private ArticleLocalDataSource localDataSource;
+    private String currentCategoryId;
 
     public HomeFragment() {
 
@@ -80,41 +88,79 @@ public class HomeFragment extends Fragment {
         articleList.setAdapter(articleAdapter);
 
         repository = new ArticleRepository();
+        localDataSource = new ArticleLocalDataSource(requireContext());
+
+        AppDatabaseHelper databaseHelper = new AppDatabaseHelper(requireContext());
+        SQLiteDatabase db = databaseHelper.getWritableDatabase();
+
+        Log.d("SQLiteCheck", "Database path: " + db.getPath());
+        Log.d("SQLiteCheck", "Database created successfully");
+
+        db.close();
+        databaseHelper.close();
 
         loadArticles(null); // null = all
     }
 
     private void loadArticles(String categoryId) {
-        // Không ẩn articleList: header (search + chip category) nằm trong RecyclerView,
-        // ẩn đi thì người dùng không đổi category được nữa.
-        if (!isAdded() || repository == null || articleAdapter == null) {
+        if (!isAdded() || repository == null || articleAdapter == null || localDataSource == null) {
             return;
         }
+
+        currentCategoryId = categoryId;
 
         if (articleListener != null) {
             articleListener.remove();
             articleListener = null;
         }
 
+        List<Article> cachedArticles = localDataSource.getHomeArticles();
+
+        Log.d("OfflineCache", "Cached articles count: " + cachedArticles.size());
+
+        if (!cachedArticles.isEmpty()) {
+            articleAdapter.setArticles(cachedArticles);
+            Log.d("OfflineCache", "Displayed articles from SQLite");
+        }
+
+        if (categoryId != null && !categoryId.trim().isEmpty()) {
+            cachedArticles.removeIf(article -> !categoryId.equals(article.getCategoryId()));
+        }
+
+        if (!cachedArticles.isEmpty()) {
+            articleAdapter.setArticles(cachedArticles);
+        }
+
         articleListener = repository.listenApprovedArticles(categoryId, new ArticleRepository.OnArticlesLoadedListener() {
             @Override
             public void onSuccess(List<Article> articles) {
-                if (!isAdded() || articleAdapter == null) {
+                if (!isAdded() || articleAdapter == null || localDataSource == null) {
                     return;
                 }
 
-                // Rỗng thì chỉ trống phần bên dưới "Latest Articles"
+                Log.d("OfflineCache", "Firestore loaded: " + articles.size() + " articles");
+
+                localDataSource.saveHomeArticles(articles);
                 articleAdapter.setArticles(articles);
             }
 
             @Override
             public void onError(Exception exception) {
-                if (!isAdded()) {
+                if (!isAdded() || articleAdapter == null || localDataSource == null) {
                     return;
                 }
 
-                android.util.Log.e("HomeFragment", "Failed to load articles", exception);
-                Toast.makeText(requireContext(), "Unable to load articles.", Toast.LENGTH_SHORT).show();
+                Log.e("OfflineCache", "Firestore failed; checking SQLite cache", exception);
+
+                List<Article> cachedArticles = localDataSource.getHomeArticles();
+
+                if (!cachedArticles.isEmpty()) {
+                    articleAdapter.setArticles(cachedArticles);
+                    Toast.makeText(requireContext(), "Showing saved articles offline.", Toast.LENGTH_SHORT).show();
+                } else {
+                    articleAdapter.setArticles(new ArrayList<>());
+                    Toast.makeText(requireContext(), "Unable to load articles.", Toast.LENGTH_SHORT).show();
+                }
             }
         });
     }

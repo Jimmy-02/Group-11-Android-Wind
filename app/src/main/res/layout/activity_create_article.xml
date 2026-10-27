@@ -203,15 +203,6 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="18dp"
-                android:text="Source URL *"
-                android:textColor="#172B4D"
-                android:textSize="14sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
                 android:text="Trang giới thiệu hoặc nguồn xuất bản bài báo."
                 android:textColor="#718096"
@@ -242,7 +233,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:text="Link trực tiếp đến file PDF để đọc bài báo."
+                android:text="Link trực tiếp đến link PDF để đọc bài báo."
                 android:textColor="#718096"
                 android:textSize="12sp" />
 
