@@ -121,14 +121,16 @@ public class HomeFragment extends Fragment {
 
     @Override
     public void onDestroyView() {
+        removeArticleListener();
+        articleList = null;
+        articleAdapter = null;
+        super.onDestroyView();
+    }
+
+    public void removeArticleListener() {
         if (articleListener != null) {
             articleListener.remove();
             articleListener = null;
         }
-
-        articleList = null;
-        articleAdapter = null;
-
-        super.onDestroyView();
     }
 }

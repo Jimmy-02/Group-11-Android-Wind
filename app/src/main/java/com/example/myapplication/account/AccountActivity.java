@@ -1,32 +1,33 @@
 package com.example.myapplication.account;
+
 import android.content.Intent;
 import android.os.Bundle;
-import androidx.fragment.app.Fragment;
-import android.widget.ImageView;
-import android.widget.TextView;
 import android.view.LayoutInflater;
 import android.view.View;
-import com.example.myapplication.ImageLoader;
 import android.view.ViewGroup;
+import android.widget.ImageView;
+import android.widget.TextView;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
+import androidx.fragment.app.Fragment;
+
+import com.example.myapplication.ImageLoader;
+import com.example.myapplication.MainActivity;
+import com.example.myapplication.R;
+import com.example.myapplication.account.myarticles.MyArticlesActivity;
 import com.example.myapplication.account.mydiscussion.MyDiscussionsActivity;
 import com.example.myapplication.account.myqna.MyQnaActivity;
+import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
-import com.example.myapplication.R;
+import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.example.myapplication.authentication.AuthSessionManager;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.app.AlertDialog;
 import com.google.firebase.firestore.ListenerRegistration;
-import com.google.firebase.auth.UserInfo;
-import android.widget.Button;
-import android.widget.EditText;
-import com.example.myapplication.account.ChangePasswordActivity;
-import com.google.firebase.auth.AuthCredential;
-import com.google.firebase.auth.EmailAuthProvider;
-import com.example.myapplication.account.myarticles.MyArticlesActivity;
+
 import java.util.Locale;
+
 public class AccountActivity extends Fragment {
 
     private ListenerRegistration profileListener;
@@ -34,65 +35,45 @@ public class AccountActivity extends Fragment {
     private ListenerRegistration discussionsCountListener;
     private ListenerRegistration questionsCountListener;
     private ListenerRegistration answersCountListener;
+
     public AccountActivity() {
     }
+
+    @Nullable
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container,
-                             Bundle savedInstanceState) {
+    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.activity_account, container, false);
 
-        //MyArticles
         View.OnClickListener openMyArticles = v -> {
-            Intent intent = new Intent(
-                    requireContext(),
-                    MyArticlesActivity.class
-            );
-
+            Intent intent = new Intent(requireContext(), MyArticlesActivity.class);
             startActivity(intent);
         };
+
         view.findViewById(R.id.cardMyArticles).setOnClickListener(openMyArticles);
-
         view.findViewById(R.id.layoutArticleHeader).setOnClickListener(openMyArticles);
-
         view.findViewById(R.id.layoutArticleStats).setOnClickListener(openMyArticles);
-
         view.findViewById(R.id.tvSeeAllArticles).setOnClickListener(openMyArticles);
 
-        //MyDiscussions
         View.OnClickListener openMyDiscussions = v -> {
-            Intent intent = new Intent(
-                    requireContext(),
-                    MyDiscussionsActivity.class
-            );
-
+            Intent intent = new Intent(requireContext(), MyDiscussionsActivity.class);
             startActivity(intent);
         };
+
         view.findViewById(R.id.cardMyDiscussions).setOnClickListener(openMyDiscussions);
-
         view.findViewById(R.id.layoutDiscussionHeader).setOnClickListener(openMyDiscussions);
-
         view.findViewById(R.id.tvSeeAllDiscussions).setOnClickListener(openMyDiscussions);
 
-        //MyQnA
         View.OnClickListener openMyQna = v -> {
-            Intent intent = new Intent(
-                    requireContext(),
-                    MyQnaActivity.class
-            );
-
+            Intent intent = new Intent(requireContext(), MyQnaActivity.class);
             startActivity(intent);
         };
 
         view.findViewById(R.id.cardMyQA).setOnClickListener(openMyQna);
-
         view.findViewById(R.id.layoutQAHeader).setOnClickListener(openMyQna);
-
         view.findViewById(R.id.tvSeeAllQA).setOnClickListener(openMyQna);
-
         view.findViewById(R.id.layoutQACounts).setOnClickListener(openMyQna);
 
         ImageView imgAvatar = view.findViewById(R.id.imgAvatar);
-
         TextView tvFullName = view.findViewById(R.id.tvFullName);
         TextView tvEmail = view.findViewById(R.id.tvEmail);
         TextView tvRole = view.findViewById(R.id.tvRole);
@@ -106,25 +87,15 @@ public class AccountActivity extends Fragment {
         TextView tvQuestionCount = view.findViewById(R.id.tvQuestionCount);
         TextView tvAnswerCount = view.findViewById(R.id.tvAnswerCount);
 
-        // Chỉ mở Edit Profile khi người dùng nhấn
         view.findViewById(R.id.layoutEditProfile).setOnClickListener(v -> {
-            Intent intent = new Intent(
-                    requireContext(),
-                    EditProfileActivity.class
-            );
-
+            Intent intent = new Intent(requireContext(), EditProfileActivity.class);
             intent.putExtra("fullName", tvFullName.getText().toString());
             intent.putExtra("email", tvEmail.getText().toString());
-
             startActivity(intent);
         });
 
         view.findViewById(R.id.layoutChangePassword).setOnClickListener(v -> {
-            Intent intent = new Intent(
-                    requireContext(),
-                    ChangePasswordActivity.class
-            );
-
+            Intent intent = new Intent(requireContext(), ChangePasswordActivity.class);
             startActivity(intent);
         });
 
@@ -134,26 +105,25 @@ public class AccountActivity extends Fragment {
                     .setMessage("Bạn có chắc chắn muốn đăng xuất?")
                     .setNegativeButton("Hủy", (dialog, which) -> dialog.dismiss())
                     .setPositiveButton("Đăng xuất", (dialog, which) -> {
-                        AuthSessionManager.logout(
-                                (AppCompatActivity) requireActivity()
-                        );
+                        removeFirestoreListeners();
+                        if (requireActivity() instanceof MainActivity) {
+                            ((MainActivity) requireActivity()).logoutAndNavigateToLogin();
+                        }
                     })
                     .show();
         });
+
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+
         if (user == null) {
             tvFullName.setText("Chưa đăng nhập");
             tvEmail.setText("");
             tvRole.setText("");
-
-            view.findViewById(R.id.layoutAccountMenu)
-                    .setVisibility(View.GONE);
+            view.findViewById(R.id.layoutAccountMenu).setVisibility(View.GONE);
         } else {
-            view.findViewById(R.id.layoutAccountMenu)
-                    .setVisibility(View.VISIBLE);
+            view.findViewById(R.id.layoutAccountMenu).setVisibility(View.VISIBLE);
 
             String userID = user.getUid();
-
             FirebaseFirestore db = FirebaseFirestore.getInstance();
 
             loadMyContentCounts(
@@ -171,43 +141,30 @@ public class AccountActivity extends Fragment {
             profileListener = db.collection("users")
                     .document(userID)
                     .addSnapshotListener((document, error) -> {
+                        if (getView() == null) return;
 
                         if (error != null) {
-                            android.util.Log.e(
-                                    "AccountActivity",
-                                    "Không thể theo dõi hồ sơ",
-                                    error
-                            );
+                            android.util.Log.e("AccountActivity", "Không thể theo dõi hồ sơ", error);
                             return;
                         }
 
-                        if (document == null || !document.exists()) {
-                            return;
-                        }
+                        if (document == null || !document.exists()) return;
 
                         String fullName = document.getString("fullName");
                         String email = document.getString("email");
                         String role = document.getString("role");
                         String avatar = document.getString("avatar");
 
-                        tvFullName.setText(
-                                fullName != null ? fullName : ""
-                        );
+                        tvFullName.setText(fullName != null ? fullName : "");
+                        tvEmail.setText(email != null ? email : "");
+                        tvRole.setText(role != null ? role : "USER");
 
-                        tvEmail.setText(
-                                email != null ? email : ""
-                        );
-
-                        tvRole.setText(
-                                role != null ? role : "USER"
-                        );
                         ImageLoader.load(avatar, imgAvatar);
                     });
         }
 
         return view;
     }
-
 
     private void loadMyContentCounts(
             FirebaseFirestore db,
@@ -220,18 +177,13 @@ public class AccountActivity extends Fragment {
             TextView tvQuestionCount,
             TextView tvAnswerCount
     ) {
-
         articlesCountListener = db.collection("articles")
                 .whereEqualTo("userId", userId)
                 .addSnapshotListener((snapshot, error) -> {
                     if (getView() == null) return;
 
                     if (error != null) {
-                        android.util.Log.e(
-                                "AccountActivity",
-                                "Không thể tải thống kê bài báo",
-                                error
-                        );
+                        android.util.Log.e("AccountActivity", "Không thể tải thống kê bài báo", error);
                         return;
                     }
 
@@ -242,16 +194,10 @@ public class AccountActivity extends Fragment {
                     int rejected = 0;
                     int totalActive = 0;
 
-                    for (com.google.firebase.firestore.DocumentSnapshot doc
-                            : snapshot.getDocuments()) {
-
+                    for (DocumentSnapshot doc : snapshot.getDocuments()) {
                         String status = doc.getString("status");
 
-                        if ("DELETED".equalsIgnoreCase(status)) {
-                            continue;
-                        }
-
-                        if (doc.get("deletedAt") != null) {
+                        if ("DELETED".equalsIgnoreCase(status) || doc.get("deletedAt") != null) {
                             continue;
                         }
 
@@ -259,17 +205,13 @@ public class AccountActivity extends Fragment {
 
                         if (status == null) continue;
 
-                        status = status.trim().toUpperCase(Locale.ROOT);
-
-                        switch (status) {
+                        switch (status.trim().toUpperCase(Locale.ROOT)) {
                             case "PENDING":
                                 pending++;
                                 break;
-
                             case "APPROVED":
                                 approved++;
                                 break;
-
                             case "REJECTED":
                                 rejected++;
                                 break;
@@ -279,10 +221,8 @@ public class AccountActivity extends Fragment {
                     tvPendingCount.setText(String.valueOf(pending));
                     tvApprovedCount.setText(String.valueOf(approved));
                     tvRejectedCount.setText(String.valueOf(rejected));
-
                     tvTotalCount.setText(String.valueOf(totalActive));
                 });
-
 
         discussionsCountListener = db.collection("discussions")
                 .whereEqualTo("userId", userId)
@@ -290,11 +230,7 @@ public class AccountActivity extends Fragment {
                     if (getView() == null) return;
 
                     if (error != null) {
-                        android.util.Log.e(
-                                "AccountActivity",
-                                "Không thể tải thống kê Discussion",
-                                error
-                        );
+                        android.util.Log.e("AccountActivity", "Không thể tải thống kê Discussion", error);
                         return;
                     }
 
@@ -302,29 +238,18 @@ public class AccountActivity extends Fragment {
 
                     int activeDiscussionCount = 0;
 
-                    for (com.google.firebase.firestore.DocumentSnapshot doc
-                            : snapshot.getDocuments()) {
-
+                    for (DocumentSnapshot doc : snapshot.getDocuments()) {
                         String status = doc.getString("status");
 
-                        if ("DELETED".equalsIgnoreCase(status)) {
-                            continue;
-                        }
-
-                        if (doc.get("deletedAt") != null) {
+                        if ("DELETED".equalsIgnoreCase(status) || doc.get("deletedAt") != null) {
                             continue;
                         }
 
                         activeDiscussionCount++;
                     }
 
-                    tvDiscussionCount.setText(
-                            activeDiscussionCount + " bài thảo luận"
-                    );
+                    tvDiscussionCount.setText(activeDiscussionCount + " bài thảo luận");
                 });
-
-
-
 
         questionsCountListener = db.collection("questions")
                 .whereEqualTo("userId", userId)
@@ -332,11 +257,7 @@ public class AccountActivity extends Fragment {
                     if (getView() == null) return;
 
                     if (error != null) {
-                        android.util.Log.e(
-                                "AccountActivity",
-                                "Không thể tải thống kê Question",
-                                error
-                        );
+                        android.util.Log.e("AccountActivity", "Không thể tải thống kê Question", error);
                         return;
                     }
 
@@ -344,30 +265,19 @@ public class AccountActivity extends Fragment {
 
                     int activeQuestionCount = 0;
 
-                    for (com.google.firebase.firestore.DocumentSnapshot document
-                            : snapshot.getDocuments()) {
-
+                    for (DocumentSnapshot document : snapshot.getDocuments()) {
                         String status = document.getString("status");
+                        Timestamp deletedAt = document.getTimestamp("deletedAt");
 
-                        if ("DELETED".equalsIgnoreCase(status)) {
-                            continue;
-                        }
-
-                        com.google.firebase.Timestamp deletedAt =
-                                document.getTimestamp("deletedAt");
-
-                        if (deletedAt != null) {
+                        if ("DELETED".equalsIgnoreCase(status) || deletedAt != null) {
                             continue;
                         }
 
                         activeQuestionCount++;
                     }
 
-                    tvQuestionCount.setText(
-                            activeQuestionCount + " câu hỏi"
-                    );
+                    tvQuestionCount.setText(activeQuestionCount + " câu hỏi");
                 });
-
 
         answersCountListener = db.collection("answers")
                 .whereEqualTo("userId", userId)
@@ -375,25 +285,22 @@ public class AccountActivity extends Fragment {
                     if (getView() == null) return;
 
                     if (error != null) {
-                        android.util.Log.e(
-                                "AccountActivity",
-                                "Không thể tải thống kê Answer",
-                                error
-                        );
+                        android.util.Log.e("AccountActivity", "Không thể tải thống kê Answer", error);
                         return;
                     }
 
                     if (snapshot == null) return;
 
-                    tvAnswerCount.setText(
-                            snapshot.size() + " câu trả lời"
-                    );
+                    tvAnswerCount.setText(snapshot.size() + " câu trả lời");
                 });
     }
 
+    private void removeFirestoreListeners() {
+        if (profileListener != null) {
+            profileListener.remove();
+            profileListener = null;
+        }
 
-    @Override
-    public void onDestroyView() {
         if (articlesCountListener != null) {
             articlesCountListener.remove();
             articlesCountListener = null;
@@ -413,7 +320,15 @@ public class AccountActivity extends Fragment {
             answersCountListener.remove();
             answersCountListener = null;
         }
+    }
 
+    public void removeFirestoreListenersForLogout() {
+        removeFirestoreListeners();
+    }
+
+    @Override
+    public void onDestroyView() {
+        removeFirestoreListeners();
         super.onDestroyView();
     }
 }
