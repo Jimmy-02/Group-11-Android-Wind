@@ -54,6 +54,9 @@
             android:name=".discussions.reports.ReportDiscussionActivity"
             android:exported="false" />
         <activity
+            android:name=".discussions.comments.commentReports.ReportCommentActivity"
+            android:exported="false" />
+        <activity
             android:name=".account.EditProfileActivity"
             android:exported="false" />
         <activity

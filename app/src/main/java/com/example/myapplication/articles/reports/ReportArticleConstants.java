@@ -21,6 +21,4 @@ public final class ReportArticleConstants {
     // Validation message
     public static final String ERROR_OTHER_REASON_REQUIRED = "Vui lòng mô tả lý do báo cáo.";
 
-    // Default report details limit
-    public static final int MAX_DETAILS_LENGTH = 500;
 }

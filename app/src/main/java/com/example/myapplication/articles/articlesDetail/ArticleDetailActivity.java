@@ -6,6 +6,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageButton;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
@@ -21,10 +22,8 @@ import com.google.android.material.button.MaterialButton;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.Locale;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
+import java.util.Locale;
 
 public class ArticleDetailActivity extends AppCompatActivity {
 
@@ -45,23 +44,18 @@ public class ArticleDetailActivity extends AppCompatActivity {
         setContentView(R.layout.activity_article_detail);
 
         // Status bar nền tím nên icon màu trắng (giống màn Search Results)
-        WindowInsetsControllerCompat insetsController =
-                WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
+        WindowInsetsControllerCompat insetsController = WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
         insetsController.setAppearanceLightStatusBars(false);
 
         View root = findViewById(R.id.root);
         View statusBarSpacer = findViewById(R.id.status_bar_spacer);
 
         ViewCompat.setOnApplyWindowInsetsListener(root, (v, windowInsets) -> {
-            Insets bars = windowInsets.getInsets(
-                    WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout());
-
+            Insets bars = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout());
             ViewGroup.LayoutParams params = statusBarSpacer.getLayoutParams();
             params.height = bars.top;
             statusBarSpacer.setLayoutParams(params);
-
             v.setPadding(bars.left, 0, bars.right, bars.bottom);
-
             return WindowInsetsCompat.CONSUMED;
         });
 
@@ -78,7 +72,6 @@ public class ArticleDetailActivity extends AppCompatActivity {
         btnBack.setOnClickListener(v -> finish());
 
         Intent intent = getIntent();
-
         String title = intent.getStringExtra("title");
         String authorName = intent.getStringExtra("authorName");
         String categoryId = intent.getStringExtra("categoryId");
@@ -86,7 +79,6 @@ public class ArticleDetailActivity extends AppCompatActivity {
         String institution = intent.getStringExtra("institution");
         String doi = intent.getStringExtra("digitalObjectIdentifier");
         String contentUrl = intent.getStringExtra("contentUrl");
-
         long createdAt = intent.getLongExtra("createdAt", -1L);
 
         tvTitle.setText(valueOrDefault(title, "Untitled Article"));
@@ -105,7 +97,7 @@ public class ArticleDetailActivity extends AppCompatActivity {
 
         btnReadArticle.setOnClickListener(v -> {
             if (contentUrl == null || contentUrl.trim().isEmpty()) {
-                android.widget.Toast.makeText(this, "PDF URL is unavailable.", android.widget.Toast.LENGTH_LONG).show();
+                Toast.makeText(this, "PDF URL is unavailable.", Toast.LENGTH_LONG).show();
                 return;
             }
 
@@ -122,50 +114,37 @@ public class ArticleDetailActivity extends AppCompatActivity {
             return;
         }
 
-        ArticleCategoryRepository categoryRepository =
-                new ArticleCategoryRepository();
+        ArticleCategoryRepository categoryRepository = new ArticleCategoryRepository();
 
-        categoryRepository.getActiveCategories(
-                new ArticleCategoryRepository.OnCategoriesLoadedListener() {
-                    @Override
-                    public void onSuccess(List<ArticleCategory> categories) {
-                        if (isFinishing() || isDestroyed()) {
-                            return;
-                        }
+        categoryRepository.getActiveCategories(new ArticleCategoryRepository.OnCategoriesLoadedListener() {
+            @Override
+            public void onSuccess(List<ArticleCategory> categories) {
+                if (isFinishing() || isDestroyed()) {
+                    return;
+                }
 
-                        for (ArticleCategory category : categories) {
-                            if (categoryId.equals(category.getId())
-                                    || categoryId.equals(category.getSlug())) {
-
-                                tvCategory.setText(
-                                        valueOrDefault(
-                                                category.getName(),
-                                                "Uncategorized"
-                                        )
-                                );
-                                return;
-                            }
-                        }
-
-                        // Không tìm thấy thì hiển thị ID ban đầu.
-                        tvCategory.setText(categoryId);
-                    }
-
-                    @Override
-                    public void onError(Exception exception) {
-                        android.util.Log.e(
-                                "ArticleDetailActivity",
-                                "Failed to load category",
-                                exception
-                        );
-
-                        if (!isFinishing() && !isDestroyed()) {
-                            tvCategory.setText(categoryId);
-                        }
+                for (ArticleCategory category : categories) {
+                    if (categoryId.equals(category.getId()) || categoryId.equals(category.getSlug())) {
+                        tvCategory.setText(valueOrDefault(category.getName(), "Uncategorized"));
+                        return;
                     }
                 }
-        );
+
+                // Không tìm thấy thì hiển thị ID ban đầu.
+                tvCategory.setText(categoryId);
+            }
+
+            @Override
+            public void onError(Exception exception) {
+                android.util.Log.e("ArticleDetailActivity", "Failed to load category", exception);
+
+                if (!isFinishing() && !isDestroyed()) {
+                    tvCategory.setText(categoryId);
+                }
+            }
+        });
     }
+
     private String valueOrDefault(String value, String defaultValue) {
         return value == null || value.trim().isEmpty() ? defaultValue : value;
     }

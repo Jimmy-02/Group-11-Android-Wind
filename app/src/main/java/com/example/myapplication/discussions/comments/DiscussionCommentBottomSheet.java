@@ -2,6 +2,7 @@ package com.example.myapplication.discussions.comments;
 
 import android.content.Context;
 import android.content.DialogInterface;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.text.InputFilter;
 import android.view.LayoutInflater;
@@ -15,7 +16,8 @@ import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
-
+import android.content.Intent;
+import com.example.myapplication.discussions.comments.commentReports.ReportCommentActivity;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -23,6 +25,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.myapplication.R;
 import com.example.myapplication.discussions.Discussion;
+import com.example.myapplication.discussions.DiscussionRepository;
 import com.google.android.material.bottomsheet.BottomSheetBehavior;
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
 import com.google.firebase.auth.FirebaseAuth;
@@ -56,6 +59,7 @@ public class DiscussionCommentBottomSheet extends BottomSheetDialogFragment {
     private TextView tvCommentsEmpty;
     private TextView tvCommentsTitle;
     private TextView tvCommentCount;
+    private TextView tvSheetLikes;
     private RecyclerView rvComments;
     private View layoutCommentInput;
     private EditText etComment;
@@ -63,10 +67,17 @@ public class DiscussionCommentBottomSheet extends BottomSheetDialogFragment {
 
     private DiscussionCommentAdapter commentAdapter;
     private CommentRepository commentRepository;
+    private DiscussionRepository discussionRepository;
     private String discussionId;
 
     private boolean isSubmitting = false;
-    private boolean commentsChanged = false;
+    private boolean dataChanged = false;
+
+    // Trạng thái like của chính discussion đang mở trong sheet
+    private long discussionLikeCount = 0;
+    private boolean discussionLiked = false;
+    private boolean isTogglingDiscussionLike = false;
+    private boolean discussionLikeToggledByUser = false;
 
     // Các comment đang chờ xử lý thích/bỏ thích, tránh bấm liên tục làm lệch số đếm
     private final Set<String> likingCommentIds = new HashSet<>();
@@ -101,6 +112,7 @@ public class DiscussionCommentBottomSheet extends BottomSheetDialogFragment {
         tvCommentsEmpty = view.findViewById(R.id.tv_comments_empty);
         tvCommentsTitle = view.findViewById(R.id.tv_sheet_comments_title);
         tvCommentCount = view.findViewById(R.id.tv_sheet_comment_count);
+        tvSheetLikes = view.findViewById(R.id.tv_sheet_likes);
         rvComments = view.findViewById(R.id.rv_comments);
         layoutCommentInput = view.findViewById(R.id.layout_comment_input);
         etComment = view.findViewById(R.id.et_comment);
@@ -108,6 +120,7 @@ public class DiscussionCommentBottomSheet extends BottomSheetDialogFragment {
 
         Bundle args = requireArguments();
         discussionId = args.getString(ARG_ID);
+        discussionLikeCount = args.getLong(ARG_LIKE_COUNT, 0);
 
         bindDiscussionHeader(view, args);
 
@@ -122,19 +135,31 @@ public class DiscussionCommentBottomSheet extends BottomSheetDialogFragment {
 
             @Override
             public void onReportClick(DiscussionComment comment) {
-                // Làm ở bước 4
+                if (comment == null || comment.getId() == null || comment.getDiscussionId() == null) {
+                    Toast.makeText(requireContext(), "Không tìm thấy bình luận cần báo cáo.", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                Intent intent = new Intent(requireContext(), ReportCommentActivity.class);
+                intent.putExtra("commentId", comment.getId());
+                intent.putExtra("discussionId", comment.getDiscussionId());
+                intent.putExtra("authorName", comment.getAuthorName());
+                intent.putExtra("content", comment.getContent());
+                startActivity(intent);
             }
         });
         rvComments.setLayoutManager(new LinearLayoutManager(requireContext()));
         rvComments.setAdapter(commentAdapter);
 
         commentRepository = new CommentRepository();
+        discussionRepository = new DiscussionRepository();
 
         // Chỉ người đã đăng nhập mới thấy thanh nhập bình luận
         layoutCommentInput.setVisibility(isLoggedIn ? View.VISIBLE : View.GONE);
         etComment.setFilters(new InputFilter[]{new InputFilter.LengthFilter(MAX_COMMENT_LENGTH)});
         btnSendComment.setOnClickListener(v -> submitComment());
 
+        setupDiscussionLike();
         loadComments();
     }
 
@@ -166,8 +191,8 @@ public class DiscussionCommentBottomSheet extends BottomSheetDialogFragment {
     public void onDismiss(@NonNull DialogInterface dialog) {
         super.onDismiss(dialog);
 
-        // Báo cho màn Discussion tải lại để card hiện đúng số bình luận mới
-        if (commentsChanged && getParentFragment() instanceof OnCommentsChangedListener) {
+        // Báo cho màn Discussion tải lại để card hiện đúng số like và số bình luận mới
+        if (dataChanged && getParentFragment() instanceof OnCommentsChangedListener) {
             ((OnCommentsChangedListener) getParentFragment()).onCommentsChanged();
         }
     }
@@ -179,7 +204,6 @@ public class DiscussionCommentBottomSheet extends BottomSheetDialogFragment {
         TextView tvTitle = view.findViewById(R.id.tv_sheet_title);
         TextView tvContent = view.findViewById(R.id.tv_sheet_content);
         ImageView imgDiscussion = view.findViewById(R.id.img_sheet_discussion);
-        TextView tvLikes = view.findViewById(R.id.tv_sheet_likes);
 
         String authorName = args.getString(ARG_AUTHOR_NAME);
         tvAuthorName.setText(authorName != null && !authorName.trim().isEmpty() ? authorName : "User");
@@ -189,7 +213,6 @@ public class DiscussionCommentBottomSheet extends BottomSheetDialogFragment {
 
         tvTitle.setText(args.getString(ARG_TITLE, ""));
         tvContent.setText(args.getString(ARG_CONTENT, ""));
-        tvLikes.setText("♡ " + args.getLong(ARG_LIKE_COUNT, 0) + " lượt thích");
 
         String avatarUrl = args.getString(ARG_AUTHOR_AVATAR);
 
@@ -203,10 +226,75 @@ public class DiscussionCommentBottomSheet extends BottomSheetDialogFragment {
 
         if (imageUrl != null && !imageUrl.trim().isEmpty()) {
             imgDiscussion.setVisibility(View.VISIBLE);
-            Picasso.get().load(imageUrl.trim()).fit().centerCrop().into(imgDiscussion);
+            Picasso.get().load(imageUrl).fit().centerCrop().into(imgDiscussion);
         } else {
             imgDiscussion.setVisibility(View.GONE);
         }
+    }
+
+    private void setupDiscussionLike() {
+        // Tăng vùng chạm cho dễ bấm
+        tvSheetLikes.setPadding(0, dpToPx(8), dpToPx(16), dpToPx(8));
+        tvSheetLikes.setOnClickListener(v -> toggleDiscussionLike());
+        updateDiscussionLikeView();
+
+        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+
+        if (currentUser == null) return;
+
+        discussionRepository.checkLikeStatus(discussionId, currentUser.getUid(), new DiscussionRepository.OnLikeStatusListener() {
+            @Override
+            public void onSuccess(boolean isLiked) {
+                // Người dùng đã bấm trước khi kiểm tra xong thì giữ kết quả mới nhất, không ghi đè
+                if (!isAdded() || discussionLikeToggledByUser) return;
+                discussionLiked = isLiked;
+                updateDiscussionLikeView();
+            }
+
+            @Override
+            public void onError(Exception exception) {
+                android.util.Log.e("DiscussionComments", "Failed to check discussion like status", exception);
+            }
+        });
+    }
+
+    private void toggleDiscussionLike() {
+        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+
+        if (currentUser == null) {
+            Toast.makeText(requireContext(), "Vui lòng đăng nhập để thích bài thảo luận.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if (isTogglingDiscussionLike) return;
+
+        isTogglingDiscussionLike = true;
+
+        discussionRepository.toggleLike(discussionId, currentUser.getUid(), new DiscussionRepository.OnLikeToggledListener() {
+            @Override
+            public void onSuccess(boolean isLiked, long likeCount) {
+                isTogglingDiscussionLike = false;
+                if (!isAdded()) return;
+                discussionLikeToggledByUser = true;
+                discussionLiked = isLiked;
+                discussionLikeCount = likeCount;
+                dataChanged = true;
+                updateDiscussionLikeView();
+            }
+
+            @Override
+            public void onError(Exception exception) {
+                isTogglingDiscussionLike = false;
+                if (!isAdded()) return;
+                android.util.Log.e("DiscussionComments", "Failed to toggle discussion like", exception);
+                Toast.makeText(requireContext(), "Không thể thích bài thảo luận. Vui lòng thử lại.", Toast.LENGTH_LONG).show();
+            }
+        });
+    }
+
+    private void updateDiscussionLikeView() {
+        tvSheetLikes.setText((discussionLiked ? "♥ " : "♡ ") + discussionLikeCount + " lượt thích");
+        tvSheetLikes.setTextColor(Color.parseColor(discussionLiked ? "#D92D20" : "#667085"));
     }
 
     private void loadComments() {
@@ -286,7 +374,7 @@ public class DiscussionCommentBottomSheet extends BottomSheetDialogFragment {
                 if (!isAdded()) return;
                 isSubmitting = false;
                 btnSendComment.setEnabled(true);
-                commentsChanged = true;
+                dataChanged = true;
                 etComment.setText("");
                 hideKeyboard();
                 Toast.makeText(requireContext(), "Đã đăng bình luận.", Toast.LENGTH_SHORT).show();
@@ -310,5 +398,9 @@ public class DiscussionCommentBottomSheet extends BottomSheetDialogFragment {
         if (keyboard != null) {
             keyboard.hideSoftInputFromWindow(etComment.getWindowToken(), 0);
         }
+    }
+
+    private int dpToPx(int dp) {
+        return Math.round(dp * getResources().getDisplayMetrics().density);
     }
 }
