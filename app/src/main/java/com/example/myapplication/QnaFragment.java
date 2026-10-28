@@ -43,7 +43,7 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import java.util.List;
 import java.util.Locale;
-
+import com.example.myapplication.qna.QuestionRepository;
 
 public class QnaFragment extends Fragment {
 
@@ -70,6 +70,7 @@ public class QnaFragment extends Fragment {
     private String searchQuery = "";
     private ActivityResultLauncher<Intent> createQuestionLauncher;
     private ActivityResultLauncher<Intent> questionDetailLauncher;
+    private QuestionRepository questionRepository;
 
     public QnaFragment() {
         // Required empty public constructor
@@ -77,39 +78,30 @@ public class QnaFragment extends Fragment {
 
     @Nullable
     @Override
-    public View onCreateView(
-            @NonNull LayoutInflater inflater,
-            @Nullable ViewGroup container,
-            @Nullable Bundle savedInstanceState
-    ) {
-        View view = inflater.inflate(
-                R.layout.fragment_qna,
-                container,
-                false
+    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+        View view = inflater.inflate(R.layout.fragment_qna, container, false);
+
+        createQuestionLauncher = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(),
+                result -> {
+                    if (result.getResultCode() == android.app.Activity.RESULT_OK) {
+                        loadQuestions();
+                    }
+                }
         );
 
-        createQuestionLauncher =
-                registerForActivityResult(
-                        new ActivityResultContracts.StartActivityForResult(),
-                        result -> {
-                            if (result.getResultCode() == android.app.Activity.RESULT_OK) {
-                                loadQuestions();
-                            }
-                        }
-                );
-
-        questionDetailLauncher =
-                registerForActivityResult(
-                        new ActivityResultContracts.StartActivityForResult(),
-                        result -> {
-                            if (result.getResultCode()
-                                    == android.app.Activity.RESULT_OK) {
-                                loadQuestions();
-                            }
-                        }
-                );
+        questionDetailLauncher = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(),
+                result -> {
+                    if (result.getResultCode() == android.app.Activity.RESULT_OK) {
+                        loadQuestions();
+                    }
+                }
+        );
 
         initViews(view);
+        questionRepository = new QuestionRepository(requireContext());
+
         setupRecyclerView();
         setupFilters();
         setupSort();
@@ -621,6 +613,10 @@ public class QnaFragment extends Fragment {
     private void loadQuestions() {
         removeQuestionsListener();
 
+        if (!isAdded() || getView() == null) {
+            return;
+        }
+
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
 
         if (user == null) {
@@ -632,112 +628,157 @@ public class QnaFragment extends Fragment {
             answerCounts.clear();
             allQuestions.clear();
 
-            allQuestions.clear();
-
             if (adapter != null) {
                 adapter.setQuestions(new ArrayList<>());
             }
 
-            if (pbQuestions != null) {
-                pbQuestions.setVisibility(View.GONE);
-            }
-
-            if (rvQuestions != null) {
-                rvQuestions.setVisibility(View.GONE);
-            }
-
-            if (tvEmptyQuestions != null) {
-                tvEmptyQuestions.setVisibility(View.VISIBLE);
-                tvEmptyQuestions.setText("Vui lòng đăng nhập để xem câu hỏi");
-            }
-
-            return;
-        }
-
-        if (!isAdded() || getView() == null) {
+            pbQuestions.setVisibility(View.GONE);
+            rvQuestions.setVisibility(View.GONE);
+            tvEmptyQuestions.setVisibility(View.VISIBLE);
+            tvEmptyQuestions.setText("Vui lòng đăng nhập để xem câu hỏi");
             return;
         }
 
         pbQuestions.setVisibility(View.VISIBLE);
-        rvQuestions.setVisibility(View.GONE);
         tvEmptyQuestions.setVisibility(View.GONE);
+
+        // Đọc SQLite trước để có dữ liệu hiển thị ngay khi offline.
+        List<Question> cachedQuestions = questionRepository.getCachedQuestions();
+
+        if (!cachedQuestions.isEmpty()) {
+            allQuestions.clear();
+            allQuestions.addAll(cachedQuestions);
+            applyFilterAndSort();
+            rvQuestions.setVisibility(View.VISIBLE);
+        }
+
+        questionRepository.getAllQuestions(new QuestionRepository.OnQuestionsLoadedListener() {
+            @Override
+            public void onSuccess(List<Question> questions) {
+                if (!isAdded() || getView() == null) {
+                    return;
+                }
+
+                allQuestions.clear();
+                allQuestions.addAll(questions);
+
+                pbQuestions.setVisibility(View.GONE);
+                applyFilterAndSort();
+
+                // Tiếp tục theo dõi thay đổi dữ liệu Firestore.
+                listenQuestionsRealtime();
+            }
+
+            @Override
+            public void onError(Exception exception) {
+                if (!isAdded() || getView() == null) {
+                    return;
+                }
+
+                android.util.Log.e("QnaFragment", "Không thể tải câu hỏi", exception);
+                pbQuestions.setVisibility(View.GONE);
+
+                // Không xóa danh sách đã tải từ SQLite.
+                applyFilterAndSort();
+            }
+        });
+    }
+    private void listenQuestionsRealtime() {
+        removeQuestionsListener();
 
         FirebaseFirestore db = FirebaseFirestore.getInstance();
 
-        listenAnswerCounts(db);
+        questionsListener = db.collection("questions").addSnapshotListener((snapshot, error) -> {
+            if (!isAdded() || getView() == null) {
+                return;
+            }
 
-        questionsListener = db.collection("questions")
-                .addSnapshotListener((snapshot, error) -> {
+            if (error != null) {
+                android.util.Log.e("QnaFragment", "Không thể theo dõi câu hỏi", error);
+                return;
+            }
+
+            if (snapshot == null) {
+                return;
+            }
+
+            // Nếu snapshot chỉ đến từ cache, không ghi đè dữ liệu SQLite
+            // bằng một danh sách có thể chưa đầy đủ.
+            if (snapshot.getMetadata().isFromCache()) {
+                return;
+            }
+
+            List<Question> questions = new ArrayList<>();
+
+            for (DocumentSnapshot doc : snapshot.getDocuments()) {
+                String status = doc.getString("status");
+
+                if ("DELETED".equalsIgnoreCase(status) || doc.get("deletedAt") != null) {
+                    continue;
+                }
+
+                Question question = new Question();
+                question.setId(doc.getId());
+                question.setTitle(doc.getString("title"));
+                question.setContent(doc.getString("content"));
+                question.setImageUrl(doc.getString("imageUrl"));
+                question.setUserId(readFirstString(doc, "userId", "authorId", "uid"));
+                question.setAuthorName(readFirstString(doc, "authorName", "userName", "username"));
+                question.setAuthorAvatar(doc.getString("authorAvatar"));
+                question.setStatus(status == null || status.isEmpty() ? "OPEN" : status.toUpperCase(Locale.ROOT));
+                question.setCreatedAt(doc.getTimestamp("createdAt"));
+
+                Object voteValue = doc.get("voteCount");
+                if (voteValue instanceof Number) {
+                    question.setVoteCount(((Number) voteValue).longValue());
+                }
+
+                Object answerValue = doc.get("answerCount");
+                if (answerValue instanceof Number) {
+                    question.setAnswerCount(((Number) answerValue).intValue());
+                }
+
+                List<String> categories = new ArrayList<>();
+                Object categoryValue = doc.get("categories");
+
+                if (categoryValue instanceof List<?>) {
+                    for (Object item : (List<?>) categoryValue) {
+                        if (item instanceof String) {
+                            categories.add((String) item);
+                        }
+                    }
+                } else if (categoryValue instanceof String) {
+                    categories.add((String) categoryValue);
+                } else {
+                    String category = doc.getString("category");
+                    if (category != null && !category.trim().isEmpty()) {
+                        categories.add(category.trim());
+                    }
+                }
+
+                question.setCategories(categories);
+                questions.add(question);
+            }
+
+            // Đồng bộ dữ liệu mới nhất vào SQLite thông qua repository.
+            questionRepository.getAllQuestions(new QuestionRepository.OnQuestionsLoadedListener() {
+                @Override
+                public void onSuccess(List<Question> latestQuestions) {
                     if (!isAdded() || getView() == null) {
                         return;
                     }
 
-                    if (error != null) {
-                        pbQuestions.setVisibility(View.GONE);
-                        android.util.Log.e("QnaFragment", "Không thể tải câu hỏi", error);
-                        Toast.makeText(requireContext(), "Không thể tải câu hỏi.", Toast.LENGTH_SHORT).show();
-                        return;
-                    }
-
-                    if (snapshot == null) {
-                        return;
-                    }
-
                     allQuestions.clear();
-
-                    for (DocumentSnapshot doc : snapshot.getDocuments()) {
-                        Question question = new Question();
-                        question.setId(doc.getId());
-                        question.setTitle(doc.getString("title"));
-                        question.setContent(doc.getString("content"));
-                        question.setImageUrl(doc.getString("imageUrl"));
-                        question.setUserId(readFirstString(doc, "userId", "authorId", "uid"));
-                        question.setAuthorName(readFirstString(doc, "authorName", "userName", "username"));
-                        question.setAuthorAvatar(doc.getString("authorAvatar"));
-
-                        String status = doc.getString("status");
-                        if (status == null || status.isEmpty()) {
-                            status = "OPEN";
-                        }
-
-                        question.setStatus(status.toUpperCase(Locale.ROOT));
-
-                        if ("DELETED".equalsIgnoreCase(status)) {
-                            continue;
-                        }
-
-                        question.setCreatedAt(doc.getTimestamp("createdAt"));
-
-                        Object voteValue = doc.get("voteCount");
-                        if (voteValue instanceof Number) {
-                            question.setVoteCount(((Number) voteValue).longValue());
-                        }
-
-                        List<String> categories = new ArrayList<>();
-                        Object categoryValue = doc.get("category");
-
-                        if (categoryValue instanceof String) {
-                            String category = ((String) categoryValue).trim();
-                            if (!category.isEmpty()) {
-                                categories.add(category);
-                            }
-                        } else if (categoryValue instanceof List<?>) {
-                            for (Object item : (List<?>) categoryValue) {
-                                if (item instanceof String) {
-                                    categories.add((String) item);
-                                }
-                            }
-                        }
-
-                        question.setCategories(categories);
-                        allQuestions.add(question);
-                    }
-
-                    applyAnswerCountsToQuestions();
-
-                    pbQuestions.setVisibility(View.GONE);
+                    allQuestions.addAll(latestQuestions);
                     applyFilterAndSort();
-                });
+                }
+
+                @Override
+                public void onError(Exception exception) {
+                    android.util.Log.e("QnaFragment", "Không thể đồng bộ câu hỏi", exception);
+                }
+            });
+        });
     }
     private void listenAnswerCounts(FirebaseFirestore db) {
         // Không tạo listener trùng lặp.

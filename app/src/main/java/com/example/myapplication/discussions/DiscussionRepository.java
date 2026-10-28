@@ -3,7 +3,9 @@ package com.example.myapplication.discussions;
 import com.google.firebase.Timestamp;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+import android.content.Context;
 
+import com.example.myapplication.data.local.DiscussionLocalDataSource;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -12,8 +14,11 @@ public class DiscussionRepository {
 
     private final FirebaseFirestore firestore;
 
-    public DiscussionRepository() {
+    private final DiscussionLocalDataSource localDataSource;
+
+    public DiscussionRepository(Context context) {
         firestore = FirebaseFirestore.getInstance();
+        localDataSource = new DiscussionLocalDataSource(context);
     }
 
     public interface OnDiscussionsLoadedListener {
@@ -22,61 +27,93 @@ public class DiscussionRepository {
     }
 
     public void getAllDiscussions(OnDiscussionsLoadedListener listener) {
-        firestore.collection("discussions")
-                .whereEqualTo("status", "ACTIVE")
-                .get()
+        firestore.collection("discussions").whereEqualTo("status", "ACTIVE").get()
                 .addOnSuccessListener(snapshot -> {
-                    // Offline: snapshot rỗng lấy từ cache không phải dữ liệu thật từ server.
-                    if (snapshot.isEmpty() && snapshot.getMetadata().isFromCache()) {
-                        listener.onError(new Exception("Offline: no data from server"));
-                        return;
-                    }
-
                     List<Discussion> discussions = new ArrayList<>();
 
                     for (DocumentSnapshot document : snapshot.getDocuments()) {
                         Discussion discussion = mapDiscussion(document);
-
-                        if (discussion != null) {
-                            discussions.add(discussion);
-                        }
+                        if (discussion != null) discussions.add(discussion);
                     }
 
                     sortByNewest(discussions);
+
+                    if (snapshot.getMetadata().isFromCache()) {
+                        List<Discussion> cachedDiscussions = localDataSource.getAllDiscussions();
+
+                        if (!cachedDiscussions.isEmpty()) {
+                            sortByNewest(cachedDiscussions);
+                            listener.onSuccess(cachedDiscussions);
+                        } else if (!discussions.isEmpty()) {
+                            listener.onSuccess(discussions);
+                        } else {
+                            listener.onError(new Exception("Chưa có dữ liệu thảo luận được lưu offline."));
+                        }
+                        return;
+                    }
+
+                    localDataSource.replaceAllDiscussions(discussions);
                     listener.onSuccess(discussions);
                 })
-                .addOnFailureListener(listener::onError);
+                .addOnFailureListener(exception -> {
+                    List<Discussion> cachedDiscussions = localDataSource.getAllDiscussions();
+
+                    if (!cachedDiscussions.isEmpty()) {
+                        sortByNewest(cachedDiscussions);
+                        listener.onSuccess(cachedDiscussions);
+                    } else {
+                        listener.onError(exception);
+                    }
+                });
     }
 
-    public void getMyDiscussions(
-            String userId,
-            OnDiscussionsLoadedListener listener
-    ) {
+    public void getMyDiscussions(String userId, OnDiscussionsLoadedListener listener) {
+        if (userId == null || userId.trim().isEmpty()) {
+            listener.onError(new IllegalArgumentException("User ID không hợp lệ."));
+            return;
+        }
+
         firestore.collection("discussions")
                 .whereEqualTo("userId", userId)
                 .whereEqualTo("status", "ACTIVE")
                 .get()
                 .addOnSuccessListener(snapshot -> {
-                    // Offline: snapshot rỗng lấy từ cache không phải dữ liệu thật từ server.
-                    if (snapshot.isEmpty() && snapshot.getMetadata().isFromCache()) {
-                        listener.onError(new Exception("Offline: no data from server"));
-                        return;
-                    }
-
                     List<Discussion> discussions = new ArrayList<>();
 
                     for (DocumentSnapshot document : snapshot.getDocuments()) {
                         Discussion discussion = mapDiscussion(document);
-
-                        if (discussion != null) {
-                            discussions.add(discussion);
-                        }
+                        if (discussion != null) discussions.add(discussion);
                     }
 
                     sortByNewest(discussions);
+
+                    if (snapshot.getMetadata().isFromCache()) {
+                        List<Discussion> cachedDiscussions = localDataSource.getDiscussions(userId);
+
+                        if (!cachedDiscussions.isEmpty()) {
+                            sortByNewest(cachedDiscussions);
+                            listener.onSuccess(cachedDiscussions);
+                        } else if (!discussions.isEmpty()) {
+                            listener.onSuccess(discussions);
+                        } else {
+                            listener.onError(new Exception("Chưa có dữ liệu thảo luận cá nhân được lưu offline."));
+                        }
+                        return;
+                    }
+
+                    localDataSource.saveDiscussions(userId, discussions);
                     listener.onSuccess(discussions);
                 })
-                .addOnFailureListener(listener::onError);
+                .addOnFailureListener(exception -> {
+                    List<Discussion> cachedDiscussions = localDataSource.getDiscussions(userId);
+
+                    if (!cachedDiscussions.isEmpty()) {
+                        sortByNewest(cachedDiscussions);
+                        listener.onSuccess(cachedDiscussions);
+                    } else {
+                        listener.onError(exception);
+                    }
+                });
     }
 
     private Discussion mapDiscussion(DocumentSnapshot document) {

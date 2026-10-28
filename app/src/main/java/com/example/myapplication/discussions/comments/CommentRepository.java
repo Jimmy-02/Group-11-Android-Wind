@@ -9,7 +9,8 @@ import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
-
+import android.content.Context;
+import com.example.myapplication.data.local.CommentLocalDataSource;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -20,8 +21,11 @@ public class CommentRepository {
 
     private final FirebaseFirestore firestore;
 
-    public CommentRepository() {
+    private final CommentLocalDataSource localDataSource;
+
+    public CommentRepository(Context context) {
         firestore = FirebaseFirestore.getInstance();
+        localDataSource = new CommentLocalDataSource(context);
     }
 
     public interface OnCommentsLoadedListener {
@@ -45,18 +49,47 @@ public class CommentRepository {
             return;
         }
 
-        firestore.collection("comments").whereEqualTo("discussionId", discussionId).whereEqualTo("status", "ACTIVE").get()
+        firestore.collection("comments")
+                .whereEqualTo("discussionId", discussionId)
+                .whereEqualTo("status", "ACTIVE")
+                .get()
                 .addOnSuccessListener(snapshot -> {
                     List<DiscussionComment> comments = new ArrayList<>();
 
                     for (DocumentSnapshot document : snapshot.getDocuments()) {
-                        comments.add(mapComment(document));
+                        DiscussionComment comment = mapComment(document);
+                        if (comment != null) comments.add(comment);
                     }
 
-                    Collections.sort(comments, (first, second) -> Long.compare(second.getCreatedAt(), first.getCreatedAt()));
+                    Collections.sort(comments, (first, second) ->
+                            Long.compare(second.getCreatedAt(), first.getCreatedAt()));
+
+                    if (snapshot.getMetadata().isFromCache()) {
+                        List<DiscussionComment> cachedComments = localDataSource.getComments(discussionId);
+
+                        if (!cachedComments.isEmpty()) {
+                            attachLikeStatus(cachedComments, listener);
+                        } else if (!comments.isEmpty()) {
+                            attachLikeStatus(comments, listener);
+                        } else {
+                            listener.onError(new Exception("Không có comment được lưu offline."));
+                        }
+
+                        return;
+                    }
+
+                    localDataSource.replaceComments(discussionId, comments);
                     attachLikeStatus(comments, listener);
                 })
-                .addOnFailureListener(listener::onError);
+                .addOnFailureListener(exception -> {
+                    List<DiscussionComment> cachedComments = localDataSource.getComments(discussionId);
+
+                    if (!cachedComments.isEmpty()) {
+                        listener.onSuccess(cachedComments);
+                    } else {
+                        listener.onError(exception);
+                    }
+                });
     }
 
     // Kiểm tra từng comment xem người dùng hiện tại đã thích chưa, lỗi ở comment nào thì coi như chưa thích

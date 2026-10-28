@@ -80,7 +80,7 @@ public class MyDiscussionsActivity extends AppCompatActivity implements Discussi
 
         backLayout.setOnClickListener(v -> finish());
 
-        repository = new DiscussionRepository();
+        repository = new DiscussionRepository(this);
         localDataSource = new DiscussionLocalDataSource(this);
         adapter = new DiscussionAdapter(this);
 
