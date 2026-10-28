@@ -10,7 +10,6 @@
         android:layout_height="match_parent"
         android:orientation="horizontal">
 
-        <!-- CỘT TRÁI: TIÊU ĐỀ, TÌM KIẾM, BỘ LỌC -->
         <ScrollView
             android:id="@+id/qnaScrollView"
             android:layout_width="0dp"
@@ -45,7 +44,6 @@
                     android:textColor="#64748B"
                     android:textSize="12sp" />
 
-                <!-- Tìm kiếm -->
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/tilSearchQuestions"
                     android:layout_width="match_parent"
@@ -70,7 +68,6 @@
 
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <!-- Tiêu đề bộ lọc -->
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -80,7 +77,6 @@
                     android:textSize="14sp"
                     android:textStyle="bold" />
 
-                <!-- Bộ lọc -->
                 <com.google.android.material.chip.ChipGroup
                     android:id="@+id/chipGroupQuestionFilter"
                     android:layout_width="match_parent"
@@ -129,7 +125,6 @@
                     android:layout_marginTop="12dp"
                     android:background="#E2E8F0" />
 
-                <!-- Sắp xếp -->
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -148,13 +143,11 @@
             </LinearLayout>
         </ScrollView>
 
-        <!-- VẠCH NGĂN HAI CỘT -->
         <View
             android:layout_width="1dp"
             android:layout_height="match_parent"
             android:background="#E2E8F0" />
 
-        <!-- CỘT PHẢI: DANH SÁCH CÂU HỎI -->
         <FrameLayout
             android:layout_width="0dp"
             android:layout_height="match_parent"
@@ -194,7 +187,6 @@
 
     </LinearLayout>
 
-    <!-- NÚT ĐẶT CÂU HỎI -->
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/fabAskQuestion"
         android:layout_width="wrap_content"
