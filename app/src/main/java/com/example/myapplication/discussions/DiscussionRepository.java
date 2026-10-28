@@ -26,6 +26,12 @@ public class DiscussionRepository {
                 .whereEqualTo("status", "ACTIVE")
                 .get()
                 .addOnSuccessListener(snapshot -> {
+                    // Offline: snapshot rỗng lấy từ cache không phải dữ liệu thật từ server.
+                    if (snapshot.isEmpty() && snapshot.getMetadata().isFromCache()) {
+                        listener.onError(new Exception("Offline: no data from server"));
+                        return;
+                    }
+
                     List<Discussion> discussions = new ArrayList<>();
 
                     for (DocumentSnapshot document : snapshot.getDocuments()) {
@@ -50,6 +56,12 @@ public class DiscussionRepository {
                 .whereEqualTo("userId", userId)
                 .get()
                 .addOnSuccessListener(snapshot -> {
+                    // Offline: snapshot rỗng lấy từ cache không phải dữ liệu thật từ server.
+                    if (snapshot.isEmpty() && snapshot.getMetadata().isFromCache()) {
+                        listener.onError(new Exception("Offline: no data from server"));
+                        return;
+                    }
+
                     List<Discussion> discussions = new ArrayList<>();
 
                     for (DocumentSnapshot document : snapshot.getDocuments()) {

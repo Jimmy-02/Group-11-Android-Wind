@@ -7,7 +7,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 public class AppDatabaseHelper extends SQLiteOpenHelper {
 
     private static final String DATABASE_NAME = "scishare.db";
-    private static final int DATABASE_VERSION = 2;
+    private static final int DATABASE_VERSION = 3;
 
     public static final String TABLE_ARTICLES = "articles";
     public static final String TABLE_DISCUSSIONS = "discussions";
@@ -57,6 +57,7 @@ public class AppDatabaseHelper extends SQLiteOpenHelper {
                 "categoryId TEXT, " +
                 "articleId TEXT, " +
                 "imageUrl TEXT, " +
+                "authorId TEXT, " +
                 "authorName TEXT, " +
                 "authorAvatar TEXT, " +
                 "status TEXT, " +
@@ -104,6 +105,10 @@ public class AppDatabaseHelper extends SQLiteOpenHelper {
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
         if (oldVersion < 2) {
             createCategoriesTable(db);
+        }
+
+        if (oldVersion < 3) {
+            db.execSQL("ALTER TABLE " + TABLE_DISCUSSIONS + " ADD COLUMN authorId TEXT");
         }
     }
 }
