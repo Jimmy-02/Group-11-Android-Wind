@@ -1050,7 +1050,8 @@ public class QnaFragment extends Fragment {
     @Override
     public void onHiddenChanged(boolean hidden) {
         super.onHiddenChanged(hidden);
-        if (!hidden && isAdded()) {
+
+        if (!hidden && isAdded() && getView() != null) {
             if (questionsListener == null) {
                 loadQuestions();
             } else {
@@ -1063,6 +1064,14 @@ public class QnaFragment extends Fragment {
         if (questionsListener != null) {
             questionsListener.remove();
             questionsListener = null;
+        }
+    }
+    @Override
+    public void onResume() {
+        super.onResume();
+
+        if (isAdded() && !isHidden() && getView() != null) {
+            loadQuestions();
         }
     }
 }
