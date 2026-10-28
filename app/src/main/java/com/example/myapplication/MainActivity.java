@@ -14,7 +14,7 @@ import androidx.fragment.app.FragmentManager;
 
 import com.example.myapplication.account.AccountActivity;
 import com.example.myapplication.authentication.login.LoginActivity;
-import com.google.android.material.bottomnavigation.BottomNavigationView;
+import com.google.android.material.navigation.NavigationBarView;
 import com.google.android.material.navigation.NavigationView;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.firebase.auth.FirebaseAuth;
@@ -79,7 +79,7 @@ public class MainActivity extends AppCompatActivity {
             fm.beginTransaction().add(R.id.content_container, homeFragment, "HOME").add(R.id.content_container, discussionFragment, "DISCUSSION").hide(discussionFragment).add(R.id.content_container, qnaFragment, "QNA").hide(qnaFragment).add(R.id.content_container, accountFragment, "ACCOUNT").hide(accountFragment).commit();
         }
 
-        BottomNavigationView bottomNavigation = findViewById(R.id.bottom_navigation);
+        NavigationBarView bottomNavigation = findViewById(R.id.bottom_navigation);
 
         bottomNavigation.setOnItemSelectedListener(item -> {
             int id = item.getItemId();
@@ -136,7 +136,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
 
-        BottomNavigationView bottomNavigation = findViewById(R.id.bottom_navigation);
+        NavigationBarView bottomNavigation = findViewById(R.id.bottom_navigation);
         outState.putInt("selected_nav_item", bottomNavigation.getSelectedItemId());
     }
 
