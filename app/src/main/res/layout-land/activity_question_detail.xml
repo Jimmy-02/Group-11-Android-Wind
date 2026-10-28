@@ -8,21 +8,18 @@
     android:orientation="vertical"
     android:background="#F8FAFC">
 
-    <!-- Status bar -->
     <View
         android:id="@+id/status_bar_spacer"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:background="#6750A4" />
 
-    <!-- Nội dung chia hai cột -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
         android:orientation="horizontal">
 
-        <!-- CỘT TRÁI: THÔNG TIN CÂU HỎI VÀ Ô NHẬP -->
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="match_parent"
@@ -30,7 +27,6 @@
             android:orientation="vertical"
             android:background="#FFFFFF">
 
-            <!-- Nút quay lại -->
             <LinearLayout
                 android:id="@+id/QNAbackLayout"
                 android:layout_width="match_parent"
@@ -65,7 +61,6 @@
                 android:layout_height="1dp"
                 android:background="#E2E8F0" />
 
-            <!-- Thông tin câu hỏi có thể cuộn -->
             <androidx.core.widget.NestedScrollView
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
@@ -79,7 +74,6 @@
                     android:orientation="vertical"
                     android:padding="14dp">
 
-                    <!-- Tiêu đề và trạng thái -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -111,7 +105,6 @@
 
                     </LinearLayout>
 
-                    <!-- Người đăng và thời gian -->
                     <TextView
                         android:id="@+id/tvDetailAuthorDate"
                         android:layout_width="match_parent"
@@ -121,7 +114,6 @@
                         android:textColor="#718096"
                         android:textSize="12sp" />
 
-                    <!-- Nội dung câu hỏi -->
                     <TextView
                         android:id="@+id/tvDetailBody"
                         android:layout_width="match_parent"
@@ -132,7 +124,6 @@
                         android:textColor="#334155"
                         android:textSize="14sp" />
 
-                    <!-- Ảnh câu hỏi -->
                     <ImageView
                         android:id="@+id/ivDetailQuestionImage"
                         android:layout_width="match_parent"
@@ -142,7 +133,6 @@
                         android:contentDescription="Ảnh câu hỏi"
                         android:visibility="gone" />
 
-                    <!-- Danh mục -->
                     <com.google.android.material.chip.ChipGroup
                         android:id="@+id/chipGroupDetailCategories"
                         android:layout_width="match_parent"
@@ -158,7 +148,6 @@
                         android:layout_marginTop="10dp"
                         android:background="#E2E8F0" />
 
-                    <!-- Bình chọn -->
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"

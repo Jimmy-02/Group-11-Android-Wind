@@ -6,14 +6,12 @@
     android:orientation="vertical"
     android:background="#F5F6F8">
 
-    <!-- Status bar -->
     <View
         android:id="@+id/status_bar_spacer"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:background="#6750A4" />
 
-    <!-- Thanh Back -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="48dp"
@@ -64,20 +62,17 @@
 
     </LinearLayout>
 
-    <!-- Đường phân cách thanh Back -->
     <View
         android:layout_width="match_parent"
         android:layout_height="1dp"
         android:background="#E2E8F0" />
 
-    <!-- Nội dung chính chia hai cột -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
         android:orientation="horizontal">
 
-        <!-- CỘT TRÁI: TIÊU ĐỀ VÀ BỘ LỌC -->
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="match_parent"
@@ -95,7 +90,6 @@
                 android:fillViewport="true"
                 android:scrollbars="vertical">
 
-                <!-- NestedScrollView chỉ có một View con trực tiếp -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -133,7 +127,6 @@
                         android:textSize="14sp"
                         android:textStyle="bold" />
 
-                    <!-- Bộ lọc trạng thái -->
                     <RadioGroup
                         android:id="@+id/rgArticleFilter"
                         android:layout_width="match_parent"
@@ -205,13 +198,11 @@
 
         </LinearLayout>
 
-        <!-- Vạch ngăn hai cột -->
         <View
             android:layout_width="1dp"
             android:layout_height="match_parent"
             android:background="#E2E8F0" />
 
-        <!-- CỘT PHẢI: DANH SÁCH BÀI BÁO -->
         <FrameLayout
             android:layout_width="0dp"
             android:layout_height="match_parent"
