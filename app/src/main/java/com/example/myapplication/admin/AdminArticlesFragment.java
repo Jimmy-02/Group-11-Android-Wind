@@ -372,6 +372,20 @@ public class AdminArticlesFragment extends Fragment
                 });
     }
 
+    private String formatTimestamp(long timeMillis) {
+        if (timeMillis <= 0) return "Vừa xong";
+        long diff = System.currentTimeMillis() - timeMillis;
+        if (diff < 0) diff = 0;
+        long minutes = diff / (1000 * 60);
+        long hours = minutes / 60;
+        long days = hours / 24;
+
+        if (days > 0) return days + " ngày trước";
+        if (hours > 0) return hours + " giờ trước";
+        if (minutes > 0) return minutes + " phút trước";
+        return "Vừa xong";
+    }
+
     private void groupArticleReports(List<DocumentSnapshot> docs) {
         final int currentToken = ++articleReportsRebuildToken;
         allReportItems.clear();
@@ -386,16 +400,61 @@ public class AdminArticlesFragment extends Fragment
         for (Map.Entry<String, List<DocumentSnapshot>> entry : map.entrySet()) {
             String articleId = entry.getKey();
             List<DocumentSnapshot> reports = entry.getValue();
-            String latestStatus = reports.get(0).getString("status");
-            if (latestStatus == null || latestStatus.isEmpty()) latestStatus = "PENDING";
 
-            final String statusToUse = latestStatus;
+            long maxTimeCalc = 0;
+            boolean hasPending = false;
+            boolean hasDeleted = false;
+            boolean allDismissed = true;
+            for (DocumentSnapshot rDoc : reports) {
+                String s = rDoc.getString("status");
+                if ("PENDING".equalsIgnoreCase(s) || s == null || s.isEmpty()) {
+                    hasPending = true;
+                    allDismissed = false;
+                } else if ("REPORTED_CONTENT_DELETED".equalsIgnoreCase(s)) {
+                    hasDeleted = true;
+                    allDismissed = false;
+                } else if (!"DISMISSED".equalsIgnoreCase(s)) {
+                    allDismissed = false;
+                }
+
+                Timestamp ts = rDoc.getTimestamp("createdAt");
+                if (ts != null && ts.toDate().getTime() > maxTimeCalc) {
+                    maxTimeCalc = ts.toDate().getTime();
+                }
+            }
+
+            final long finalReportMaxTime = maxTimeCalc;
+            final boolean finalHasPending = hasPending;
+            final boolean finalHasDeleted = hasDeleted;
+            final boolean finalAllDismissed = allDismissed;
+
             db.collection("articles").document(articleId).get().addOnSuccessListener(aDoc -> {
                 if (!isAdded() || currentToken != articleReportsRebuildToken) return;
                 String title = aDoc.exists() ? aDoc.getString("title") : "Bài báo khoa học";
                 String author = aDoc.exists() ? aDoc.getString("authorName") : "Tác giả";
                 String category = aDoc.exists() ? aDoc.getString("category") : "Khoa học";
                 String imgUrl = aDoc.exists() ? aDoc.getString("imageUrl") : null;
+                String aStatus = aDoc.exists() ? aDoc.getString("status") : null;
+
+                String statusToUse;
+                if ("DELETED".equalsIgnoreCase(aStatus) || (aDoc.exists() && aDoc.get("deletedAt") != null)) {
+                    statusToUse = "REPORTED_CONTENT_DELETED";
+                } else if (finalHasPending) {
+                    statusToUse = "PENDING";
+                } else if (finalHasDeleted) {
+                    statusToUse = "REPORTED_CONTENT_DELETED";
+                } else if (finalAllDismissed && !reports.isEmpty()) {
+                    statusToUse = "DISMISSED";
+                } else {
+                    statusToUse = "PENDING";
+                }
+
+                long maxTime = finalReportMaxTime;
+                if (maxTime == 0 && aDoc.exists()) {
+                    Timestamp aTs = aDoc.getTimestamp("createdAt");
+                    if (aTs != null) maxTime = aTs.toDate().getTime();
+                }
+                if (maxTime == 0) maxTime = System.currentTimeMillis();
 
                 AdminReportItem item = new AdminReportItem(
                         reports.get(0).getId(),
@@ -406,11 +465,12 @@ public class AdminArticlesFragment extends Fragment
                         null,
                         statusToUse,
                         reports.size(),
-                        "Vừa xong",
+                        formatTimestamp(maxTime),
                         author,
                         imgUrl,
                         Arrays.asList(category != null ? category : "Khoa học", "Bài báo")
                 );
+                item.setTimestamp(maxTime);
                 item.setImageUrl(imgUrl);
 
                 addOrUpdateReportItem(item);

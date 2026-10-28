@@ -25,6 +25,7 @@ import com.example.myapplication.admin.models.UserReportDetail;
 import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.WriteBatch;
@@ -51,6 +52,7 @@ public class AdminReportDetailActivity extends AppCompatActivity {
     public static final String EXTRA_POST_TIME = "extra_post_time";
     public static final String EXTRA_TAG = "extra_tag";
     public static final String EXTRA_IMAGE_URL = "extra_image_url";
+    public static final String EXTRA_DISCUSSION_ID = "extra_discussion_id";
 
     private ImageView btnBack;
     private TextView tvStatusBadge;
@@ -78,6 +80,7 @@ public class AdminReportDetailActivity extends AppCompatActivity {
     private String targetType;
     private String currentStatus;
     private String itemTitle;
+    private String targetDiscussionId;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -126,6 +129,7 @@ public class AdminReportDetailActivity extends AppCompatActivity {
     private void bindDataFromIntent() {
         targetId = getIntent().getStringExtra(EXTRA_TARGET_ID);
         targetType = getIntent().getStringExtra(EXTRA_TARGET_TYPE);
+        targetDiscussionId = getIntent().getStringExtra(EXTRA_DISCUSSION_ID);
         currentStatus = getIntent().getStringExtra(EXTRA_STATUS);
         if (currentStatus == null || currentStatus.isEmpty()) currentStatus = "PENDING";
 
@@ -178,6 +182,13 @@ public class AdminReportDetailActivity extends AppCompatActivity {
         String collection = getTargetCollection();
         FirebaseFirestore.getInstance().collection(collection).document(targetId).get().addOnSuccessListener(doc -> {
             if (!doc.exists()) return;
+
+            if ("COMMENT".equalsIgnoreCase(targetType)) {
+                String dId = doc.getString("discussionId");
+                if (dId != null && !dId.trim().isEmpty()) {
+                    targetDiscussionId = dId.trim();
+                }
+            }
 
             String img = doc.getString("imageUrl");
             if (img != null && !img.trim().isEmpty() && ivDetailImage != null && ivDetailImage.getVisibility() != View.VISIBLE) {
@@ -317,27 +328,67 @@ public class AdminReportDetailActivity extends AppCompatActivity {
         contentUpdates.put("updatedAt", now);
 
         if (targetId != null && !targetId.isEmpty()) {
-            if ("ARTICLE".equalsIgnoreCase(targetType)) {
-                Map<String, Object> approval = new HashMap<>();
-                approval.put("action", "DELETED");
-                approval.put("articleId", targetId);
-                approval.put("adminId", adminId);
-                approval.put("reason", reason);
-                approval.put("createdAt", now);
-                db.collection("articleApprovals").add(approval);
-            }
+            if ("COMMENT".equalsIgnoreCase(targetType)) {
+                DocumentReference commentRef = db.collection("comments").document(targetId);
+                db.runTransaction(transaction -> {
+                    DocumentSnapshot commentDoc = transaction.get(commentRef);
+                    if (commentDoc.exists()) {
+                        String commentStatus = commentDoc.getString("status");
+                        String discId = commentDoc.getString("discussionId");
+                        if (discId == null || discId.trim().isEmpty()) {
+                            discId = targetDiscussionId;
+                        }
 
-            db.collection(targetCollection).document(targetId).update(contentUpdates)
-                    .addOnCompleteListener(task -> {
-                        // Tiếp tục cập nhật các document báo cáo liên quan
-                        updateReportsStatus(db, reportCollection, filterField, "REPORTED_CONTENT_DELETED", reason, adminId, now, () -> {
-                            if (bottomSheet != null && bottomSheet.isAdded()) {
-                                bottomSheet.dismiss();
+                        // Chỉ giảm commentCount nếu comment chưa ở trạng thái DELETED
+                        if (!"DELETED".equalsIgnoreCase(commentStatus) && discId != null && !discId.trim().isEmpty()) {
+                            DocumentReference discussionRef = db.collection("discussions").document(discId.trim());
+                            DocumentSnapshot discussionDoc = transaction.get(discussionRef);
+                            if (discussionDoc.exists()) {
+                                Long storedCount = discussionDoc.getLong("commentCount");
+                                long newCount = Math.max(0, (storedCount != null ? storedCount : 0) - 1);
+                                transaction.update(discussionRef, "commentCount", newCount);
                             }
-                            setResult(RESULT_OK);
-                            showSuccessDialog("Đã xóa nội dung", "Nội dung vi phạm và các báo cáo liên quan đã được xóa thành công.");
-                        });
+                        }
+                        transaction.update(commentRef, contentUpdates);
+                    } else {
+                        transaction.set(commentRef, contentUpdates);
+                    }
+                    return null;
+                }).addOnCompleteListener(task -> {
+                    if (!task.isSuccessful()) {
+                        commentRef.update(contentUpdates);
+                    }
+                    updateReportsStatus(db, reportCollection, filterField, "REPORTED_CONTENT_DELETED", reason, adminId, now, () -> {
+                        if (bottomSheet != null && bottomSheet.isAdded()) {
+                            bottomSheet.dismiss();
+                        }
+                        setResult(RESULT_OK);
+                        showSuccessDialog("Đã xóa nội dung", "Nội dung vi phạm và các báo cáo liên quan đã được xóa thành công.");
                     });
+                });
+            } else {
+                if ("ARTICLE".equalsIgnoreCase(targetType)) {
+                    Map<String, Object> approval = new HashMap<>();
+                    approval.put("action", "DELETED");
+                    approval.put("articleId", targetId);
+                    approval.put("adminId", adminId);
+                    approval.put("reason", reason);
+                    approval.put("createdAt", now);
+                    db.collection("articleApprovals").add(approval);
+                }
+
+                db.collection(targetCollection).document(targetId).update(contentUpdates)
+                        .addOnCompleteListener(task -> {
+                            // Tiếp tục cập nhật các document báo cáo liên quan
+                            updateReportsStatus(db, reportCollection, filterField, "REPORTED_CONTENT_DELETED", reason, adminId, now, () -> {
+                                if (bottomSheet != null && bottomSheet.isAdded()) {
+                                    bottomSheet.dismiss();
+                                }
+                                setResult(RESULT_OK);
+                                showSuccessDialog("Đã xóa nội dung", "Nội dung vi phạm và các báo cáo liên quan đã được xóa thành công.");
+                            });
+                        });
+            }
         } else {
             if (bottomSheet != null && bottomSheet.isAdded()) bottomSheet.dismiss();
             showSuccessDialog("Đã xóa nội dung", "Nội dung vi phạm và các báo cáo liên quan đã được xóa thành công.");

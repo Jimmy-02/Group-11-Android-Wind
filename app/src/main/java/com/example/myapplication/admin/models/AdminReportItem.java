@@ -19,6 +19,7 @@ public class AdminReportItem {
     private String imageUrl;
     private List<String> tags;
     private long timestamp;
+    private String parentId;
 
     public AdminReportItem() {
         this.tags = new ArrayList<>();
@@ -82,4 +83,6 @@ public class AdminReportItem {
     public void setTags(List<String> tags) { this.tags = tags; }
     public long getTimestamp() { return timestamp; }
     public void setTimestamp(long timestamp) { this.timestamp = timestamp; }
+    public String getParentId() { return parentId; }
+    public void setParentId(String parentId) { this.parentId = parentId; }
 }

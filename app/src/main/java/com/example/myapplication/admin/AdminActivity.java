@@ -17,6 +17,7 @@ import androidx.fragment.app.FragmentManager;
 
 import com.example.myapplication.R;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
+import com.google.android.material.navigation.NavigationBarView;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -62,8 +63,12 @@ public class AdminActivity extends AppCompatActivity {
                     .commit();
         }
 
-        BottomNavigationView bottomNav = findViewById(R.id.admin_bottom_navigation);
-        bottomNav.setOnItemSelectedListener(item -> {
+        NavigationBarView navBar = findViewById(R.id.admin_bottom_navigation);
+        if (navBar == null) {
+            navBar = findViewById(R.id.admin_navigation_rail);
+        }
+        if (navBar != null) {
+            navBar.setOnItemSelectedListener(item -> {
             int id = item.getItemId();
             if (id == R.id.nav_admin_articles) {
                 showTab(articlesFragment);
@@ -79,7 +84,8 @@ public class AdminActivity extends AppCompatActivity {
                 return true;
             }
             return false;
-        });
+            });
+        }
     }
 
     private void setupStatusBar() {
