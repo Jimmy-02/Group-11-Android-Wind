@@ -21,6 +21,7 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.FirebaseFirestoreException;
 import com.google.firebase.firestore.ListenerRegistration;
 
 import java.util.Locale;
@@ -75,15 +76,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         if (savedInstanceState == null) {
-            fm.beginTransaction()
-                    .add(R.id.content_container, homeFragment, "HOME")
-                    .add(R.id.content_container, discussionFragment, "DISCUSSION")
-                    .hide(discussionFragment)
-                    .add(R.id.content_container, qnaFragment, "QNA")
-                    .hide(qnaFragment)
-                    .add(R.id.content_container, accountFragment, "ACCOUNT")
-                    .hide(accountFragment)
-                    .commit();
+            fm.beginTransaction().add(R.id.content_container, homeFragment, "HOME").add(R.id.content_container, discussionFragment, "DISCUSSION").hide(discussionFragment).add(R.id.content_container, qnaFragment, "QNA").hide(qnaFragment).add(R.id.content_container, accountFragment, "ACCOUNT").hide(accountFragment).commit();
         }
 
         BottomNavigationView bottomNavigation = findViewById(R.id.bottom_navigation);
@@ -134,9 +127,7 @@ public class MainActivity extends AppCompatActivity {
 
         setupDrawerHeader();
 
-        int selectedItem = savedInstanceState != null
-                ? savedInstanceState.getInt("selected_nav_item", R.id.nav_home)
-                : R.id.nav_home;
+        int selectedItem = savedInstanceState != null ? savedInstanceState.getInt("selected_nav_item", R.id.nav_home) : R.id.nav_home;
 
         bottomNavigation.setSelectedItemId(selectedItem);
     }
@@ -161,13 +152,7 @@ public class MainActivity extends AppCompatActivity {
     private void showFragment(Fragment target, String title) {
         FragmentManager fm = getSupportFragmentManager();
 
-        fm.beginTransaction()
-                .hide(homeFragment)
-                .hide(discussionFragment)
-                .hide(qnaFragment)
-                .hide(accountFragment)
-                .show(target)
-                .commit();
+        fm.beginTransaction().hide(homeFragment).hide(discussionFragment).hide(qnaFragment).hide(accountFragment).show(target).commit();
 
         findViewById(R.id.toolbar).setVisibility(View.VISIBLE);
         tvToolbarTitle.setText(title);
@@ -188,12 +173,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void showLogoutConfirmation() {
-        new AlertDialog.Builder(this)
-                .setTitle("Xác nhận đăng xuất")
-                .setMessage("Bạn có chắc chắn muốn đăng xuất?")
-                .setNegativeButton("Hủy", (dialog, which) -> dialog.dismiss())
-                .setPositiveButton("Đăng xuất", (dialog, which) -> logoutAndNavigateToLogin())
-                .show();
+        new AlertDialog.Builder(this).setTitle("Xác nhận đăng xuất").setMessage("Bạn có chắc chắn muốn đăng xuất?").setNegativeButton("Hủy", (dialog, which) -> dialog.dismiss()).setPositiveButton("Đăng xuất", (dialog, which) -> logoutAndNavigateToLogin()).show();
     }
 
     public void logoutAndNavigateToLogin() {
@@ -261,6 +241,15 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private boolean isOfflineError(Exception exception) {
+        if (!(exception instanceof FirebaseFirestoreException)) {
+            return false;
+        }
+
+        FirebaseFirestoreException firestoreException = (FirebaseFirestoreException) exception;
+        return firestoreException.getCode() == FirebaseFirestoreException.Code.UNAVAILABLE;
+    }
+
     private void checkAccountStatus() {
         if (isCheckingAccount || isRedirectingToLogin) {
             return;
@@ -275,39 +264,56 @@ public class MainActivity extends AppCompatActivity {
 
         isCheckingAccount = true;
 
-        FirebaseFirestore.getInstance()
-                .collection("users")
-                .document(user.getUid())
-                .get()
-                .addOnCompleteListener(this, task -> {
-                    isCheckingAccount = false;
+        FirebaseFirestore.getInstance().collection("users").document(user.getUid()).get().addOnCompleteListener(this, task -> {
+            isCheckingAccount = false;
 
-                    if (isFinishing() || isDestroyed() || isRedirectingToLogin) {
-                        return;
-                    }
+            if (isFinishing() || isDestroyed() || isRedirectingToLogin) {
+                return;
+            }
 
-                    if (!task.isSuccessful() || task.getResult() == null || !task.getResult().exists()) {
-                        redirectToLogin("Không thể xác minh tài khoản. Vui lòng đăng nhập lại.");
-                        return;
-                    }
+            if (!task.isSuccessful()) {
+                // Mất mạng: giữ phiên đăng nhập, không đăng xuất.
+                if (isOfflineError(task.getException())) {
+                    return;
+                }
 
-                    DocumentSnapshot document = task.getResult();
-                    String status = document.getString("status");
-                    String role = document.getString("role");
+                redirectToLogin("Không thể xác minh tài khoản. Vui lòng đăng nhập lại.");
+                return;
+            }
 
-                    updateAdminDrawerVisibility(role);
+            DocumentSnapshot document = task.getResult();
 
-                    if (!"ACTIVE".equalsIgnoreCase(status == null ? "" : status.trim())) {
-                        redirectToLogin("Tài khoản của bạn đã bị khóa hoặc không được phép truy cập.");
-                        return;
-                    }
+            if (document == null) {
+                redirectToLogin("Không thể xác minh tài khoản. Vui lòng đăng nhập lại.");
+                return;
+            }
 
-                    String normalizedRole = role == null ? "" : role.trim().toUpperCase(Locale.ROOT);
+            if (!document.exists()) {
+                // Dữ liệu từ cache khi offline chưa đáng tin để kết luận hồ sơ bị xóa.
+                if (document.getMetadata().isFromCache()) {
+                    return;
+                }
 
-                    if (!"USER".equals(normalizedRole) && !"ADMIN".equals(normalizedRole)) {
-                        redirectToLogin("Tài khoản không được phép truy cập màn hình này.");
-                    }
-                });
+                redirectToLogin("Không thể xác minh tài khoản. Vui lòng đăng nhập lại.");
+                return;
+            }
+
+            String status = document.getString("status");
+            String role = document.getString("role");
+
+            updateAdminDrawerVisibility(role);
+
+            if (!"ACTIVE".equalsIgnoreCase(status == null ? "" : status.trim())) {
+                redirectToLogin("Tài khoản của bạn đã bị khóa hoặc không được phép truy cập.");
+                return;
+            }
+
+            String normalizedRole = role == null ? "" : role.trim().toUpperCase(Locale.ROOT);
+
+            if (!"USER".equals(normalizedRole) && !"ADMIN".equals(normalizedRole)) {
+                redirectToLogin("Tài khoản không được phép truy cập màn hình này.");
+            }
+        });
     }
 
     private void startAccountStatusListener() {
@@ -319,53 +325,55 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
-        accountListener = FirebaseFirestore.getInstance()
-                .collection("users")
-                .document(user.getUid())
-                .addSnapshotListener((document, error) -> {
-                    if (isFinishing() || isDestroyed() || isRedirectingToLogin) {
-                        return;
-                    }
+        accountListener = FirebaseFirestore.getInstance().collection("users").document(user.getUid()).addSnapshotListener((document, error) -> {
+            if (isFinishing() || isDestroyed() || isRedirectingToLogin) {
+                return;
+            }
 
-                    if (error != null) {
-                        Toast.makeText(this, "Không thể kiểm tra trạng thái tài khoản.", Toast.LENGTH_SHORT).show();
-                        return;
-                    }
+            if (error != null) {
+                if (!isOfflineError(error)) {
+                    Toast.makeText(this, "Không thể kiểm tra trạng thái tài khoản.", Toast.LENGTH_SHORT).show();
+                }
 
-                    if (document == null || !document.exists()) {
-                        redirectToLogin("Không tìm thấy hồ sơ người dùng.");
-                        return;
-                    }
+                return;
+            }
 
-                    String status = document.getString("status");
-                    String role = document.getString("role");
+            if (document == null) {
+                return;
+            }
 
-                    updateAdminDrawerVisibility(role);
+            if (!document.exists()) {
+                // Offline: snapshot rỗng lấy từ cache, không phải hồ sơ bị xóa thật.
+                if (document.getMetadata().isFromCache()) {
+                    return;
+                }
 
-                    if (!"ACTIVE".equalsIgnoreCase(status == null ? "" : status.trim())) {
-                        redirectToLogin("Tài khoản đã bị khóa hoặc không được phép truy cập.");
-                        return;
-                    }
+                redirectToLogin("Không tìm thấy hồ sơ người dùng.");
+                return;
+            }
 
-                    String normalizedRole = role == null ? "" : role.trim().toUpperCase(Locale.ROOT);
+            String status = document.getString("status");
+            String role = document.getString("role");
 
-                    if (!"USER".equals(normalizedRole) && !"ADMIN".equals(normalizedRole)) {
-                        redirectToLogin("Tài khoản không được phép truy cập màn hình này.");
-                    }
-                });
+            updateAdminDrawerVisibility(role);
+
+            if (!"ACTIVE".equalsIgnoreCase(status == null ? "" : status.trim())) {
+                redirectToLogin("Tài khoản đã bị khóa hoặc không được phép truy cập.");
+                return;
+            }
+
+            String normalizedRole = role == null ? "" : role.trim().toUpperCase(Locale.ROOT);
+
+            if (!"USER".equals(normalizedRole) && !"ADMIN".equals(normalizedRole)) {
+                redirectToLogin("Tài khoản không được phép truy cập màn hình này.");
+            }
+        });
     }
 
     private void showAboutDialog() {
-        String members = "Nguyễn Anh Trường Tài\n"
-                + "Phan Nhựt Đăng Khoa\n"
-                + "Dương Minh Triết\n"
-                + "Nguyễn Thị Minh Nguyệt";
+        String members = "Nguyễn Anh Trường Tài\n" + "Phan Nhựt Đăng Khoa\n" + "Dương Minh Triết\n" + "Nguyễn Thị Minh Nguyệt";
 
-        new MaterialAlertDialogBuilder(this)
-                .setTitle("About SciShare")
-                .setMessage(members)
-                .setPositiveButton("Close", (dialog, which) -> dialog.dismiss())
-                .show();
+        new MaterialAlertDialogBuilder(this).setTitle("About SciShare").setMessage(members).setPositiveButton("Close", (dialog, which) -> dialog.dismiss()).show();
     }
 
     private void redirectToLogin(String message) {

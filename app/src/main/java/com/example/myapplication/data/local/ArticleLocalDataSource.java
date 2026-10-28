@@ -12,6 +12,8 @@ import java.util.List;
 
 public class ArticleLocalDataSource {
 
+    private static final String HOME_USER_ID = "HOME_PUBLIC";
+
     private final AppDatabaseHelper databaseHelper;
 
     public ArticleLocalDataSource(Context context) {
@@ -27,6 +29,8 @@ public class ArticleLocalDataSource {
         db.beginTransaction();
 
         try {
+            db.delete(AppDatabaseHelper.TABLE_ARTICLES, "userId = ?", new String[]{userId});
+
             for (Article article : articles) {
                 if (article == null || article.getId() == null) {
                     continue;
@@ -53,16 +57,17 @@ public class ArticleLocalDataSource {
             db.setTransactionSuccessful();
         } finally {
             db.endTransaction();
-            db.close();
         }
     }
 
     public void saveHomeArticles(List<Article> articles) {
-        saveArticles("HOME_PUBLIC", articles);
+        saveArticles(HOME_USER_ID, articles);
     }
+
     public List<Article> getHomeArticles() {
-        return getArticles("HOME_PUBLIC");
+        return getArticles(HOME_USER_ID);
     }
+
     public List<Article> getArticles(String userId) {
         List<Article> articles = new ArrayList<>();
 
@@ -72,15 +77,7 @@ public class ArticleLocalDataSource {
 
         SQLiteDatabase db = databaseHelper.getReadableDatabase();
 
-        try (Cursor cursor = db.query(
-                AppDatabaseHelper.TABLE_ARTICLES,
-                null,
-                "userId = ?",
-                new String[]{userId},
-                null,
-                null,
-                "createdAt DESC"
-        )) {
+        try (Cursor cursor = db.query(AppDatabaseHelper.TABLE_ARTICLES, null, "userId = ?", new String[]{userId}, null, null, "createdAt DESC")) {
             while (cursor.moveToNext()) {
                 Article article = new Article();
 
@@ -99,8 +96,6 @@ public class ArticleLocalDataSource {
 
                 articles.add(article);
             }
-        } finally {
-            db.close();
         }
 
         return articles;
@@ -112,12 +107,7 @@ public class ArticleLocalDataSource {
         }
 
         SQLiteDatabase db = databaseHelper.getWritableDatabase();
-
-        try {
-            db.delete(AppDatabaseHelper.TABLE_ARTICLES, "userId = ?", new String[]{userId});
-        } finally {
-            db.close();
-        }
+        db.delete(AppDatabaseHelper.TABLE_ARTICLES, "userId = ?", new String[]{userId});
     }
 
     public void close() {

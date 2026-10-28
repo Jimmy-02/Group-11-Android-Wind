@@ -5,7 +5,6 @@ import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.Query;
-import com.google.firebase.firestore.QuerySnapshot;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -57,6 +56,11 @@ public class ArticleRepository {
 
                     articles.add(article);
                 }
+            }
+
+            if (articles.isEmpty() && querySnapshot.getMetadata().isFromCache()) {
+                listener.onError(new Exception("Offline: no data from server"));
+                return;
             }
 
             listener.onSuccess(articles);

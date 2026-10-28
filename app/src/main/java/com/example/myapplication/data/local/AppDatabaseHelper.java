@@ -7,12 +7,13 @@ import android.database.sqlite.SQLiteOpenHelper;
 public class AppDatabaseHelper extends SQLiteOpenHelper {
 
     private static final String DATABASE_NAME = "scishare.db";
-    private static final int DATABASE_VERSION = 1;
+    private static final int DATABASE_VERSION = 2;
 
     public static final String TABLE_ARTICLES = "articles";
     public static final String TABLE_DISCUSSIONS = "discussions";
     public static final String TABLE_QUESTIONS = "questions";
     public static final String TABLE_ANSWERS = "answers";
+    public static final String TABLE_CATEGORIES = "categories";
 
     public AppDatabaseHelper(Context context) {
         super(context.getApplicationContext(), DATABASE_NAME, null, DATABASE_VERSION);
@@ -24,6 +25,7 @@ public class AppDatabaseHelper extends SQLiteOpenHelper {
         createDiscussionsTable(db);
         createQuestionsTable(db);
         createAnswersTable(db);
+        createCategoriesTable(db);
     }
 
     private void createArticlesTable(SQLiteDatabase db) {
@@ -94,7 +96,14 @@ public class AppDatabaseHelper extends SQLiteOpenHelper {
                 "PRIMARY KEY (id, userId))");
     }
 
+    private void createCategoriesTable(SQLiteDatabase db) {
+        db.execSQL("CREATE TABLE IF NOT EXISTS " + TABLE_CATEGORIES + " (id TEXT NOT NULL PRIMARY KEY, name TEXT, displayOrder INTEGER DEFAULT 0)");
+    }
+
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+        if (oldVersion < 2) {
+            createCategoriesTable(db);
+        }
     }
 }
