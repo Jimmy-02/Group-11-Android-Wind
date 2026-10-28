@@ -1,0 +1,205 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#F5F6F8">
+
+    <!-- Vùng status bar -->
+    <View
+        android:id="@+id/status_bar_spacer"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:background="#6750A4" />
+
+    <!-- Thanh Back ở trên cùng -->
+    <LinearLayout
+        android:id="@+id/myQnaBackLayout"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:background="#FFFFFF"
+        android:elevation="2dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp">
+
+        <ImageView
+            android:id="@+id/ivMyQnaBack"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:contentDescription="Quay lại"
+            android:scaleType="centerInside"
+            app:srcCompat="@drawable/ic_arrow_back" />
+
+        <TextView
+            android:id="@+id/tvMyQnaBack"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:gravity="center_vertical"
+            android:paddingStart="4dp"
+            android:text="Back"
+            android:textColor="#172B4D"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#E2E8F0" />
+
+    <!-- Nội dung chính chia thành hai cột -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="horizontal">
+
+        <!-- CỘT TRÁI: THÔNG TIN Q&A -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="0.35"
+            android:orientation="vertical"
+            android:background="#FFFFFF"
+            android:paddingStart="18dp"
+            android:paddingTop="24dp"
+            android:paddingEnd="18dp"
+            android:paddingBottom="18dp">
+
+            <TextView
+                android:id="@+id/tvMyQnaTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Q&amp;A của tôi"
+                android:textColor="#172B4D"
+                android:textSize="23sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvMyQnaSummary"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="0 câu hỏi · 0 câu trả lời"
+                android:textColor="#718096"
+                android:textSize="14sp" />
+
+            <View
+                android:layout_width="48dp"
+                android:layout_height="3dp"
+                android:layout_marginTop="18dp"
+                android:background="#78A75A" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="18dp"
+                android:text="Quản lý nội dung của bạn"
+                android:textColor="#334155"
+                android:textSize="15sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:lineSpacingExtra="4dp"
+                android:text="Xem lại những câu hỏi đã đăng và các câu trả lời bạn đã đóng góp cho cộng đồng."
+                android:textColor="#718096"
+                android:textSize="13sp" />
+
+        </LinearLayout>
+
+        <!-- Vạch ngăn hai cột -->
+        <View
+            android:layout_width="1dp"
+            android:layout_height="match_parent"
+            android:background="#E2E8F0" />
+
+        <!-- CỘT PHẢI: TAB VÀ DANH SÁCH -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="0.65"
+            android:orientation="vertical"
+            android:background="#F5F6F8">
+
+            <!-- Hai tab -->
+            <com.google.android.material.tabs.TabLayout
+                android:id="@+id/tabMyQna"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#FFFFFF"
+                app:tabMode="fixed"
+                app:tabGravity="fill"
+                app:tabIndicatorColor="#78A75A"
+                app:tabIndicatorFullWidth="false"
+                app:tabSelectedTextColor="#78A75A"
+                app:tabTextColor="#718096">
+
+                <com.google.android.material.tabs.TabItem
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Câu hỏi của tôi" />
+
+                <com.google.android.material.tabs.TabItem
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Câu trả lời của tôi" />
+
+            </com.google.android.material.tabs.TabLayout>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="#E2E8F0" />
+
+            <!-- Danh sách, trạng thái tải và trạng thái trống -->
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1">
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rvMyQna"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:clipToPadding="false"
+                    android:paddingStart="12dp"
+                    android:paddingTop="12dp"
+                    android:paddingEnd="12dp"
+                    android:paddingBottom="16dp"
+                    android:scrollbars="vertical" />
+
+                <ProgressBar
+                    android:id="@+id/pbMyQna"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:visibility="gone" />
+
+                <TextView
+                    android:id="@+id/tvMyQnaEmpty"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:gravity="center"
+                    android:padding="24dp"
+                    android:text="Bạn chưa có nội dung nào."
+                    android:textColor="#718096"
+                    android:textSize="14sp"
+                    android:visibility="gone" />
+
+            </FrameLayout>
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</LinearLayout>
