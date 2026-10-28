@@ -42,6 +42,7 @@ public class ArticleAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
     private final OnCategorySelectedListener categorySelectedListener;
     private final OnCreateArticleClickListener createArticleClickListener;
     private boolean categoriesLoaded = false;
+    private final boolean showHeader;
     public interface OnArticleClickListener {
         void onArticleClick(Article article);
     }
@@ -59,15 +60,20 @@ public class ArticleAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
 
 
     public ArticleAdapter(OnArticleClickListener articleClickListener, OnReportClickListener reportClickListener, OnCategorySelectedListener categorySelectedListener, OnCreateArticleClickListener createArticleClickListener) {
+        this(articleClickListener, reportClickListener, categorySelectedListener, createArticleClickListener, true);
+    }
+
+    public ArticleAdapter(OnArticleClickListener articleClickListener, OnReportClickListener reportClickListener, OnCategorySelectedListener categorySelectedListener, OnCreateArticleClickListener createArticleClickListener, boolean showHeader) {
         this.articleClickListener = articleClickListener;
         this.reportClickListener = reportClickListener;
         this.categorySelectedListener = categorySelectedListener;
         this.createArticleClickListener = createArticleClickListener;
+        this.showHeader = showHeader;
     }
 
     @Override
     public int getItemViewType(int position) {
-        return position == 0 ? TYPE_HEADER : TYPE_ARTICLE;
+        return showHeader && position == 0 ? TYPE_HEADER : TYPE_ARTICLE;
     }
 
     @NonNull
@@ -89,8 +95,9 @@ public class ArticleAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
             return;
         }
 
+        int articlePosition = showHeader ? position - 1 : position;
         ArticleViewHolder articleHolder = (ArticleViewHolder) holder;
-        Article article = articleList.get(position - 1);
+        Article article = articleList.get(articlePosition);
 
         articleHolder.titleView.setText(article.getTitle());
         articleHolder.authorView.setText(article.getAuthorName());
@@ -123,13 +130,7 @@ public class ArticleAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
         String imageUrl = article.getImageUrl();
 
         if (imageUrl != null && !imageUrl.trim().isEmpty()) {
-            Picasso.get()
-                    .load(imageUrl)
-                    .placeholder(android.R.drawable.ic_menu_gallery)
-                    .error(android.R.drawable.ic_menu_gallery)
-                    .fit()
-                    .centerCrop()
-                    .into(articleHolder.coverView);
+            Picasso.get().load(imageUrl).placeholder(android.R.drawable.ic_menu_gallery).error(android.R.drawable.ic_menu_gallery).fit().centerCrop().into(articleHolder.coverView);
         } else {
             Picasso.get().cancelRequest(articleHolder.coverView);
             articleHolder.coverView.setImageResource(android.R.drawable.ic_menu_gallery);
@@ -150,7 +151,7 @@ public class ArticleAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
 
     @Override
     public int getItemCount() {
-        return articleList.size() + 1;
+        return articleList.size() + (showHeader ? 1 : 0);
     }
 
     public void setArticles(List<Article> articles) {
@@ -166,7 +167,7 @@ public class ArticleAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
             categoryNames.putAll(names);
         }
 
-        notifyItemRangeChanged(1, articleList.size());
+        notifyItemRangeChanged(showHeader ? 1 : 0, articleList.size());
     }
 
     private void loadCategories(LinearLayout categoryChipContainer, Context context) {
