@@ -1,6 +1,8 @@
-
 package com.example.myapplication.qna.questionDetail;
 
+import android.content.Context;
+
+import com.example.myapplication.data.local.AnswerLocalDataSource;
 import com.google.firebase.Timestamp;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -12,9 +14,11 @@ import java.util.List;
 public class AnswerRepository {
 
     private final FirebaseFirestore firestore;
+    private final AnswerLocalDataSource localDataSource;
 
-    public AnswerRepository() {
+    public AnswerRepository(Context context) {
         firestore = FirebaseFirestore.getInstance();
+        localDataSource = new AnswerLocalDataSource(context);
     }
 
     public interface OnAnswersLoadedListener {
@@ -22,14 +26,14 @@ public class AnswerRepository {
         void onError(Exception exception);
     }
 
-    public void getAnswersByQuestionId(
-            String questionId,
-            OnAnswersLoadedListener listener
-    ) {
+    public interface OnAnswerLoadedListener {
+        void onSuccess(Answer answer);
+        void onError(Exception exception);
+    }
+
+    public void getAnswersByQuestionId(String questionId, OnAnswersLoadedListener listener) {
         if (questionId == null || questionId.trim().isEmpty()) {
-            listener.onError(
-                    new IllegalArgumentException("Question ID không hợp lệ.")
-            );
+            listener.onError(new IllegalArgumentException("Question ID không hợp lệ."));
             return;
         }
 
@@ -41,26 +45,41 @@ public class AnswerRepository {
 
                     for (DocumentSnapshot document : snapshot.getDocuments()) {
                         Answer answer = mapAnswer(document);
-
-                        if (answer != null) {
-                            answers.add(answer);
-                        }
+                        if (answer != null) answers.add(answer);
                     }
 
                     sortByNewest(answers);
+
+                    if (snapshot.getMetadata().isFromCache()) {
+                        List<Answer> cachedAnswers = localDataSource.getAnswersOfQuestion(questionId);
+
+                        if (!cachedAnswers.isEmpty()) {
+                            listener.onSuccess(cachedAnswers);
+                        } else if (!answers.isEmpty()) {
+                            listener.onSuccess(answers);
+                        } else {
+                            listener.onError(new Exception("Chưa có câu trả lời được lưu offline."));
+                        }
+                        return;
+                    }
+
+                    localDataSource.replaceAnswersOfQuestion(questionId, answers);
                     listener.onSuccess(answers);
                 })
-                .addOnFailureListener(listener::onError);
+                .addOnFailureListener(exception -> {
+                    List<Answer> cachedAnswers = localDataSource.getAnswersOfQuestion(questionId);
+
+                    if (!cachedAnswers.isEmpty()) {
+                        listener.onSuccess(cachedAnswers);
+                    } else {
+                        listener.onError(exception);
+                    }
+                });
     }
 
-    public void getMyAnswers(
-            String userId,
-            OnAnswersLoadedListener listener
-    ) {
+    public void getMyAnswers(String userId, OnAnswersLoadedListener listener) {
         if (userId == null || userId.trim().isEmpty()) {
-            listener.onError(
-                    new IllegalArgumentException("User ID không hợp lệ.")
-            );
+            listener.onError(new IllegalArgumentException("User ID không hợp lệ."));
             return;
         }
 
@@ -72,26 +91,41 @@ public class AnswerRepository {
 
                     for (DocumentSnapshot document : snapshot.getDocuments()) {
                         Answer answer = mapAnswer(document);
-
-                        if (answer != null) {
-                            answers.add(answer);
-                        }
+                        if (answer != null) answers.add(answer);
                     }
 
                     sortByNewest(answers);
+
+                    if (snapshot.getMetadata().isFromCache()) {
+                        List<Answer> cachedAnswers = localDataSource.getAnswersOfUser(userId);
+
+                        if (!cachedAnswers.isEmpty()) {
+                            listener.onSuccess(cachedAnswers);
+                        } else if (!answers.isEmpty()) {
+                            listener.onSuccess(answers);
+                        } else {
+                            listener.onError(new Exception("Chưa có câu trả lời được lưu offline."));
+                        }
+                        return;
+                    }
+
+                    localDataSource.replaceAnswersOfUser(userId, answers);
                     listener.onSuccess(answers);
                 })
-                .addOnFailureListener(listener::onError);
+                .addOnFailureListener(exception -> {
+                    List<Answer> cachedAnswers = localDataSource.getAnswersOfUser(userId);
+
+                    if (!cachedAnswers.isEmpty()) {
+                        listener.onSuccess(cachedAnswers);
+                    } else {
+                        listener.onError(exception);
+                    }
+                });
     }
 
-    public void getAnswerById(
-            String answerId,
-            OnAnswerLoadedListener listener
-    ) {
+    public void getAnswerById(String answerId, OnAnswerLoadedListener listener) {
         if (answerId == null || answerId.trim().isEmpty()) {
-            listener.onError(
-                    new IllegalArgumentException("Answer ID không hợp lệ.")
-            );
+            listener.onError(new IllegalArgumentException("Answer ID không hợp lệ."));
             return;
         }
 
@@ -99,38 +133,36 @@ public class AnswerRepository {
                 .document(answerId)
                 .get()
                 .addOnSuccessListener(document -> {
-                    Answer answer = document.exists()
-                            ? mapAnswer(document)
-                            : null;
+                    Answer answer = document.exists() ? mapAnswer(document) : null;
 
                     if (answer == null) {
-                        listener.onError(
-                                new IllegalStateException(
-                                        "Không tìm thấy câu trả lời."
-                                )
-                        );
+                        listener.onError(new IllegalStateException("Không tìm thấy câu trả lời."));
                     } else {
+                        List<Answer> cachedAnswers = new ArrayList<>();
+                        cachedAnswers.add(answer);
+                        localDataSource.replaceAnswersOfQuestion(answer.getQuestionId(), mergeWithCachedAnswers(answer));
                         listener.onSuccess(answer);
                     }
                 })
                 .addOnFailureListener(listener::onError);
     }
 
-    public interface OnAnswerLoadedListener {
-        void onSuccess(Answer answer);
-        void onError(Exception exception);
+    private List<Answer> mergeWithCachedAnswers(Answer answer) {
+        List<Answer> answers = localDataSource.getAnswersOfQuestion(answer.getQuestionId());
+        answers.removeIf(item -> answer.getId().equals(item.getId()));
+        answers.add(answer);
+        sortByNewest(answers);
+        return answers;
     }
 
     private Answer mapAnswer(DocumentSnapshot document) {
         String status = document.getString("status");
 
-        if ("DELETED".equalsIgnoreCase(status)
-                || document.get("deletedAt") != null) {
+        if ("DELETED".equalsIgnoreCase(status) || document.get("deletedAt") != null) {
             return null;
         }
 
         Answer answer = new Answer();
-
         answer.setId(document.getId());
         answer.setQuestionId(document.getString("questionId"));
         answer.setUserId(document.getString("userId"));
@@ -148,18 +180,15 @@ public class AnswerRepository {
     }
 
     private void sortByNewest(List<Answer> answers) {
-        Collections.sort(
-                answers,
-                (first, second) -> Long.compare(
-                        getTime(second.getCreatedAt()),
-                        getTime(first.getCreatedAt())
-                )
-        );
+        Collections.sort(answers, (first, second) ->
+                Long.compare(getTime(second.getCreatedAt()), getTime(first.getCreatedAt())));
     }
 
     private long getTime(Timestamp timestamp) {
-        return timestamp == null
-                ? 0L
-                : timestamp.toDate().getTime();
+        return timestamp == null ? 0L : timestamp.toDate().getTime();
+    }
+
+    public void close() {
+        localDataSource.close();
     }
 }

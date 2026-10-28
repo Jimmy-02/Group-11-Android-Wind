@@ -68,7 +68,7 @@ public class DiscussionFragment extends Fragment implements DiscussionAdapter.On
         tvDiscussionSection = view.findViewById(R.id.tv_discussion_section);
         fabCreateDiscussion = view.findViewById(R.id.fab_create_discussion);
 
-        discussionRepository = new DiscussionRepository();
+        discussionRepository = new DiscussionRepository(requireContext());
         discussionAdapter = new DiscussionAdapter(this);
 
         rvDiscussions.setLayoutManager(new LinearLayoutManager(requireContext()));
@@ -148,17 +148,21 @@ public class DiscussionFragment extends Fragment implements DiscussionAdapter.On
             @Override
             public void onSuccess(List<Discussion> discussions) {
                 if (!isAdded()) return;
+
                 allDiscussions.clear();
-                allDiscussions.addAll(discussions);
+                if (discussions != null) {
+                    allDiscussions.addAll(discussions);
+                }
+
                 filterDiscussions(etDiscussionSearch.getText().toString());
             }
 
             @Override
             public void onError(Exception exception) {
                 if (!isAdded()) return;
-                Toast.makeText(requireContext(), "Failed to load discussions: " + exception.getMessage(), Toast.LENGTH_LONG).show();
-                allDiscussions.clear();
-                updateDiscussionList();
+
+                android.util.Log.e("DiscussionFragment", "Failed to load discussions", exception);
+                Toast.makeText(requireContext(), "Không thể tải bài thảo luận: " + exception.getMessage(), Toast.LENGTH_LONG).show();
             }
         };
     }

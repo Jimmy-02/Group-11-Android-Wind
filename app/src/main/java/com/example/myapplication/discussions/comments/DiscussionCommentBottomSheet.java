@@ -151,8 +151,8 @@ public class DiscussionCommentBottomSheet extends BottomSheetDialogFragment {
         rvComments.setLayoutManager(new LinearLayoutManager(requireContext()));
         rvComments.setAdapter(commentAdapter);
 
-        commentRepository = new CommentRepository();
-        discussionRepository = new DiscussionRepository();
+        commentRepository = new CommentRepository(requireContext());
+        discussionRepository = new DiscussionRepository(requireContext());
 
         // Chỉ người đã đăng nhập mới thấy thanh nhập bình luận
         layoutCommentInput.setVisibility(isLoggedIn ? View.VISIBLE : View.GONE);

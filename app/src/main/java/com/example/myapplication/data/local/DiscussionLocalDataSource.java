@@ -20,6 +20,25 @@ public class DiscussionLocalDataSource {
         databaseHelper = new AppDatabaseHelper(context);
     }
 
+    // Lưu hoặc cập nhật toàn bộ danh sách bài thảo luận.
+    public void replaceAllDiscussions(List<Discussion> discussions) {
+        if (discussions == null) {
+            return;
+        }
+
+        SQLiteDatabase db = databaseHelper.getWritableDatabase();
+        db.beginTransaction();
+
+        try {
+            db.delete(AppDatabaseHelper.TABLE_DISCUSSIONS, null, null);
+            insertDiscussions(db, discussions);
+            db.setTransactionSuccessful();
+        } finally {
+            db.endTransaction();
+        }
+    }
+
+    // Lưu hoặc cập nhật danh sách bài thảo luận của người dùng.
     public void saveDiscussions(String ownerKey, List<Discussion> discussions) {
         if (ownerKey == null || ownerKey.trim().isEmpty() || discussions == null) {
             return;
@@ -30,48 +49,72 @@ public class DiscussionLocalDataSource {
 
         try {
             db.delete(AppDatabaseHelper.TABLE_DISCUSSIONS, "userId = ?", new String[]{ownerKey});
-
-            for (Discussion discussion : discussions) {
-                if (discussion == null || discussion.getId() == null) {
-                    continue;
-                }
-
-                ContentValues values = new ContentValues();
-                values.put("id", discussion.getId());
-                values.put("userId", ownerKey);
-                values.put("title", discussion.getTitle());
-                values.put("content", discussion.getContent());
-                values.put("category", discussion.getCategory());
-                values.put("categoryId", discussion.getCategoryId());
-                values.put("articleId", discussion.getArticleId());
-                values.put("imageUrl", discussion.getImageUrl());
-                values.put("authorId", discussion.getUserId());
-                values.put("authorName", discussion.getAuthorName());
-                values.put("authorAvatar", discussion.getAuthorAvatar());
-                values.put("status", discussion.getStatus());
-                values.put("likeCount", discussion.getLikeCount());
-                values.put("commentCount", discussion.getCommentCount());
-                values.put("createdAt", discussion.getCreatedAt());
-
-                db.insertWithOnConflict(AppDatabaseHelper.TABLE_DISCUSSIONS, null, values, SQLiteDatabase.CONFLICT_REPLACE);
-            }
-
+            insertDiscussions(db, discussions);
             db.setTransactionSuccessful();
         } finally {
             db.endTransaction();
         }
     }
 
-    public List<Discussion> getDiscussions(String ownerKey) {
-        List<Discussion> discussions = new ArrayList<>();
+    private void insertDiscussions(SQLiteDatabase db, List<Discussion> discussions) {
+        for (Discussion discussion : discussions) {
+            if (discussion == null || discussion.getId() == null) {
+                continue;
+            }
 
+            ContentValues values = new ContentValues();
+            values.put("id", discussion.getId());
+            values.put("userId", discussion.getUserId());
+            values.put("title", discussion.getTitle());
+            values.put("content", discussion.getContent());
+            values.put("category", discussion.getCategory());
+            values.put("categoryId", discussion.getCategoryId());
+            values.put("articleId", discussion.getArticleId());
+            values.put("imageUrl", discussion.getImageUrl());
+            values.put("authorId", discussion.getUserId());
+            values.put("authorName", discussion.getAuthorName());
+            values.put("authorAvatar", discussion.getAuthorAvatar());
+            values.put("status", discussion.getStatus());
+            values.put("likeCount", discussion.getLikeCount());
+            values.put("commentCount", discussion.getCommentCount());
+            values.put("createdAt", discussion.getCreatedAt());
+
+            db.insertWithOnConflict(
+                    AppDatabaseHelper.TABLE_DISCUSSIONS,
+                    null,
+                    values,
+                    SQLiteDatabase.CONFLICT_REPLACE
+            );
+        }
+    }
+
+    // Lấy tất cả bài thảo luận đã lưu trong SQLite.
+    public List<Discussion> getAllDiscussions() {
+        return queryDiscussions(null, null);
+    }
+
+    // Lấy bài thảo luận của một người dùng.
+    public List<Discussion> getDiscussions(String ownerKey) {
         if (ownerKey == null || ownerKey.trim().isEmpty()) {
-            return discussions;
+            return new ArrayList<>();
         }
 
+        return queryDiscussions("userId = ?", new String[]{ownerKey});
+    }
+
+    private List<Discussion> queryDiscussions(String selection, String[] selectionArgs) {
+        List<Discussion> discussions = new ArrayList<>();
         SQLiteDatabase db = databaseHelper.getReadableDatabase();
 
-        try (Cursor cursor = db.query(AppDatabaseHelper.TABLE_DISCUSSIONS, null, "userId = ?", new String[]{ownerKey}, null, null, "createdAt DESC")) {
+        try (Cursor cursor = db.query(
+                AppDatabaseHelper.TABLE_DISCUSSIONS,
+                null,
+                selection,
+                selectionArgs,
+                null,
+                null,
+                "createdAt DESC"
+        )) {
             while (cursor.moveToNext()) {
                 Discussion discussion = new Discussion();
 
@@ -90,7 +133,9 @@ public class DiscussionLocalDataSource {
                 discussion.setCommentCount(cursor.getLong(cursor.getColumnIndexOrThrow("commentCount")));
                 discussion.setCreatedAt(cursor.getLong(cursor.getColumnIndexOrThrow("createdAt")));
 
-                discussions.add(discussion);
+                if (!"DELETED".equalsIgnoreCase(discussion.getStatus())) {
+                    discussions.add(discussion);
+                }
             }
         }
 

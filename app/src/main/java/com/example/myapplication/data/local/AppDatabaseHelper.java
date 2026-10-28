@@ -7,13 +7,15 @@ import android.database.sqlite.SQLiteOpenHelper;
 public class AppDatabaseHelper extends SQLiteOpenHelper {
 
     private static final String DATABASE_NAME = "scishare.db";
-    private static final int DATABASE_VERSION = 3;
+    private static final int DATABASE_VERSION = 4;
 
     public static final String TABLE_ARTICLES = "articles";
     public static final String TABLE_DISCUSSIONS = "discussions";
+    public static final String TABLE_COMMENTS = "comments";
     public static final String TABLE_QUESTIONS = "questions";
     public static final String TABLE_ANSWERS = "answers";
     public static final String TABLE_CATEGORIES = "categories";
+
 
     public AppDatabaseHelper(Context context) {
         super(context.getApplicationContext(), DATABASE_NAME, null, DATABASE_VERSION);
@@ -23,6 +25,7 @@ public class AppDatabaseHelper extends SQLiteOpenHelper {
     public void onCreate(SQLiteDatabase db) {
         createArticlesTable(db);
         createDiscussionsTable(db);
+        createCommentsTable(db);
         createQuestionsTable(db);
         createAnswersTable(db);
         createCategoriesTable(db);
@@ -65,6 +68,18 @@ public class AppDatabaseHelper extends SQLiteOpenHelper {
                 "commentCount INTEGER DEFAULT 0, " +
                 "createdAt INTEGER, " +
                 "PRIMARY KEY (id, userId))");
+    }
+    private void createCommentsTable(SQLiteDatabase db) {
+        db.execSQL("CREATE TABLE IF NOT EXISTS " + TABLE_COMMENTS + " (" +
+                "id TEXT NOT NULL, " +
+                "discussionId TEXT NOT NULL, " +
+                "userId TEXT, " +
+                "authorName TEXT, " +
+                "authorAvatar TEXT, " +
+                "content TEXT, " +
+                "likeCount INTEGER DEFAULT 0, " +
+                "createdAt INTEGER, " +
+                "PRIMARY KEY (id, discussionId))");
     }
 
     private void createQuestionsTable(SQLiteDatabase db) {
@@ -109,6 +124,9 @@ public class AppDatabaseHelper extends SQLiteOpenHelper {
 
         if (oldVersion < 3) {
             db.execSQL("ALTER TABLE " + TABLE_DISCUSSIONS + " ADD COLUMN authorId TEXT");
+        }
+        if (oldVersion < 4) {
+            createCommentsTable(db);
         }
     }
 }

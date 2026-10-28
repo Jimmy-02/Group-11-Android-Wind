@@ -1,4 +1,3 @@
-
 package com.example.myapplication.account.myqna;
 
 import android.content.Intent;
@@ -7,7 +6,6 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -15,10 +13,17 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.myapplication.R;
+import com.example.myapplication.data.local.AnswerLocalDataSource;
+import com.example.myapplication.data.local.QuestionLocalDataSource;
 import com.example.myapplication.qna.Question;
 import com.example.myapplication.qna.QuestionAdapter;
 import com.example.myapplication.qna.questionDetail.Answer;
@@ -36,17 +41,10 @@ import com.squareup.picasso.Picasso;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import android.view.ViewGroup;
-import androidx.core.graphics.Insets;
-import androidx.core.view.ViewCompat;
-import androidx.core.view.WindowCompat;
-import androidx.core.view.WindowInsetsCompat;
-import androidx.core.view.WindowInsetsControllerCompat;
 
 public class MyQnaActivity extends AppCompatActivity {
 
@@ -60,6 +58,9 @@ public class MyQnaActivity extends AppCompatActivity {
 
     private QuestionAdapter questionAdapter;
     private MyAnswersAdapter answerAdapter;
+
+    private QuestionLocalDataSource questionLocalDataSource;
+    private AnswerLocalDataSource answerLocalDataSource;
 
     private final List<Question> myQuestions = new ArrayList<>();
     private final List<Answer> myAnswers = new ArrayList<>();
@@ -75,36 +76,19 @@ public class MyQnaActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
         setContentView(R.layout.activity_my_qna);
-        WindowInsetsControllerCompat insetsController =
-                WindowCompat.getInsetsController(
-                        getWindow(),
-                        getWindow().getDecorView()
-                );
 
+        WindowInsetsControllerCompat insetsController = WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
         insetsController.setAppearanceLightStatusBars(false);
 
         View root = findViewById(R.id.root);
         View statusBarSpacer = findViewById(R.id.status_bar_spacer);
 
         ViewCompat.setOnApplyWindowInsetsListener(root, (v, windowInsets) -> {
-            Insets bars = windowInsets.getInsets(
-                    WindowInsetsCompat.Type.systemBars()
-                            | WindowInsetsCompat.Type.displayCutout()
-            );
-
-            ViewGroup.LayoutParams params =
-                    statusBarSpacer.getLayoutParams();
-
+            Insets bars = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout());
+            ViewGroup.LayoutParams params = statusBarSpacer.getLayoutParams();
             params.height = bars.top;
             statusBarSpacer.setLayoutParams(params);
-
-            v.setPadding(
-                    bars.left,
-                    0,
-                    bars.right,
-                    bars.bottom
-            );
-
+            v.setPadding(bars.left, 0, bars.right, bars.bottom);
             return WindowInsetsCompat.CONSUMED;
         });
 
@@ -114,18 +98,12 @@ public class MyQnaActivity extends AppCompatActivity {
         rvMyQna = findViewById(R.id.rvMyQna);
         tabMyQna = findViewById(R.id.tabMyQna);
 
-        findViewById(R.id.myQnaBackLayout)
-                .setOnClickListener(v -> finish());
+        findViewById(R.id.myQnaBackLayout).setOnClickListener(v -> finish());
 
-        FirebaseUser user =
-                FirebaseAuth.getInstance().getCurrentUser();
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
 
         if (user == null) {
-            Toast.makeText(
-                    this,
-                    "Vui lòng đăng nhập để xem Q&A của bạn.",
-                    Toast.LENGTH_SHORT
-            ).show();
+            Toast.makeText(this, "Vui lòng đăng nhập để xem Q&A của bạn.", Toast.LENGTH_SHORT).show();
 
             finish();
             return;
@@ -133,36 +111,32 @@ public class MyQnaActivity extends AppCompatActivity {
 
         currentUserId = user.getUid();
 
-        rvMyQna.setLayoutManager(
-                new LinearLayoutManager(this)
-        );
+        questionLocalDataSource = new QuestionLocalDataSource(this);
+        answerLocalDataSource = new AnswerLocalDataSource(this);
+
+        rvMyQna.setLayoutManager(new LinearLayoutManager(this));
 
         setupQuestionAdapter();
         answerAdapter = new MyAnswersAdapter();
 
         rvMyQna.setAdapter(questionAdapter);
 
-        tabMyQna.addOnTabSelectedListener(
-                new TabLayout.OnTabSelectedListener() {
+        tabMyQna.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
 
-                    @Override
-                    public void onTabSelected(
-                            TabLayout.Tab tab) {
-                        selectedTab = tab.getPosition();
-                        showSelectedTab();
-                    }
+            @Override
+            public void onTabSelected(TabLayout.Tab tab) {
+                selectedTab = tab.getPosition();
+                showSelectedTab();
+            }
 
-                    @Override
-                    public void onTabUnselected(
-                            TabLayout.Tab tab) {
-                    }
+            @Override
+            public void onTabUnselected(TabLayout.Tab tab) {
+            }
 
-                    @Override
-                    public void onTabReselected(
-                            TabLayout.Tab tab) {
-                    }
-                }
-        );
+            @Override
+            public void onTabReselected(TabLayout.Tab tab) {
+            }
+        });
 
         loadMyQna();
     }
@@ -171,62 +145,40 @@ public class MyQnaActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
 
-        if (currentUserId != null
-                && !isLoading
-                && rvMyQna != null) {
+        if (currentUserId != null && !isLoading && rvMyQna != null) {
             loadMyQna();
         }
     }
 
     private void setupQuestionAdapter() {
-        questionAdapter = new QuestionAdapter(
-                new ArrayList<>(),
-                currentUserId,
-                new QuestionAdapter.OnQuestionActionListener() {
+        questionAdapter = new QuestionAdapter(new ArrayList<>(), currentUserId, new QuestionAdapter.OnQuestionActionListener() {
 
-                    @Override
-                    public void onQuestionClick(Question question) {
-                        openQuestion(question.getId());
-                    }
+            @Override
+            public void onQuestionClick(Question question) {
+                openQuestion(question.getId());
+            }
 
-                    @Override
-                    public void onReportClick(Question question) {
-                        Intent intent = new Intent(
-                                MyQnaActivity.this,
-                                ReportQuestionActivity.class
-                        );
+            @Override
+            public void onReportClick(Question question) {
+                Intent intent = new Intent(MyQnaActivity.this, ReportQuestionActivity.class);
 
-                        intent.putExtra(
-                                ReportQuestionActivity.EXTRA_QUESTION_ID,
-                                question.getId()
-                        );
+                intent.putExtra(ReportQuestionActivity.EXTRA_QUESTION_ID, question.getId());
+                intent.putExtra(ReportQuestionActivity.EXTRA_TITLE, question.getTitle());
+                intent.putExtra(ReportQuestionActivity.EXTRA_CONTENT, question.getContent());
 
-                        intent.putExtra(
-                                ReportQuestionActivity.EXTRA_TITLE,
-                                question.getTitle()
-                        );
+                startActivity(intent);
+            }
 
-                        intent.putExtra(
-                                ReportQuestionActivity.EXTRA_CONTENT,
-                                question.getContent()
-                        );
+            @Override
+            public void onCloseClick(Question question) {
+                confirmCloseQuestion(question);
+            }
 
-                        startActivity(intent);
-                    }
-
-                    @Override
-                    public void onCloseClick(Question question) {
-                        confirmCloseQuestion(question);
-                    }
-
-                    @Override
-                    public void onVoteClick(
-                            Question question,
-                            int value) {
-                        toggleQuestionVote(question, value);
-                    }
-                }
-        );
+            @Override
+            public void onVoteClick(Question question, int value) {
+                toggleQuestionVote(question, value);
+            }
+        });
     }
 
     private void loadMyQna() {
@@ -235,244 +187,243 @@ public class MyQnaActivity extends AppCompatActivity {
         }
 
         isLoading = true;
-        progressBar.setVisibility(View.VISIBLE);
-        rvMyQna.setVisibility(View.GONE);
         tvEmpty.setVisibility(View.GONE);
+
+        // Hiện ngay dữ liệu đã lưu trong SQLite nếu màn hình chưa có gì, Firestore sẽ cập nhật sau.
+        if (myQuestions.isEmpty() && myAnswers.isEmpty()) {
+            if (loadCachedData()) {
+                progressBar.setVisibility(View.GONE);
+                showData();
+            } else {
+                progressBar.setVisibility(View.VISIBLE);
+                rvMyQna.setVisibility(View.GONE);
+            }
+        }
 
         FirebaseFirestore db = FirebaseFirestore.getInstance();
 
-        // Đọc câu hỏi và lọc theo chủ sở hữu.
-        db.collection("questions")
-                .get()
-                .addOnSuccessListener(questionSnapshot -> {
-                    if (isFinishing() || isDestroyed()) {
-                        isLoading = false;
-                        return;
-                    }
+        db.collection("questions").get().addOnSuccessListener(questionSnapshot -> {
+            if (isFinishing() || isDestroyed()) {
+                isLoading = false;
+                return;
+            }
 
-                    myQuestions.clear();
-                    questionTitles.clear();
+            // Offline: snapshot rỗng lấy từ cache không phải dữ liệu thật từ server.
+            if (questionSnapshot.isEmpty() && questionSnapshot.getMetadata().isFromCache()) {
+                handleLoadError(new Exception("Offline: no data from server"));
+                return;
+            }
 
-                    for (DocumentSnapshot doc :
-                            questionSnapshot.getDocuments()) {
+            List<Question> allQuestions = new ArrayList<>();
 
-                        String title = doc.getString("title");
+            for (DocumentSnapshot doc : questionSnapshot.getDocuments()) {
+                String status = doc.getString("status");
 
-                        if (title != null) {
-                            questionTitles.put(doc.getId(), title);
-                        }
+                if ("DELETED".equalsIgnoreCase(status)) {
+                    continue;
+                }
 
-                        String ownerId = readFirstString(
-                                doc,
-                                "userId",
-                                "authorId",
-                                "uid"
-                        );
+                allQuestions.add(buildQuestion(doc, status));
+            }
 
-                        if (!currentUserId.equals(ownerId)) {
-                            continue;
-                        }
+            // Tải câu trả lời để vừa lấy câu trả lời của tôi, vừa tính số câu trả lời của mỗi câu hỏi.
+            loadMyAnswersAndAnswerCounts(db, allQuestions);
+        }).addOnFailureListener(error -> {
+            if (isFinishing() || isDestroyed()) {
+                isLoading = false;
+                return;
+            }
 
-                        String status = doc.getString("status");
-
-                        if ("DELETED".equalsIgnoreCase(status)) {
-                            continue;
-                        }
-
-                        Question question = new Question();
-
-                        question.setId(doc.getId());
-                        question.setTitle(title);
-                        question.setContent(doc.getString("content"));
-                        question.setImageUrl(doc.getString("imageUrl"));
-                        question.setUserId(ownerId);
-
-                        question.setAuthorName(
-                                readFirstString(
-                                        doc,
-                                        "authorName",
-                                        "userName",
-                                        "username"
-                                )
-                        );
-
-                        question.setAuthorAvatar(
-                                doc.getString("authorAvatar")
-                        );
-
-                        question.setStatus(
-                                status == null || status.trim().isEmpty()
-                                        ? "OPEN"
-                                        : status.toUpperCase(Locale.ROOT)
-                        );
-
-                        question.setCreatedAt(
-                                doc.getTimestamp("createdAt")
-                        );
-
-                        Object voteValue = doc.get("voteCount");
-
-                        question.setVoteCount(
-                                voteValue instanceof Number
-                                        ? ((Number) voteValue).longValue()
-                                        : 0L
-                        );
-
-                        // Số câu trả lời sẽ được tính từ collection answers.
-                        question.setAnswerCount(0);
-
-                        Object categoryValue = doc.get("category");
-
-                        List<String> categories = new ArrayList<>();
-
-                        if (categoryValue instanceof String) {
-                            categories.add((String) categoryValue);
-
-                        } else if (categoryValue instanceof List<?>) {
-                            for (Object item :
-                                    (List<?>) categoryValue) {
-
-                                if (item instanceof String) {
-                                    categories.add((String) item);
-                                }
-                            }
-                        }
-
-                        question.setCategories(categories);
-                        myQuestions.add(question);
-                    }
-
-                    sortQuestions();
-
-                    // Tải câu trả lời để vừa lấy câu trả lời của tôi,
-                    // vừa tính số câu trả lời của mỗi câu hỏi.
-                    loadMyAnswersAndAnswerCounts(db);
-                })
-                .addOnFailureListener(error -> {
-                    if (isFinishing() || isDestroyed()) {
-                        isLoading = false;
-                        return;
-                    }
-
-                    handleLoadError(error);
-                });
+            handleLoadError(error);
+        });
     }
 
-    private void loadMyAnswersAndAnswerCounts(
-            FirebaseFirestore db) {
+    private Question buildQuestion(DocumentSnapshot doc, String status) {
+        Question question = new Question();
 
-        db.collection("answers")
-                .get()
-                .addOnSuccessListener(snapshot -> {
-                    if (isFinishing() || isDestroyed()) {
-                        isLoading = false;
-                        return;
-                    }
+        question.setId(doc.getId());
+        question.setTitle(doc.getString("title"));
+        question.setContent(doc.getString("content"));
+        question.setImageUrl(doc.getString("imageUrl"));
+        question.setUserId(readFirstString(doc, "userId", "authorId", "uid"));
+        question.setAuthorName(readFirstString(doc, "authorName", "userName", "username"));
+        question.setAuthorAvatar(doc.getString("authorAvatar"));
+        question.setStatus(status == null || status.trim().isEmpty() ? "OPEN" : status.toUpperCase(Locale.ROOT));
+        question.setCreatedAt(doc.getTimestamp("createdAt"));
 
-                    myAnswers.clear();
+        Object voteValue = doc.get("voteCount");
+        question.setVoteCount(voteValue instanceof Number ? ((Number) voteValue).longValue() : 0L);
 
-                    Map<String, Integer> answerCounts =
-                            new HashMap<>();
+        // Số câu trả lời sẽ được tính từ collection answers.
+        question.setAnswerCount(0);
+        question.setCategories(readCategories(doc));
 
-                    for (DocumentSnapshot doc :
-                            snapshot.getDocuments()) {
+        return question;
+    }
 
-                        String status = doc.getString("status");
+    private List<String> readCategories(DocumentSnapshot doc) {
+        List<String> categories = new ArrayList<>();
 
-                        if ("DELETE".equalsIgnoreCase(status)
-                                || "DELETED".equalsIgnoreCase(status)
-                                || doc.get("deletedAt") != null) {
-                            continue;
-                        }
+        Object categoryValue = doc.get("category");
 
-                        String questionId = doc.getString("questionId");
+        if (categoryValue == null) {
+            categoryValue = doc.get("categories");
+        }
 
-                        if (questionId != null) {
-                            Integer oldCount =
-                                    answerCounts.get(questionId);
+        if (categoryValue instanceof String) {
+            categories.add((String) categoryValue);
+        } else if (categoryValue instanceof List<?>) {
+            for (Object item : (List<?>) categoryValue) {
+                if (item instanceof String) {
+                    categories.add((String) item);
+                }
+            }
+        }
 
-                            answerCounts.put(questionId, oldCount == null ? 1 : oldCount + 1);}
+        return categories;
+    }
 
-                        String ownerId = readFirstString(
-                                doc,
-                                "userId",
-                                "authorId",
-                                "uid"
-                        );
+    private void loadMyAnswersAndAnswerCounts(FirebaseFirestore db, List<Question> allQuestions) {
+        db.collection("answers").get().addOnSuccessListener(snapshot -> {
+            if (isFinishing() || isDestroyed()) {
+                isLoading = false;
+                return;
+            }
 
-                        if (!currentUserId.equals(ownerId)) {
-                            continue;
-                        }
+            if (snapshot.isEmpty() && snapshot.getMetadata().isFromCache()) {
+                handleLoadError(new Exception("Offline: no data from server"));
+                return;
+            }
 
-                        Answer answer = new Answer();
+            List<Answer> freshAnswers = new ArrayList<>();
+            Map<String, Integer> answerCounts = new HashMap<>();
 
-                        answer.setId(doc.getId());
-                        answer.setQuestionId(questionId);
-                        answer.setUserId(ownerId);
+            for (DocumentSnapshot doc : snapshot.getDocuments()) {
+                String status = doc.getString("status");
 
-                        answer.setAuthorName(
-                                readFirstString(
-                                        doc,
-                                        "authorName",
-                                        "username",
-                                        "userName"
-                                )
-                        );
+                if ("DELETE".equalsIgnoreCase(status) || "DELETED".equalsIgnoreCase(status) || doc.get("deletedAt") != null) {
+                    continue;
+                }
 
-                        answer.setAuthorAvatar(
-                                doc.getString("authorAvatar")
-                        );
+                String questionId = doc.getString("questionId");
 
-                        answer.setContent(doc.getString("content"));
+                if (questionId != null) {
+                    Integer oldCount = answerCounts.get(questionId);
+                    answerCounts.put(questionId, oldCount == null ? 1 : oldCount + 1);
+                }
 
-                        answer.setCreatedAt(
-                                doc.getTimestamp("createdAt")
-                        );
+                String ownerId = readFirstString(doc, "userId", "authorId", "uid");
 
-                        Object voteValue = doc.get("voteCount");
+                if (!currentUserId.equals(ownerId)) {
+                    continue;
+                }
 
-                        answer.setVoteCount(
-                                voteValue instanceof Number
-                                        ? ((Number) voteValue).longValue()
-                                        : 0L
-                        );
+                Answer answer = new Answer();
 
-                        myAnswers.add(answer);
-                    }
+                answer.setId(doc.getId());
+                answer.setQuestionId(questionId);
+                answer.setUserId(ownerId);
+                answer.setAuthorName(readFirstString(doc, "authorName", "username", "userName"));
+                answer.setAuthorAvatar(doc.getString("authorAvatar"));
+                answer.setContent(doc.getString("content"));
+                answer.setCreatedAt(doc.getTimestamp("createdAt"));
 
-                    // Cập nhật số câu trả lời trên từng câu hỏi.
-                    for (Question question : myQuestions) {
-                        Integer count =
-                                answerCounts.get(question.getId());
+                Object voteValue = doc.get("voteCount");
+                answer.setVoteCount(voteValue instanceof Number ? ((Number) voteValue).longValue() : 0L);
 
-                        question.setAnswerCount(
-                                count == null ? 0 : count
-                        );
-                    }
+                freshAnswers.add(answer);
+            }
 
-                    sortAnswers();
+            // Chỉ cập nhật dữ liệu hiển thị khi cả câu hỏi và câu trả lời đều tải thành công.
+            List<Question> freshMyQuestions = new ArrayList<>();
+            Map<String, String> freshTitles = new HashMap<>();
 
-                    progressBar.setVisibility(View.GONE);
-                    isLoading = false;
+            for (Question question : allQuestions) {
+                Integer count = answerCounts.get(question.getId());
+                question.setAnswerCount(count == null ? 0 : count);
 
-                    questionAdapter.setQuestions(myQuestions);
-                    answerAdapter.setAnswers(myAnswers);
+                if (question.getTitle() != null) {
+                    freshTitles.put(question.getId(), question.getTitle());
+                }
 
-                    tvSummary.setText(
-                            myQuestions.size() + " câu hỏi · "
-                                    + myAnswers.size() + " câu trả lời"
-                    );
+                if (currentUserId.equals(question.getUserId())) {
+                    freshMyQuestions.add(question);
+                }
+            }
 
-                    showSelectedTab();
-                })
-                .addOnFailureListener(error -> {
-                    if (isFinishing() || isDestroyed()) {
-                        isLoading = false;
-                        return;
-                    }
+            myQuestions.clear();
+            myQuestions.addAll(freshMyQuestions);
 
-                    handleLoadError(error);
-                });
+            myAnswers.clear();
+            myAnswers.addAll(freshAnswers);
+
+            questionTitles.clear();
+            questionTitles.putAll(freshTitles);
+
+            sortQuestions();
+            sortAnswers();
+
+            Log.d("OfflineCache", "My Q&A Firestore: " + myQuestions.size() + " questions, " + myAnswers.size() + " answers");
+
+            try {
+                questionLocalDataSource.replaceAllQuestions(allQuestions);
+                answerLocalDataSource.replaceAnswersOfUser(currentUserId, myAnswers);
+                Log.d("OfflineCache", "My Q&A saved to SQLite");
+            } catch (Exception e) {
+                Log.e(TAG, "Không thể lưu cache SQLite", e);
+            }
+
+            isLoading = false;
+            progressBar.setVisibility(View.GONE);
+            showData();
+        }).addOnFailureListener(error -> {
+            if (isFinishing() || isDestroyed()) {
+                isLoading = false;
+                return;
+            }
+
+            handleLoadError(error);
+        });
+    }
+
+    private boolean loadCachedData() {
+        try {
+            List<Question> cachedQuestions = questionLocalDataSource.getMyQuestions(currentUserId);
+            List<Answer> cachedAnswers = answerLocalDataSource.getAnswersOfUser(currentUserId);
+
+            Log.d("OfflineCache", "My Q&A cached: " + cachedQuestions.size() + " questions, " + cachedAnswers.size() + " answers");
+
+            questionTitles.clear();
+
+            for (Question question : questionLocalDataSource.getAllQuestions()) {
+                if (question.getId() != null && question.getTitle() != null) {
+                    questionTitles.put(question.getId(), question.getTitle());
+                }
+            }
+
+            myQuestions.clear();
+            myQuestions.addAll(cachedQuestions);
+
+            myAnswers.clear();
+            myAnswers.addAll(cachedAnswers);
+
+            sortQuestions();
+            sortAnswers();
+
+            return !myQuestions.isEmpty() || !myAnswers.isEmpty();
+        } catch (Exception e) {
+            Log.e(TAG, "Không thể đọc cache SQLite", e);
+            return false;
+        }
+    }
+
+    private void showData() {
+        questionAdapter.setQuestions(myQuestions);
+        answerAdapter.setAnswers(myAnswers);
+
+        tvSummary.setText(myQuestions.size() + " câu hỏi · " + myAnswers.size() + " câu trả lời");
+
+        showSelectedTab();
     }
 
     private void showSelectedTab() {
@@ -504,24 +455,14 @@ public class MyQnaActivity extends AppCompatActivity {
 
     private void openQuestion(String questionId) {
         if (questionId == null || questionId.trim().isEmpty()) {
-            Toast.makeText(
-                    this,
-                    "Không tìm thấy mã câu hỏi.",
-                    Toast.LENGTH_SHORT
-            ).show();
+            Toast.makeText(this, "Không tìm thấy mã câu hỏi.", Toast.LENGTH_SHORT).show();
 
             return;
         }
 
-        Intent intent = new Intent(
-                this,
-                QuestionDetailActivity.class
-        );
+        Intent intent = new Intent(this, QuestionDetailActivity.class);
 
-        intent.putExtra(
-                QuestionDetailActivity.EXTRA_QUESTION_ID,
-                questionId
-        );
+        intent.putExtra(QuestionDetailActivity.EXTRA_QUESTION_ID, questionId);
 
         startActivity(intent);
     }
@@ -538,155 +479,104 @@ public class MyQnaActivity extends AppCompatActivity {
             options = new String[]{"Xóa câu hỏi", "Mở lại câu hỏi"};
         }
 
-        new AlertDialog.Builder(this)
-                .setTitle("Tùy chọn câu hỏi")
-                .setItems(options, (dialog, which) -> {
-                    if (which == 0) {
-                        promptDeleteQuestion(question);
-                    } else if (which == 1) {
-                        toggleQuestionCloseStatus(question, isOpen ? "CLOSED" : "OPEN");
-                    }
-                })
-                .setNegativeButton("Hủy", null)
-                .show();
+        new AlertDialog.Builder(this).setTitle("Tùy chọn câu hỏi").setItems(options, (dialog, which) -> {
+            if (which == 0) {
+                promptDeleteQuestion(question);
+            } else if (which == 1) {
+                toggleQuestionCloseStatus(question, isOpen ? "CLOSED" : "OPEN");
+            }
+        }).setNegativeButton("Hủy", null).show();
     }
 
     private void promptDeleteQuestion(Question question) {
-        new AlertDialog.Builder(this)
-                .setTitle("Xác nhận xóa câu hỏi")
-                .setMessage("Bạn có chắc chắn muốn xóa câu hỏi này không? Câu hỏi sẽ bị xóa vĩnh viễn khỏi danh sách.")
-                .setPositiveButton("Xóa", (dialog, which) -> {
-                    Map<String, Object> updates = new HashMap<>();
-                    updates.put("status", "DELETED");
-                    updates.put("deletedAt", FieldValue.serverTimestamp());
+        new AlertDialog.Builder(this).setTitle("Xác nhận xóa câu hỏi").setMessage("Bạn có chắc chắn muốn xóa câu hỏi này không? Câu hỏi sẽ bị xóa vĩnh viễn khỏi danh sách.").setPositiveButton("Xóa", (dialog, which) -> {
+            Map<String, Object> updates = new HashMap<>();
+            updates.put("status", "DELETED");
+            updates.put("deletedAt", FieldValue.serverTimestamp());
 
-                    FirebaseFirestore db = FirebaseFirestore.getInstance();
-                    db.collection("questions")
-                            .document(question.getId())
-                            .update(updates)
-                            .addOnSuccessListener(unused -> {
-                                question.setStatus("DELETED");
-                                myQuestions.remove(question);
-                                questionAdapter.setQuestions(myQuestions);
-                                tvSummary.setText(myQuestions.size() + " câu hỏi · " + myAnswers.size() + " câu trả lời");
-                                showSelectedTab();
-                                Toast.makeText(this, "Đã xóa câu hỏi", Toast.LENGTH_SHORT).show();
+            FirebaseFirestore db = FirebaseFirestore.getInstance();
+            db.collection("questions").document(question.getId()).update(updates).addOnSuccessListener(unused -> {
+                question.setStatus("DELETED");
+                myQuestions.remove(question);
+                questionAdapter.setQuestions(myQuestions);
+                tvSummary.setText(myQuestions.size() + " câu hỏi · " + myAnswers.size() + " câu trả lời");
+                showSelectedTab();
+                Toast.makeText(this, "Đã xóa câu hỏi", Toast.LENGTH_SHORT).show();
 
-                                db.collection("questionReports")
-                                        .whereEqualTo("questionId", question.getId())
-                                        .get()
-                                        .addOnSuccessListener(rSnap -> {
-                                            if (rSnap != null && !rSnap.isEmpty()) {
-                                                for (DocumentSnapshot doc : rSnap.getDocuments()) {
-                                                    doc.getReference().update(
-                                                            "status", "REPORTED_CONTENT_DELETED",
-                                                            "reviewedAt", FieldValue.serverTimestamp(),
-                                                            "reviewReason", "Tác giả đã xóa câu hỏi"
-                                                    );
-                                                }
-                                            }
-                                        });
-                            })
-                            .addOnFailureListener(error -> {
-                                Toast.makeText(this, "Không thể xóa câu hỏi: " + error.getMessage(), Toast.LENGTH_SHORT).show();
-                            });
-                })
-                .setNegativeButton("Hủy", null)
-                .show();
+                db.collection("questionReports").whereEqualTo("questionId", question.getId()).get().addOnSuccessListener(rSnap -> {
+                    if (rSnap != null && !rSnap.isEmpty()) {
+                        for (DocumentSnapshot doc : rSnap.getDocuments()) {
+                            doc.getReference().update("status", "REPORTED_CONTENT_DELETED", "reviewedAt", FieldValue.serverTimestamp(), "reviewReason", "Tác giả đã xóa câu hỏi");
+                        }
+                    }
+                });
+            }).addOnFailureListener(error -> {
+                Toast.makeText(this, "Không thể xóa câu hỏi: " + error.getMessage(), Toast.LENGTH_SHORT).show();
+            });
+        }).setNegativeButton("Hủy", null).show();
     }
 
     private void toggleQuestionCloseStatus(Question question, String targetStatus) {
-        FirebaseFirestore.getInstance()
-                .collection("questions")
-                .document(question.getId())
-                .update("status", targetStatus)
-                .addOnSuccessListener(unused -> {
-                    question.setStatus(targetStatus);
-                    questionAdapter.notifyDataSetChanged();
-                    String msg = "CLOSED".equals(targetStatus) ? "Đã đóng câu hỏi" : "Đã mở lại câu hỏi";
-                    Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
-                })
-                .addOnFailureListener(error -> {
-                    Toast.makeText(this, "Thao tác thất bại: " + error.getMessage(), Toast.LENGTH_SHORT).show();
-                });
+        FirebaseFirestore.getInstance().collection("questions").document(question.getId()).update("status", targetStatus).addOnSuccessListener(unused -> {
+            question.setStatus(targetStatus);
+            questionAdapter.notifyDataSetChanged();
+            String msg = "CLOSED".equals(targetStatus) ? "Đã đóng câu hỏi" : "Đã mở lại câu hỏi";
+            Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
+        }).addOnFailureListener(error -> {
+            Toast.makeText(this, "Thao tác thất bại: " + error.getMessage(), Toast.LENGTH_SHORT).show();
+        });
     }
 
-    private void toggleQuestionVote(
-            Question question,
-            int requestedValue) {
-
-        FirebaseUser user =
-                FirebaseAuth.getInstance().getCurrentUser();
+    private void toggleQuestionVote(Question question, int requestedValue) {
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
 
         if (user == null) {
-            Toast.makeText(
-                    this,
-                    "Vui lòng đăng nhập để bình chọn.",
-                    Toast.LENGTH_SHORT
-            ).show();
+            Toast.makeText(this, "Vui lòng đăng nhập để bình chọn.", Toast.LENGTH_SHORT).show();
             return;
         }
 
         String questionId = question.getId();
         String userId = user.getUid();
 
-        if (questionId == null
-                || (requestedValue != 1 && requestedValue != -1)) {
+        if (questionId == null || (requestedValue != 1 && requestedValue != -1)) {
             return;
         }
 
         FirebaseFirestore db = FirebaseFirestore.getInstance();
 
-        com.google.firebase.firestore.DocumentReference questionRef =
-                db.collection("questions").document(questionId);
+        com.google.firebase.firestore.DocumentReference questionRef = db.collection("questions").document(questionId);
 
-        com.google.firebase.firestore.DocumentReference voteRef =
-                db.collection("questionVotes")
-                        .document(questionId + "_" + userId);
+        com.google.firebase.firestore.DocumentReference voteRef = db.collection("questionVotes").document(questionId + "_" + userId);
 
         db.runTransaction(transaction -> {
-            DocumentSnapshot questionSnapshot =
-                    transaction.get(questionRef);
+            DocumentSnapshot questionSnapshot = transaction.get(questionRef);
 
-            DocumentSnapshot voteSnapshot =
-                    transaction.get(voteRef);
+            DocumentSnapshot voteSnapshot = transaction.get(voteRef);
 
             if (!questionSnapshot.exists()) {
-                throw new IllegalStateException(
-                        "Không tìm thấy câu hỏi."
-                );
+                throw new IllegalStateException("Không tìm thấy câu hỏi.");
             }
 
             Long countValue = questionSnapshot.getLong("voteCount");
 
-            long currentCount =
-                    countValue == null ? 0L : countValue;
+            long currentCount = countValue == null ? 0L : countValue;
 
             Long savedValue = voteSnapshot.getLong("value");
 
-            long oldValue =
-                    voteSnapshot.exists() && savedValue != null
-                            ? savedValue
-                            : 0L;
+            long oldValue = voteSnapshot.exists() && savedValue != null ? savedValue : 0L;
 
             long updatedCount;
 
-            if (voteSnapshot.exists()
-                    && oldValue == requestedValue) {
+            if (voteSnapshot.exists() && oldValue == requestedValue) {
 
                 transaction.delete(voteRef);
                 updatedCount = currentCount - oldValue;
 
             } else if (voteSnapshot.exists()) {
 
-                transaction.update(
-                        voteRef,
-                        "value",
-                        requestedValue
-                );
+                transaction.update(voteRef, "value", requestedValue);
 
-                updatedCount =
-                        currentCount + requestedValue - oldValue;
+                updatedCount = currentCount + requestedValue - oldValue;
 
             } else {
                 Map<String, Object> voteData = new HashMap<>();
@@ -694,20 +584,13 @@ public class MyQnaActivity extends AppCompatActivity {
                 voteData.put("questionId", questionId);
                 voteData.put("userId", userId);
                 voteData.put("value", requestedValue);
-                voteData.put(
-                        "createdAt",
-                        FieldValue.serverTimestamp()
-                );
+                voteData.put("createdAt", FieldValue.serverTimestamp());
 
                 transaction.set(voteRef, voteData);
                 updatedCount = currentCount + requestedValue;
             }
 
-            transaction.update(
-                    questionRef,
-                    "voteCount",
-                    updatedCount
-            );
+            transaction.update(questionRef, "voteCount", updatedCount);
 
             return updatedCount;
         }).addOnSuccessListener(updatedCount -> {
@@ -722,45 +605,24 @@ public class MyQnaActivity extends AppCompatActivity {
             Log.e(TAG, "Không thể bình chọn câu hỏi", error);
 
             if (!isFinishing() && !isDestroyed()) {
-                Toast.makeText(
-                        this,
-                        "Không thể bình chọn: " + error.getMessage(),
-                        Toast.LENGTH_LONG
-                ).show();
+                Toast.makeText(this, "Không thể bình chọn: " + error.getMessage(), Toast.LENGTH_LONG).show();
             }
         });
     }
 
     private void sortQuestions() {
-        Collections.sort(
-                myQuestions,
-                (first, second) -> Long.compare(
-                        getTimestampMillis(second.getCreatedAt()),
-                        getTimestampMillis(first.getCreatedAt())
-                )
-        );
+        Collections.sort(myQuestions, (first, second) -> Long.compare(getTimestampMillis(second.getCreatedAt()), getTimestampMillis(first.getCreatedAt())));
     }
 
     private void sortAnswers() {
-        Collections.sort(
-                myAnswers,
-                (first, second) -> Long.compare(
-                        getTimestampMillis(second.getCreatedAt()),
-                        getTimestampMillis(first.getCreatedAt())
-                )
-        );
+        Collections.sort(myAnswers, (first, second) -> Long.compare(getTimestampMillis(second.getCreatedAt()), getTimestampMillis(first.getCreatedAt())));
     }
 
     private long getTimestampMillis(Timestamp timestamp) {
-        return timestamp == null
-                ? 0L
-                : timestamp.toDate().getTime();
+        return timestamp == null ? 0L : timestamp.toDate().getTime();
     }
 
-    private String readFirstString(
-            DocumentSnapshot document,
-            String... fields) {
-
+    private String readFirstString(DocumentSnapshot document, String... fields) {
         for (String field : fields) {
             String value = document.getString(field);
 
@@ -775,23 +637,40 @@ public class MyQnaActivity extends AppCompatActivity {
     private void handleLoadError(Exception error) {
         isLoading = false;
         progressBar.setVisibility(View.GONE);
-        rvMyQna.setVisibility(View.GONE);
-        tvEmpty.setText("Không thể tải dữ liệu Q&A. Vui lòng thử lại.");
-        tvEmpty.setVisibility(View.VISIBLE);
 
         Log.e(TAG, "Lỗi tải dữ liệu Q&A", error);
 
-        Toast.makeText(
-                this,
-                "Tải dữ liệu Q&A thất bại.",
-                Toast.LENGTH_SHORT
-        ).show();
+        // Có dữ liệu đã lưu thì giữ nguyên để người dùng xem offline.
+        if (!myQuestions.isEmpty() || !myAnswers.isEmpty()) {
+            showData();
+            Toast.makeText(this, "Đang hiển thị dữ liệu đã lưu offline.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        tvSummary.setText("0 câu hỏi · 0 câu trả lời");
+        rvMyQna.setVisibility(View.GONE);
+        tvEmpty.setText("Không có dữ liệu offline. Hãy kết nối mạng và mở lại trang này.");
+        tvEmpty.setVisibility(View.VISIBLE);
+
+        Toast.makeText(this, "Tải dữ liệu Q&A thất bại.", Toast.LENGTH_SHORT).show();
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (questionLocalDataSource != null) {
+            questionLocalDataSource.close();
+        }
+
+        if (answerLocalDataSource != null) {
+            answerLocalDataSource.close();
+        }
+
+        super.onDestroy();
     }
 
     // Adapter riêng để hiển thị các câu trả lời của người dùng.
     // Nhấn câu trả lời sẽ mở câu hỏi liên quan.
-    private class MyAnswersAdapter
-            extends RecyclerView.Adapter<AnswerViewHolder> {
+    private class MyAnswersAdapter extends RecyclerView.Adapter<AnswerViewHolder> {
 
         private final List<Answer> answerList = new ArrayList<>();
 
@@ -807,89 +686,54 @@ public class MyQnaActivity extends AppCompatActivity {
 
         @NonNull
         @Override
-        public AnswerViewHolder onCreateViewHolder(
-                @NonNull ViewGroup parent,
-                int viewType) {
-
-            View view = LayoutInflater.from(parent.getContext())
-                    .inflate(R.layout.item_answer, parent, false);
+        public AnswerViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_answer, parent, false);
 
             return new AnswerViewHolder(view);
         }
 
         @Override
-        public void onBindViewHolder(
-                @NonNull AnswerViewHolder holder,
-                int position) {
-
+        public void onBindViewHolder(@NonNull AnswerViewHolder holder, int position) {
             Answer answer = answerList.get(position);
 
             // Hiển thị tiêu đề câu hỏi liên quan tại vị trí tên tác giả.
-            String questionTitle =
-                    questionTitles.get(answer.getQuestionId());
+            String questionTitle = questionTitles.get(answer.getQuestionId());
 
-            if (questionTitle != null
-                    && !questionTitle.trim().isEmpty()) {
-                holder.tvAnswerAuthor.setText(
-                        "Câu hỏi: " + questionTitle
-                );
+            if (questionTitle != null && !questionTitle.trim().isEmpty()) {
+                holder.tvAnswerAuthor.setText("Câu hỏi: " + questionTitle);
             } else {
                 holder.tvAnswerAuthor.setText("Câu trả lời của bạn");
             }
 
-            holder.tvAnswerContent.setText(
-                    answer.getContent() == null
-                            ? ""
-                            : answer.getContent()
-            );
+            holder.tvAnswerContent.setText(answer.getContent() == null ? "" : answer.getContent());
 
             Timestamp createdAt = answer.getCreatedAt();
 
             if (createdAt != null) {
-                java.text.SimpleDateFormat sdf =
-                        new java.text.SimpleDateFormat(
-                                "dd/MM/yyyy HH:mm",
-                                Locale.getDefault()
-                        );
+                java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault());
 
-                holder.tvAnswerDate.setText(
-                        sdf.format(createdAt.toDate())
-                );
+                holder.tvAnswerDate.setText(sdf.format(createdAt.toDate()));
             } else {
                 holder.tvAnswerDate.setText("");
             }
 
-            holder.tvAnswerVoteCount.setText(
-                    answer.getVoteCount() + " vote"
-            );
+            holder.tvAnswerVoteCount.setText(answer.getVoteCount() + " vote");
 
             String avatarUrl = answer.getAuthorAvatar();
 
             if (avatarUrl != null && !avatarUrl.trim().isEmpty()) {
-                Picasso.get()
-                        .load(avatarUrl)
-                        .placeholder(R.drawable.ic_account)
-                        .error(R.drawable.ic_account)
-                        .fit()
-                        .centerCrop()
-                        .into(holder.ivAuthorAvatar);
+                Picasso.get().load(avatarUrl).placeholder(R.drawable.ic_account).error(R.drawable.ic_account).fit().centerCrop().into(holder.ivAuthorAvatar);
             } else {
                 Picasso.get().cancelRequest(holder.ivAuthorAvatar);
-                holder.ivAuthorAvatar.setImageResource(
-                        R.drawable.ic_account
-                );
+                holder.ivAuthorAvatar.setImageResource(R.drawable.ic_account);
             }
-
 
             holder.btnReportAnswer.setVisibility(View.GONE);
 
             View parent = (View) holder.tvAnswerUpVote.getParent();
             parent.setVisibility(View.GONE);
 
-
-            holder.itemView.setOnClickListener(v ->
-                    openQuestion(answer.getQuestionId())
-            );
+            holder.itemView.setOnClickListener(v -> openQuestion(answer.getQuestionId()));
         }
 
         @Override
