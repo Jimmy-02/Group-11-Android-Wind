@@ -54,6 +54,7 @@ public class DiscussionRepository {
     ) {
         firestore.collection("discussions")
                 .whereEqualTo("userId", userId)
+                .whereEqualTo("status", "ACTIVE")
                 .get()
                 .addOnSuccessListener(snapshot -> {
                     // Offline: snapshot rỗng lấy từ cache không phải dữ liệu thật từ server.
