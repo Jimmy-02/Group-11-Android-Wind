@@ -1,0 +1,254 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#F5F6F8">
+
+    <!-- Status bar -->
+    <View
+        android:id="@+id/status_bar_spacer"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:background="#6750A4" />
+
+    <!-- Thanh Back -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:background="#FFFFFF"
+        android:elevation="2dp">
+
+        <LinearLayout
+            android:id="@+id/myArticlesBackLayout"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="8dp"
+            android:paddingEnd="12dp">
+
+            <ImageView
+                android:id="@+id/ivMyArticlesBack"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:contentDescription="Quay lại"
+                android:scaleType="centerInside"
+                android:src="@drawable/ic_arrow_back" />
+
+            <TextView
+                android:id="@+id/tvMyArticlesBack"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:text="Back"
+                android:textColor="#172B4D"
+                android:textSize="15sp"
+                android:textStyle="bold" />
+
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="end"
+            android:paddingEnd="16dp"
+            android:text="Bài báo của tôi"
+            android:textColor="#172B4D"
+            android:textSize="17sp"
+            android:textStyle="bold" />
+
+    </LinearLayout>
+
+    <!-- Đường phân cách thanh Back -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#E2E8F0" />
+
+    <!-- Nội dung chính chia hai cột -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="horizontal">
+
+        <!-- CỘT TRÁI: TIÊU ĐỀ VÀ BỘ LỌC -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="0.36"
+            android:orientation="vertical"
+            android:background="#FFFFFF"
+            android:paddingStart="16dp"
+            android:paddingTop="20dp"
+            android:paddingEnd="16dp"
+            android:paddingBottom="16dp">
+
+            <androidx.core.widget.NestedScrollView
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:fillViewport="true"
+                android:scrollbars="vertical">
+
+                <!-- NestedScrollView chỉ có một View con trực tiếp -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Bài báo của tôi"
+                        android:textColor="#172B4D"
+                        android:textSize="22sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tvMyArticlesSummary"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="0 bài báo"
+                        android:textColor="#718096"
+                        android:textSize="13sp" />
+
+                    <View
+                        android:layout_width="48dp"
+                        android:layout_height="3dp"
+                        android:layout_marginTop="18dp"
+                        android:background="#2864E8" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="20dp"
+                        android:text="Lọc theo trạng thái"
+                        android:textColor="#172B4D"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+
+                    <!-- Bộ lọc trạng thái -->
+                    <RadioGroup
+                        android:id="@+id/rgArticleFilter"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:orientation="vertical">
+
+                        <RadioButton
+                            android:id="@+id/rbFilterAll"
+                            android:layout_width="match_parent"
+                            android:layout_height="42dp"
+                            android:layout_marginBottom="8dp"
+                            android:background="@drawable/bg_article_filter"
+                            android:button="@null"
+                            android:checked="true"
+                            android:gravity="center"
+                            android:paddingStart="8dp"
+                            android:paddingEnd="8dp"
+                            android:text="Tất cả"
+                            android:textColor="@color/article_filter_text"
+                            android:textSize="13sp" />
+
+                        <RadioButton
+                            android:id="@+id/rbFilterPending"
+                            android:layout_width="match_parent"
+                            android:layout_height="42dp"
+                            android:layout_marginBottom="8dp"
+                            android:background="@drawable/bg_article_filter"
+                            android:button="@null"
+                            android:gravity="center"
+                            android:paddingStart="8dp"
+                            android:paddingEnd="8dp"
+                            android:text="Đang duyệt"
+                            android:textColor="@color/article_filter_text"
+                            android:textSize="13sp" />
+
+                        <RadioButton
+                            android:id="@+id/rbFilterApproved"
+                            android:layout_width="match_parent"
+                            android:layout_height="42dp"
+                            android:layout_marginBottom="8dp"
+                            android:background="@drawable/bg_article_filter"
+                            android:button="@null"
+                            android:gravity="center"
+                            android:paddingStart="8dp"
+                            android:paddingEnd="8dp"
+                            android:text="Đã duyệt"
+                            android:textColor="@color/article_filter_text"
+                            android:textSize="13sp" />
+
+                        <RadioButton
+                            android:id="@+id/rbFilterRejected"
+                            android:layout_width="match_parent"
+                            android:layout_height="42dp"
+                            android:background="@drawable/bg_article_filter"
+                            android:button="@null"
+                            android:gravity="center"
+                            android:paddingStart="8dp"
+                            android:paddingEnd="8dp"
+                            android:text="Bị từ chối"
+                            android:textColor="@color/article_filter_text"
+                            android:textSize="13sp" />
+
+                    </RadioGroup>
+
+                </LinearLayout>
+
+            </androidx.core.widget.NestedScrollView>
+
+        </LinearLayout>
+
+        <!-- Vạch ngăn hai cột -->
+        <View
+            android:layout_width="1dp"
+            android:layout_height="match_parent"
+            android:background="#E2E8F0" />
+
+        <!-- CỘT PHẢI: DANH SÁCH BÀI BÁO -->
+        <FrameLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="0.64"
+            android:background="#F5F6F8">
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rvMyArticles"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:clipToPadding="false"
+                android:paddingStart="12dp"
+                android:paddingTop="12dp"
+                android:paddingEnd="12dp"
+                android:paddingBottom="16dp" />
+
+            <ProgressBar
+                android:id="@+id/pbMyArticles"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/tvMyArticlesEmpty"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:gravity="center"
+                android:padding="24dp"
+                android:text="Bạn chưa có bài báo nào."
+                android:textColor="#718096"
+                android:textSize="14sp"
+                android:visibility="gone" />
+
+        </FrameLayout>
+
+    </LinearLayout>
+
+</LinearLayout>
