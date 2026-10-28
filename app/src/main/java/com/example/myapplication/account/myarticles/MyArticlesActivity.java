@@ -10,7 +10,6 @@ import android.widget.RadioGroup;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
@@ -31,7 +30,6 @@ import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 
 public class MyArticlesActivity extends AppCompatActivity {
@@ -113,97 +111,110 @@ public class MyArticlesActivity extends AppCompatActivity {
 
         currentUserId = user.getUid();
 
-        progressBar.setVisibility(View.VISIBLE);
-        rvMyArticles.setVisibility(View.GONE);
         tvEmpty.setVisibility(View.GONE);
 
-        FirebaseFirestore.getInstance()
-                .collection("articles")
-                .whereEqualTo("userId", currentUserId)
-                .get()
-                .addOnSuccessListener(snapshot -> {
-                    if (isFinishing() || isDestroyed()) {
-                        return;
-                    }
+        // Hiện ngay dữ liệu đã lưu trong SQLite (nếu có), Firestore sẽ cập nhật sau.
+        List<Article> cachedArticles = readCachedArticles();
 
-                    List<Article> fetchedArticles = new ArrayList<>();
+        Log.d("OfflineCache", "My articles cached: " + cachedArticles.size());
 
-                    for (DocumentSnapshot document : snapshot.getDocuments()) {
-                        String status = document.getString("status");
+        allArticles.clear();
+        allArticles.addAll(cachedArticles);
 
-                        if ("DELETED".equalsIgnoreCase(status)) {
-                            continue;
-                        }
-
-                        Article article = document.toObject(Article.class);
-
-                        if (article == null) {
-                            continue;
-                        }
-
-                        article.setId(document.getId());
-                        article.setStatus(status == null ? "PENDING" : status);
-
-                        Timestamp createdAt = document.getTimestamp("createdAt");
-                        article.setCreatedAt(createdAt == null ? 0L : createdAt.toDate().getTime());
-
-                        fetchedArticles.add(article);
-                    }
-
-                    Collections.sort(fetchedArticles, (first, second) -> Long.compare(second.getCreatedAt(), first.getCreatedAt()));
-
-                    allArticles.clear();
-                    allArticles.addAll(fetchedArticles);
-
-                    try {
-                        localDataSource.saveArticles(currentUserId, fetchedArticles);
-                    } catch (Exception e) {
-                        Log.e("MyArticlesActivity", "Không thể lưu cache SQLite", e);
-                    }
-
-                    progressBar.setVisibility(View.GONE);
-                    applyFilter();
-                })
-                .addOnFailureListener(error -> {
-                    if (isFinishing() || isDestroyed()) {
-                        return;
-                    }
-
-                    Log.e("MyArticlesActivity", "Không thể tải bài báo từ Firestore", error);
-
-                    loadCachedArticles();
-                });
-    }
-
-    private void loadCachedArticles() {
-        try {
-            List<Article> cachedArticles = localDataSource.getArticles(currentUserId);
-
-            allArticles.clear();
-            allArticles.addAll(cachedArticles);
-
+        if (cachedArticles.isEmpty()) {
+            progressBar.setVisibility(View.VISIBLE);
+            rvMyArticles.setVisibility(View.GONE);
+        } else {
             progressBar.setVisibility(View.GONE);
+            applyFilter();
+        }
 
-            if (cachedArticles.isEmpty()) {
-                tvEmpty.setText("Không có dữ liệu offline. Hãy kết nối mạng và mở lại trang này.");
-                tvEmpty.setVisibility(View.VISIBLE);
-                rvMyArticles.setVisibility(View.GONE);
-                tvSummary.setText("Bạn có 0 bài báo");
-
-                Toast.makeText(this, "Không có dữ liệu bài báo đã lưu offline.", Toast.LENGTH_SHORT).show();
+        FirebaseFirestore.getInstance().collection("articles").whereEqualTo("userId", currentUserId).get().addOnSuccessListener(snapshot -> {
+            if (isFinishing() || isDestroyed()) {
                 return;
             }
 
-            Toast.makeText(this, "Đang hiển thị dữ liệu đã lưu offline.", Toast.LENGTH_SHORT).show();
-            applyFilter();
-        } catch (Exception e) {
-            Log.e("MyArticlesActivity", "Không thể đọc cache SQLite", e);
+            // Offline: Firestore trả snapshot rỗng lấy từ cache, không phải user chưa có bài.
+            if (snapshot.isEmpty() && snapshot.getMetadata().isFromCache()) {
+                Log.d("OfflineCache", "My articles: empty snapshot from cache, showing SQLite data");
+                showOfflineState();
+                return;
+            }
+
+            List<Article> fetchedArticles = new ArrayList<>();
+
+            for (DocumentSnapshot document : snapshot.getDocuments()) {
+                String status = document.getString("status");
+
+                if ("DELETED".equalsIgnoreCase(status)) {
+                    continue;
+                }
+
+                Article article = document.toObject(Article.class);
+
+                if (article == null) {
+                    continue;
+                }
+
+                article.setId(document.getId());
+                article.setStatus(status == null ? "PENDING" : status);
+
+                Timestamp createdAt = document.getTimestamp("createdAt");
+                article.setCreatedAt(createdAt == null ? 0L : createdAt.toDate().getTime());
+
+                fetchedArticles.add(article);
+            }
+
+            Collections.sort(fetchedArticles, (first, second) -> Long.compare(second.getCreatedAt(), first.getCreatedAt()));
+
+            Log.d("OfflineCache", "My articles Firestore: " + fetchedArticles.size());
+
+            allArticles.clear();
+            allArticles.addAll(fetchedArticles);
+
+            try {
+                localDataSource.saveArticles(currentUserId, fetchedArticles);
+                Log.d("OfflineCache", "My articles saved to SQLite: " + fetchedArticles.size());
+            } catch (Exception e) {
+                Log.e("MyArticlesActivity", "Không thể lưu cache SQLite", e);
+            }
 
             progressBar.setVisibility(View.GONE);
-            tvEmpty.setText("Không thể tải danh sách bài báo.");
+            applyFilter();
+        }).addOnFailureListener(error -> {
+            if (isFinishing() || isDestroyed()) {
+                return;
+            }
+
+            Log.e("MyArticlesActivity", "Không thể tải bài báo từ Firestore", error);
+
+            showOfflineState();
+        });
+    }
+
+    private List<Article> readCachedArticles() {
+        try {
+            return localDataSource.getArticles(currentUserId);
+        } catch (Exception e) {
+            Log.e("MyArticlesActivity", "Không thể đọc cache SQLite", e);
+            return new ArrayList<>();
+        }
+    }
+
+    private void showOfflineState() {
+        progressBar.setVisibility(View.GONE);
+
+        if (allArticles.isEmpty()) {
+            tvEmpty.setText("Không có dữ liệu offline. Hãy kết nối mạng và mở lại trang này.");
             tvEmpty.setVisibility(View.VISIBLE);
             rvMyArticles.setVisibility(View.GONE);
+            tvSummary.setText("Bạn có 0 bài báo");
+
+            Toast.makeText(this, "Không có dữ liệu bài báo đã lưu offline.", Toast.LENGTH_SHORT).show();
+            return;
         }
+
+        Toast.makeText(this, "Đang hiển thị dữ liệu đã lưu offline.", Toast.LENGTH_SHORT).show();
     }
 
     private void applyFilter() {

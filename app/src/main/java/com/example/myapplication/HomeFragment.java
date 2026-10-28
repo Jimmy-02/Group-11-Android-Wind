@@ -2,16 +2,12 @@ package com.example.myapplication;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Toast;
-import android.database.sqlite.SQLiteDatabase;
-import android.util.Log;
 
-import com.example.myapplication.data.local.AppDatabaseHelper;
-import com.example.myapplication.data.local.ArticleLocalDataSource;
-import com.google.firebase.auth.FirebaseAuth;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
@@ -22,8 +18,9 @@ import com.example.myapplication.articles.Article;
 import com.example.myapplication.articles.ArticleAdapter;
 import com.example.myapplication.articles.ArticleRepository;
 import com.example.myapplication.articles.articlesDetail.ArticleDetailActivity;
-import com.example.myapplication.articles.reports.ReportArticleActivity;
 import com.example.myapplication.articles.creation.CreateArticleActivity;
+import com.example.myapplication.articles.reports.ReportArticleActivity;
+import com.example.myapplication.data.local.ArticleLocalDataSource;
 import com.google.firebase.firestore.ListenerRegistration;
 
 import java.util.ArrayList;
@@ -90,16 +87,17 @@ public class HomeFragment extends Fragment {
         repository = new ArticleRepository();
         localDataSource = new ArticleLocalDataSource(requireContext());
 
-        AppDatabaseHelper databaseHelper = new AppDatabaseHelper(requireContext());
-        SQLiteDatabase db = databaseHelper.getWritableDatabase();
-
-        Log.d("SQLiteCheck", "Database path: " + db.getPath());
-        Log.d("SQLiteCheck", "Database created successfully");
-
-        db.close();
-        databaseHelper.close();
-
         loadArticles(null); // null = all
+    }
+
+    private List<Article> getCachedArticles(String categoryId) {
+        List<Article> cachedArticles = localDataSource.getHomeArticles();
+
+        if (categoryId != null && !categoryId.trim().isEmpty()) {
+            cachedArticles.removeIf(article -> !categoryId.equals(article.getCategoryId()));
+        }
+
+        return cachedArticles;
     }
 
     private void loadArticles(String categoryId) {
@@ -114,21 +112,13 @@ public class HomeFragment extends Fragment {
             articleListener = null;
         }
 
-        List<Article> cachedArticles = localDataSource.getHomeArticles();
+        List<Article> cachedArticles = getCachedArticles(categoryId);
 
         Log.d("OfflineCache", "Cached articles count: " + cachedArticles.size());
 
         if (!cachedArticles.isEmpty()) {
             articleAdapter.setArticles(cachedArticles);
             Log.d("OfflineCache", "Displayed articles from SQLite");
-        }
-
-        if (categoryId != null && !categoryId.trim().isEmpty()) {
-            cachedArticles.removeIf(article -> !categoryId.equals(article.getCategoryId()));
-        }
-
-        if (!cachedArticles.isEmpty()) {
-            articleAdapter.setArticles(cachedArticles);
         }
 
         articleListener = repository.listenApprovedArticles(categoryId, new ArticleRepository.OnArticlesLoadedListener() {
@@ -140,7 +130,11 @@ public class HomeFragment extends Fragment {
 
                 Log.d("OfflineCache", "Firestore loaded: " + articles.size() + " articles");
 
-                localDataSource.saveHomeArticles(articles);
+                if (categoryId == null || categoryId.trim().isEmpty()) {
+                    localDataSource.saveHomeArticles(articles);
+                    Log.d("OfflineCache", "Saved to SQLite: " + articles.size());
+                }
+
                 articleAdapter.setArticles(articles);
             }
 
@@ -150,12 +144,12 @@ public class HomeFragment extends Fragment {
                     return;
                 }
 
-                Log.e("OfflineCache", "Firestore failed; checking SQLite cache", exception);
+                Log.e("OfflineCache", "Firestore failed or offline; checking SQLite cache", exception);
 
-                List<Article> cachedArticles = localDataSource.getHomeArticles();
+                List<Article> fallbackArticles = getCachedArticles(categoryId);
 
-                if (!cachedArticles.isEmpty()) {
-                    articleAdapter.setArticles(cachedArticles);
+                if (!fallbackArticles.isEmpty()) {
+                    articleAdapter.setArticles(fallbackArticles);
                     Toast.makeText(requireContext(), "Showing saved articles offline.", Toast.LENGTH_SHORT).show();
                 } else {
                     articleAdapter.setArticles(new ArrayList<>());

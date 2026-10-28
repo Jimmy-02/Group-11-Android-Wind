@@ -9,6 +9,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 import com.google.firebase.auth.AuthResult;
 import com.google.firebase.firestore.FieldValue;
+import com.google.firebase.firestore.FirebaseFirestoreException;
 import java.util.HashMap;
 import java.util.Map;
 import androidx.appcompat.app.AppCompatActivity;
@@ -72,12 +73,12 @@ public class LoginActivity extends AppCompatActivity {
 
         checkExistingSession();
     }
+
     private void login() {
         String email = etEmail.getText().toString().trim();
         String password = etPassword.getText().toString();
 
-        if (email.isEmpty()
-                || !Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+        if (email.isEmpty() || !Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
             etEmail.setError("Vui lòng nhập email hợp lệ");
             etEmail.requestFocus();
             return;
@@ -106,29 +107,26 @@ public class LoginActivity extends AppCompatActivity {
                 return;
             }
 
-            db.collection("users")
-                    .document(user.getUid())
-                    .get()
-                    .addOnCompleteListener(this, profileTask -> {
+            db.collection("users").document(user.getUid()).get().addOnCompleteListener(this, profileTask -> {
 
-                        if (isFinishing() || isDestroyed()) {
-                            return;
-                        }
+                if (isFinishing() || isDestroyed()) {
+                    return;
+                }
 
-                        if (!profileTask.isSuccessful()) {
-                            rejectLogin("Không thể kiểm tra tài khoản. Vui lòng thử lại.");
-                            return;
-                        }
+                if (!profileTask.isSuccessful()) {
+                    rejectLogin("Không thể kiểm tra tài khoản. Vui lòng thử lại.");
+                    return;
+                }
 
-                        DocumentSnapshot document = profileTask.getResult();
+                DocumentSnapshot document = profileTask.getResult();
 
-                        if (document == null || !document.exists()) {
-                            rejectLogin("Không tìm thấy hồ sơ người dùng.");
-                            return;
-                        }
+                if (document == null || !document.exists()) {
+                    rejectLogin("Không tìm thấy hồ sơ người dùng.");
+                    return;
+                }
 
-                        syncEmailIndex(user, () -> checkUserStatus(document));
-                    });
+                syncEmailIndex(user, () -> checkUserStatus(document));
+            });
         });
     }
 
@@ -154,6 +152,7 @@ public class LoginActivity extends AppCompatActivity {
             }
         });
     }
+
     private void handleGoogleCredential(Credential credential) {
         if (!(credential instanceof CustomCredential)) {
             btnGoogleSignIn.setEnabled(true);
@@ -243,6 +242,7 @@ public class LoginActivity extends AppCompatActivity {
 
         rejectLogin("Tài khoản không có quyền truy cập.");
     }
+
     private void checkGoogleUserProfile(FirebaseUser user, boolean isNewUser) {
         db.collection("users").document(user.getUid()).get().addOnCompleteListener(this, task -> {
             if (isFinishing() || isDestroyed()) return;
@@ -300,26 +300,41 @@ public class LoginActivity extends AppCompatActivity {
         btnLogin.setEnabled(false);
         btnGoogleSignIn.setEnabled(false);
 
-        db.collection("users").document(user.getUid()).get()
-                .addOnCompleteListener(this, task -> {
-                    if (isFinishing() || isDestroyed()) {
-                        return;
-                    }
+        db.collection("users").document(user.getUid()).get().addOnCompleteListener(this, task -> {
+            if (isFinishing() || isDestroyed()) {
+                return;
+            }
 
-                    if (!task.isSuccessful()) {
-                        rejectLogin("Không thể kiểm tra tài khoản. Vui lòng thử lại.");
-                        return;
-                    }
+            if (!task.isSuccessful()) {
+                // Mất mạng: giữ phiên đăng nhập, vào thẳng app để dùng dữ liệu SQLite đã lưu.
+                if (isOfflineError(task.getException())) {
+                    Toast.makeText(this, "Đang offline, hiển thị dữ liệu đã lưu.", Toast.LENGTH_SHORT).show();
+                    openMainScreen();
+                    return;
+                }
 
-                    DocumentSnapshot document = task.getResult();
+                rejectLogin("Không thể kiểm tra tài khoản. Vui lòng thử lại.");
+                return;
+            }
 
-                    if (document == null || !document.exists()) {
-                        rejectLogin("Không tìm thấy hồ sơ người dùng.");
-                        return;
-                    }
+            DocumentSnapshot document = task.getResult();
 
-                    checkUserStatus(document);
-                });
+            if (document == null || !document.exists()) {
+                rejectLogin("Không tìm thấy hồ sơ người dùng.");
+                return;
+            }
+
+            checkUserStatus(document);
+        });
+    }
+
+    private boolean isOfflineError(Exception exception) {
+        if (!(exception instanceof FirebaseFirestoreException)) {
+            return false;
+        }
+
+        FirebaseFirestoreException firestoreException = (FirebaseFirestoreException) exception;
+        return firestoreException.getCode() == FirebaseFirestoreException.Code.UNAVAILABLE;
     }
 
     private void rejectGoogleLogin(String message) {
@@ -346,61 +361,52 @@ public class LoginActivity extends AppCompatActivity {
 
         String emailKey = currentEmail.trim().toLowerCase(Locale.ROOT);
 
-        db.collection("emailIndex")
-                .document(emailKey)
-                .get()
-                .addOnCompleteListener(this, indexTask -> {
+        db.collection("emailIndex").document(emailKey).get().addOnCompleteListener(this, indexTask -> {
 
-                    if (isFinishing() || isDestroyed()) {
-                        return;
-                    }
+            if (isFinishing() || isDestroyed()) {
+                return;
+            }
 
-                    if (!indexTask.isSuccessful()) {
-                        rejectLogin("Không thể kiểm tra emailIndex. Vui lòng thử lại.");
-                        return;
-                    }
+            if (!indexTask.isSuccessful()) {
+                rejectLogin("Không thể kiểm tra emailIndex. Vui lòng thử lại.");
+                return;
+            }
 
-                    DocumentSnapshot indexDocument = indexTask.getResult();
+            DocumentSnapshot indexDocument = indexTask.getResult();
 
-                    // Document đã tồn tại
-                    if (indexDocument != null && indexDocument.exists()) {
-                        String indexedUid = indexDocument.getString("uid");
+            // Document đã tồn tại
+            if (indexDocument != null && indexDocument.exists()) {
+                String indexedUid = indexDocument.getString("uid");
 
-                        if (user.getUid().equals(indexedUid)) {
-                            onSuccess.run();
-                        } else {
-                            rejectLogin(
-                                    "Email này đã được liên kết với tài khoản khác."
-                            );
-                        }
+                if (user.getUid().equals(indexedUid)) {
+                    onSuccess.run();
+                } else {
+                    rejectLogin("Email này đã được liên kết với tài khoản khác.");
+                }
 
-                        return;
-                    }
+                return;
+            }
 
-                    // Document chưa tồn tại: tạo emailIndex mới
-                    Map<String, Object> indexData = new HashMap<>();
-                    indexData.put("uid", user.getUid());
+            // Document chưa tồn tại: tạo emailIndex mới
+            Map<String, Object> indexData = new HashMap<>();
+            indexData.put("uid", user.getUid());
 
-                    db.collection("emailIndex")
-                            .document(emailKey)
-                            .set(indexData)
-                            .addOnCompleteListener(this, saveTask -> {
+            db.collection("emailIndex").document(emailKey).set(indexData).addOnCompleteListener(this, saveTask -> {
 
-                                if (isFinishing() || isDestroyed()) {
-                                    return;
-                                }
+                if (isFinishing() || isDestroyed()) {
+                    return;
+                }
 
-                                if (!saveTask.isSuccessful()) {
-                                    rejectLogin(
-                                            "Không thể đồng bộ emailIndex. Vui lòng thử lại."
-                                    );
-                                    return;
-                                }
+                if (!saveTask.isSuccessful()) {
+                    rejectLogin("Không thể đồng bộ emailIndex. Vui lòng thử lại.");
+                    return;
+                }
 
-                                onSuccess.run();
-                            });
-                });
+                onSuccess.run();
+            });
+        });
     }
+
     private void syncGoogleEmailIndex(FirebaseUser user, Runnable onSuccess) {
         String currentEmail = user.getEmail();
 
@@ -411,59 +417,50 @@ public class LoginActivity extends AppCompatActivity {
 
         String emailKey = currentEmail.trim().toLowerCase(Locale.ROOT);
 
-        db.collection("emailIndex")
-                .document(emailKey)
-                .get()
-                .addOnCompleteListener(this, task -> {
+        db.collection("emailIndex").document(emailKey).get().addOnCompleteListener(this, task -> {
 
-                    if (isFinishing() || isDestroyed()) {
-                        return;
-                    }
+            if (isFinishing() || isDestroyed()) {
+                return;
+            }
 
-                    if (!task.isSuccessful()) {
-                        rejectGoogleLogin("Không thể kiểm tra emailIndex.");
-                        return;
-                    }
+            if (!task.isSuccessful()) {
+                rejectGoogleLogin("Không thể kiểm tra emailIndex.");
+                return;
+            }
 
-                    DocumentSnapshot document = task.getResult();
+            DocumentSnapshot document = task.getResult();
 
-                    if (document != null && document.exists()) {
-                        String indexedUid = document.getString("uid");
+            if (document != null && document.exists()) {
+                String indexedUid = document.getString("uid");
 
-                        if (user.getUid().equals(indexedUid)) {
-                            onSuccess.run();
-                        } else {
-                            rejectGoogleLogin(
-                                    "Email này đã được liên kết với tài khoản khác."
-                            );
-                        }
+                if (user.getUid().equals(indexedUid)) {
+                    onSuccess.run();
+                } else {
+                    rejectGoogleLogin("Email này đã được liên kết với tài khoản khác.");
+                }
 
-                        return;
-                    }
+                return;
+            }
 
-                    Map<String, Object> emailData = new HashMap<>();
-                    emailData.put("uid", user.getUid());
+            Map<String, Object> emailData = new HashMap<>();
+            emailData.put("uid", user.getUid());
 
-                    db.collection("emailIndex")
-                            .document(emailKey)
-                            .set(emailData)
-                            .addOnCompleteListener(this, saveTask -> {
+            db.collection("emailIndex").document(emailKey).set(emailData).addOnCompleteListener(this, saveTask -> {
 
-                                if (isFinishing() || isDestroyed()) {
-                                    return;
-                                }
+                if (isFinishing() || isDestroyed()) {
+                    return;
+                }
 
-                                if (!saveTask.isSuccessful()) {
-                                    rejectGoogleLogin(
-                                            "Không thể tạo emailIndex."
-                                    );
-                                    return;
-                                }
+                if (!saveTask.isSuccessful()) {
+                    rejectGoogleLogin("Không thể tạo emailIndex.");
+                    return;
+                }
 
-                                onSuccess.run();
-                            });
-                });
+                onSuccess.run();
+            });
+        });
     }
+
     private void openMainScreen() {
         Intent intent = new Intent(LoginActivity.this, MainActivity.class);
 

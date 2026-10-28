@@ -19,6 +19,7 @@ import com.example.myapplication.articles.categories.ArticleCategory;
 import com.example.myapplication.articles.categories.ArticleCategoryRepository;
 import com.example.myapplication.articles.creation.CreateArticleActivity;
 import com.example.myapplication.R;
+import com.example.myapplication.data.local.CategoryLocalDataSource;
 import com.squareup.picasso.Picasso;
 
 import java.util.ArrayList;
@@ -34,6 +35,7 @@ public class ArticleAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
     private final List<Article> articleList = new ArrayList<>();
     private final Map<String, String> categoryNames = new HashMap<>();
     private final ArticleCategoryRepository categoryRepository = new ArticleCategoryRepository();
+    private CategoryLocalDataSource categoryLocalDataSource;
 
     private final OnArticleClickListener articleClickListener;
     private final OnReportClickListener reportClickListener;
@@ -166,6 +168,7 @@ public class ArticleAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
 
         notifyItemRangeChanged(1, articleList.size());
     }
+
     private void loadCategories(LinearLayout categoryChipContainer, Context context) {
         if (categoriesLoaded) {
             return;
@@ -175,27 +178,64 @@ public class ArticleAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
         categoryChipContainer.removeAllViews();
         addCategoryChip(categoryChipContainer, context, "All", null, true);
 
+        if (categoryLocalDataSource == null) {
+            categoryLocalDataSource = new CategoryLocalDataSource(context.getApplicationContext());
+        }
+
         categoryRepository.getActiveCategories(new ArticleCategoryRepository.OnCategoriesLoadedListener() {
             @Override
             public void onSuccess(List<ArticleCategory> categories) {
-                Map<String, String> names = new HashMap<>();
-
-                for (ArticleCategory category : categories) {
-                    if (category.getId() != null && category.getName() != null) {
-                        names.put(category.getId(), category.getName());
-                        addCategoryChip(categoryChipContainer, context, category.getName(), category.getId(), false);
-                    }
+                if (categories == null || categories.isEmpty()) {
+                    // Offline có thể trả danh sách rỗng: dùng cache SQLite và không ghi đè.
+                    loadCachedCategories(categoryChipContainer, context);
+                    return;
                 }
 
-                setCategoryNames(names);
+                showCategories(categoryChipContainer, context, categories);
+
+                try {
+                    categoryLocalDataSource.saveCategories(categories);
+                } catch (Exception e) {
+                    android.util.Log.e("ArticleAdapter", "Failed to save categories to SQLite", e);
+                }
             }
 
             @Override
             public void onError(Exception exception) {
                 android.util.Log.e("ArticleAdapter", "Failed to load categories", exception);
                 categoriesLoaded = false;
+                loadCachedCategories(categoryChipContainer, context);
             }
         });
+    }
+
+    private void loadCachedCategories(LinearLayout container, Context context) {
+        try {
+            List<ArticleCategory> cachedCategories = categoryLocalDataSource.getCategories();
+            android.util.Log.d("OfflineCache", "Cached categories count: " + cachedCategories.size());
+
+            if (!cachedCategories.isEmpty()) {
+                showCategories(container, context, cachedCategories);
+            }
+        } catch (Exception e) {
+            android.util.Log.e("ArticleAdapter", "Failed to read categories from SQLite", e);
+        }
+    }
+
+    private void showCategories(LinearLayout container, Context context, List<ArticleCategory> categories) {
+        container.removeAllViews();
+        addCategoryChip(container, context, "All", null, true);
+
+        Map<String, String> names = new HashMap<>();
+
+        for (ArticleCategory category : categories) {
+            if (category.getId() != null && category.getName() != null) {
+                names.put(category.getId(), category.getName());
+                addCategoryChip(container, context, category.getName(), category.getId(), false);
+            }
+        }
+
+        setCategoryNames(names);
     }
 
     private void addCategoryChip(LinearLayout container, Context context, String name, String categoryId, boolean selected) {
