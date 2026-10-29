@@ -16,9 +16,9 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
-    <!-- Navigation Rail nằm bên trái ở chế độ màn hình ngang -->
+    <!-- Navigation Rail nằm bên trái ở chế độ màn hình ngang, dùng chung ID admin_bottom_navigation để tự động lưu trạng thái khi xoay -->
     <com.google.android.material.navigationrail.NavigationRailView
-        android:id="@+id/admin_navigation_rail"
+        android:id="@+id/admin_bottom_navigation"
         android:layout_width="wrap_content"
         android:layout_height="0dp"
         android:background="#FFFFFF"
@@ -42,7 +42,7 @@
         android:background="#FFFFFF"
         android:elevation="2dp"
         app:layout_constraintTop_toBottomOf="@id/status_bar_spacer"
-        app:layout_constraintStart_toEndOf="@id/admin_navigation_rail"
+        app:layout_constraintStart_toEndOf="@id/admin_bottom_navigation"
         app:layout_constraintEnd_toEndOf="parent">
 
         <ImageButton
@@ -73,7 +73,7 @@
         android:layout_height="0dp"
         app:layout_constraintTop_toBottomOf="@id/admin_toolbar"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toEndOf="@id/admin_navigation_rail"
+        app:layout_constraintStart_toEndOf="@id/admin_bottom_navigation"
         app:layout_constraintEnd_toEndOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
