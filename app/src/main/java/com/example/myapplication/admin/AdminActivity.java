@@ -28,6 +28,8 @@ public class AdminActivity extends AppCompatActivity {
     private Fragment usersFragment;
     private Fragment discussionsFragment;
     private Fragment qnaFragment;
+    private static final String KEY_SELECTED_TAB = "admin_selected_tab";
+    private int currentTabId = R.id.nav_admin_articles;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -61,31 +63,41 @@ public class AdminActivity extends AppCompatActivity {
                     .add(R.id.admin_content_container, qnaFragment, "ADMIN_QNA")
                     .hide(qnaFragment)
                     .commit();
+        } else {
+            currentTabId = savedInstanceState.getInt(KEY_SELECTED_TAB, R.id.nav_admin_articles);
         }
 
         NavigationBarView navBar = findViewById(R.id.admin_bottom_navigation);
-        if (navBar == null) {
-            navBar = findViewById(R.id.admin_navigation_rail);
-        }
         if (navBar != null) {
             navBar.setOnItemSelectedListener(item -> {
-            int id = item.getItemId();
-            if (id == R.id.nav_admin_articles) {
-                showTab(articlesFragment);
-                return true;
-            } else if (id == R.id.nav_admin_users) {
-                showTab(usersFragment);
-                return true;
-            } else if (id == R.id.nav_admin_discussions) {
-                showTab(discussionsFragment);
-                return true;
-            } else if (id == R.id.nav_admin_qna) {
-                showTab(qnaFragment);
-                return true;
-            }
-            return false;
+                int id = item.getItemId();
+                currentTabId = id;
+                if (id == R.id.nav_admin_articles) {
+                    showTab(articlesFragment);
+                    return true;
+                } else if (id == R.id.nav_admin_users) {
+                    showTab(usersFragment);
+                    return true;
+                } else if (id == R.id.nav_admin_discussions) {
+                    showTab(discussionsFragment);
+                    return true;
+                } else if (id == R.id.nav_admin_qna) {
+                    showTab(qnaFragment);
+                    return true;
+                }
+                return false;
             });
+
+            if (savedInstanceState != null) {
+                navBar.setSelectedItemId(currentTabId);
+            }
         }
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putInt(KEY_SELECTED_TAB, currentTabId);
     }
 
     private void setupStatusBar() {
