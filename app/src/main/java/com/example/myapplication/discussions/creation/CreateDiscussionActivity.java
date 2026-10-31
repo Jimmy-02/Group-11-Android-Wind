@@ -23,6 +23,7 @@ import com.example.myapplication.R;
 import com.example.myapplication.articles.Article;
 import com.example.myapplication.articles.categories.ArticleCategory;
 import com.example.myapplication.articles.categories.ArticleCategoryRepository;
+import com.example.myapplication.discussions.DiscussionConstant;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentSnapshot;
@@ -164,18 +165,45 @@ public class CreateDiscussionActivity extends AppCompatActivity {
         String content = etContent.getText().toString().trim();
         String imageUrl = etImageUrl.getText().toString().trim();
 
+        // Validate title
         if (title.isEmpty()) {
             etTitle.setError("Please enter the discussion title.");
             etTitle.requestFocus();
             return;
         }
 
+        if (title.length() < DiscussionConstant.MIN_TITLE_LENGTH) {
+            etTitle.setError("Title must contain at least 5 characters.");
+            etTitle.requestFocus();
+            return;
+        }
+
+        if (title.length() > DiscussionConstant.MAX_TITLE_LENGTH) {
+            etTitle.setError("Title cannot exceed 200 characters.");
+            etTitle.requestFocus();
+            return;
+        }
+
+        // Validate content
         if (content.isEmpty()) {
             etContent.setError("Please enter the discussion content.");
             etContent.requestFocus();
             return;
         }
 
+        if (content.length() < DiscussionConstant.MIN_CONTENT_LENGTH) {
+            etContent.setError("Content must contain at least 10 characters.");
+            etContent.requestFocus();
+            return;
+        }
+
+        if (content.length() > DiscussionConstant.MAX_CONTENT_LENGTH) {
+            etContent.setError("Content cannot exceed 5000 characters.");
+            etContent.requestFocus();
+            return;
+        }
+
+        // Validate category
         int categoryPosition = spinnerCategory.getSelectedItemPosition();
 
         if (categoryPosition <= 0 || categoryPosition > categories.size()) {
@@ -183,10 +211,14 @@ public class CreateDiscussionActivity extends AppCompatActivity {
             return;
         }
 
-        if (!imageUrl.isEmpty() && (!Patterns.WEB_URL.matcher(imageUrl).matches() || !(imageUrl.startsWith("https://") || imageUrl.startsWith("http://")))) {
-            etImageUrl.setError("Please enter a valid HTTP or HTTPS URL.");
-            etImageUrl.requestFocus();
-            return;
+        // Validate optional image URL
+        if (!imageUrl.isEmpty()) {
+
+            if (!Patterns.WEB_URL.matcher(imageUrl).matches() || !(imageUrl.startsWith("https://") || imageUrl.startsWith("http://"))) {
+                etImageUrl.setError("Please enter a valid HTTP or HTTPS URL.");
+                etImageUrl.requestFocus();
+                return;
+            }
         }
 
         FirebaseUser currentUser = firebaseAuth.getCurrentUser();

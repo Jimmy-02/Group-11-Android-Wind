@@ -20,6 +20,7 @@ import androidx.core.view.WindowInsetsCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
 
 import com.example.myapplication.R;
+import com.example.myapplication.articles.ArticleConstant;
 import com.example.myapplication.articles.categories.ArticleCategory;
 import com.example.myapplication.articles.categories.ArticleCategoryRepository;
 import com.google.firebase.auth.FirebaseAuth;
@@ -136,30 +137,90 @@ public class CreateArticleActivity extends AppCompatActivity {
         String contentUrl = etContentUrl.getText().toString().trim();
         String imageUrl = etImageUrl.getText().toString().trim();
 
+// Validate title
         if (title.isEmpty()) {
             etTitle.setError("Please enter the article title.");
             etTitle.requestFocus();
             return;
         }
 
+        if (title.length() < ArticleConstant.MIN_TITLE_LENGTH) {
+            etTitle.setError("Title must contain at least 5 characters.");
+            etTitle.requestFocus();
+            return;
+        }
+
+        if (title.length() > ArticleConstant.MAX_TITLE_LENGTH) {
+            etTitle.setError("Title cannot exceed 200 characters.");
+            etTitle.requestFocus();
+            return;
+        }
+
+        // Validate author name
         if (authorName.isEmpty()) {
             etAuthorName.setError("Please enter the author name.");
             etAuthorName.requestFocus();
             return;
         }
 
+        if (authorName.length() < ArticleConstant.MIN_AUTHOR_NAME_LENGTH) {
+            etAuthorName.setError("Author name must contain at least 2 characters.");
+            etAuthorName.requestFocus();
+            return;
+        }
+
+        if (authorName.length() > ArticleConstant.MAX_AUTHOR_NAME_LENGTH) {
+            etAuthorName.setError("Author name cannot exceed 150 characters.");
+            etAuthorName.requestFocus();
+            return;
+        }
+
+        // Validate institution
         if (institution.isEmpty()) {
             etInstitution.setError("Please enter the institution.");
             etInstitution.requestFocus();
             return;
         }
 
+        if (institution.length() < ArticleConstant.MIN_INSTITUTION_LENGTH) {
+            etInstitution.setError("Institution must contain at least 2 characters.");
+            etInstitution.requestFocus();
+            return;
+        }
+
+        if (institution.length() > ArticleConstant.MAX_INSTITUTION_LENGTH) {
+            etInstitution.setError("Institution cannot exceed 200 characters.");
+            etInstitution.requestFocus();
+            return;
+        }
+
+        // Validate description
         if (description.isEmpty()) {
             etDescription.setError("Please enter the article description.");
             etDescription.requestFocus();
             return;
         }
 
+        if (description.length() < ArticleConstant.MIN_DESCRIPTION_LENGTH) {
+            etDescription.setError("Description must contain at least 20 characters.");
+            etDescription.requestFocus();
+            return;
+        }
+
+        if (description.length() > ArticleConstant.MAX_DESCRIPTION_LENGTH) {
+            etDescription.setError("Description cannot exceed 2000 characters.");
+            etDescription.requestFocus();
+            return;
+        }
+
+        // Validate DOI
+        if (doi.length() > ArticleConstant.MAX_DOI_LENGTH) {
+            etDoi.setError("DOI cannot exceed 255 characters.");
+            etDoi.requestFocus();
+            return;
+        }
+
+        // Validate category
         int categoryPosition = spinnerCategory.getSelectedItemPosition();
 
         if (categoryPosition <= 0 || categoryPosition > categories.size()) {
@@ -167,7 +228,10 @@ public class CreateArticleActivity extends AppCompatActivity {
             return;
         }
 
-        if (!isValidOptionalUrl(sourceUrl, "Source URL") || !isValidOptionalUrl(contentUrl, "Article Content URL") || !isValidOptionalUrl(imageUrl, "Image URL")) {
+        // Validate optional URLs
+        if (!isValidOptionalUrl(sourceUrl, "Source URL") ||
+                !isValidOptionalUrl(contentUrl, "Article Content URL") ||
+                !isValidOptionalUrl(imageUrl, "Image URL")) {
             return;
         }
 
