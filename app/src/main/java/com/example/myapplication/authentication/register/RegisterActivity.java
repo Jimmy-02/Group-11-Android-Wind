@@ -6,6 +6,7 @@ import android.util.Patterns;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.example.myapplication.authentication.AuthConstant;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -90,9 +91,22 @@ public class RegisterActivity extends AppCompatActivity {
         String password = getText(etPassword);
         String confirmPassword = getText(etConfirmPassword);
 
+
         // Validate full name
         if (fullName.isEmpty()) {
             tilFullName.setError("Please enter your full name");
+            etFullName.requestFocus();
+            return;
+        }
+
+        if (fullName.length() < AuthConstant.MIN_FULL_NAME_LENGTH) {
+            tilFullName.setError("Full name must contain at least 2 characters");
+            etFullName.requestFocus();
+            return;
+        }
+
+        if (fullName.length() > AuthConstant.MAX_FULL_NAME_LENGTH) {
+            tilFullName.setError("Full name cannot exceed 100 characters");
             etFullName.requestFocus();
             return;
         }
@@ -104,9 +118,27 @@ public class RegisterActivity extends AppCompatActivity {
             return;
         }
 
+        if (username.length() < AuthConstant.MIN_USERNAME_LENGTH) {
+            tilUsername.setError("Username must contain at least 3 characters");
+            etUsername.requestFocus();
+            return;
+        }
+
+        if (username.length() > AuthConstant.MAX_USERNAME_LENGTH) {
+            tilUsername.setError("Username cannot exceed 30 characters");
+            etUsername.requestFocus();
+            return;
+        }
+
         // Validate email
         if (email.isEmpty()) {
             tilEmail.setError("Please enter your email");
+            etEmail.requestFocus();
+            return;
+        }
+
+        if (email.length() > AuthConstant.MAX_EMAIL_LENGTH) {
+            tilEmail.setError("Email cannot exceed 254 characters");
             etEmail.requestFocus();
             return;
         }
@@ -124,8 +156,14 @@ public class RegisterActivity extends AppCompatActivity {
             return;
         }
 
-        if (password.length() < 6) {
+        if (password.length() < AuthConstant.MIN_PASSWORD_LENGTH) {
             tilPassword.setError("Password must contain at least 6 characters");
+            etPassword.requestFocus();
+            return;
+        }
+
+        if (password.length() > AuthConstant.MAX_PASSWORD_LENGTH) {
+            tilPassword.setError("Password cannot exceed 128 characters");
             etPassword.requestFocus();
             return;
         }
@@ -142,6 +180,7 @@ public class RegisterActivity extends AppCompatActivity {
             etConfirmPassword.requestFocus();
             return;
         }
+
 
         // Prevent repeated taps while registering
         btnRegister.setEnabled(false);
