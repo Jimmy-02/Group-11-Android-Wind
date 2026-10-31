@@ -1,5 +1,6 @@
 package com.example.myapplication.discussions.comments;
 
+import com.example.myapplication.discussions.CommentConstant;
 import com.google.android.gms.tasks.Task;
 import com.google.android.gms.tasks.Tasks;
 import com.google.firebase.Timestamp;
@@ -183,6 +184,11 @@ public class CommentRepository {
 
         if (trimmedContent.isEmpty()) {
             listener.onError(new IllegalArgumentException("Comment content is empty."));
+            return;
+        }
+
+        if (trimmedContent.length() > CommentConstant.MAX_CONTENT_LENGTH) {
+            listener.onError(new IllegalArgumentException("Comment cannot exceed 2000 characters."));
             return;
         }
 
