@@ -7,6 +7,8 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import com.example.myapplication.authentication.AuthConstant;
 import com.google.firebase.auth.AuthResult;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestoreException;
@@ -83,9 +85,25 @@ public class LoginActivity extends AppCompatActivity {
             etEmail.requestFocus();
             return;
         }
+        if (email.length() > AuthConstant.MAX_EMAIL_LENGTH) {
+            etEmail.setError("Email không được vượt quá 254 ký tự");
+            etEmail.requestFocus();
+            return;
+        }
 
         if (password.isEmpty()) {
             etPassword.setError("Vui lòng nhập mật khẩu");
+            etPassword.requestFocus();
+            return;
+        }
+        if (password.length() < AuthConstant.MIN_PASSWORD_LENGTH) {
+            etPassword.setError("Mật khẩu phải có ít nhất 6 ký tự");
+            etPassword.requestFocus();
+            return;
+        }
+
+        if (password.length() > AuthConstant.MAX_PASSWORD_LENGTH) {
+            etPassword.setError("Mật khẩu không được vượt quá 128 ký tự");
             etPassword.requestFocus();
             return;
         }
