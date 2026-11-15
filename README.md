@@ -237,6 +237,18 @@ Through SciShare, our team aims to:
 - Promote meaningful discussions and knowledge exchange.
 - Provide a structured environment for content moderation.
 
+## 🗄️ Database Design
+
+SciShare uses Firebase Cloud Firestore as its primary database
+and SQLite for local data caching.
+
+The following diagram illustrates the logical data relationships
+between the application's main entities.
+
+<p align="center">
+  <img src="docs/ERD/ERD.png" alt="SciShare Entity Relationship Diagram" width="100%" />
+</p>
+
 ## 📄 License
 
 This project was developed for educational purposes as part of an academic Android application development project.
