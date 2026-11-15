@@ -258,7 +258,7 @@ public class AdminDiscussionsFragment extends Fragment {
         pbLoading.setVisibility(View.VISIBLE);
         FirebaseFirestore db = FirebaseFirestore.getInstance();
 
-        // 1. Lắng nghe báo cáo Thảo luận realtime
+        // 1. Lắng nghe báo cáo Thảo luận
         discussionReportsListener = db.collection("discussionReports")
                 .addSnapshotListener((snapshots, error) -> {
                     if (!isAdded()) return;
@@ -266,7 +266,7 @@ public class AdminDiscussionsFragment extends Fragment {
                     rebuildDiscussionItems();
                 });
 
-        // 2. Lắng nghe thảo luận đã bị xóa realtime (để giữ trong admin và gán nhãn "Đã xử lý")
+        // 2. Lắng nghe thảo luận đã bị xóa  (để giữ trong admin và gán nhãn "Đã xử lý")
         deletedDiscussionsListener = db.collection("discussions")
                 .whereEqualTo("status", "DELETED")
                 .addSnapshotListener((snapshots, error) -> {
@@ -275,7 +275,7 @@ public class AdminDiscussionsFragment extends Fragment {
                     rebuildDiscussionItems();
                 });
 
-        // 3. Lắng nghe báo cáo Bình luận realtime
+        // 3. Lắng nghe báo cáo Bình luận
         commentReportsListener = db.collection("commentReports")
                 .addSnapshotListener((snapshots, error) -> {
                     if (!isAdded()) return;
@@ -283,7 +283,7 @@ public class AdminDiscussionsFragment extends Fragment {
                     rebuildCommentItems();
                 });
 
-        // 4. Lắng nghe bình luận đã bị xóa realtime
+        // 4. Lắng nghe bình luận đã bị xóa
         deletedCommentsListener = db.collection("comments")
                 .whereEqualTo("status", "DELETED")
                 .addSnapshotListener((snapshots, error) -> {

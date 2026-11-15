@@ -176,7 +176,7 @@ public class PdfReaderActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         if (pdfViewer != null) {
-            pdfViewer.recycle();
+            pdfViewer.recycle(); //giai phong tai nguyen pdf viewer su dung khi activity bi huy
         }
 
         if (offlinePdfManager != null) {
