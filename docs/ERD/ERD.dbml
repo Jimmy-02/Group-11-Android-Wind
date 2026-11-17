@@ -1,0 +1,275 @@
+Project SciShare {
+  database_type: 'PostgreSQL'
+  Note: 'Logical ERD representing SciShare Firestore collections'
+}
+
+//USER MANAGEMENT
+
+Table users {
+  id varchar [pk, note: 'Firebase Authentication UID']
+  fullName varchar
+  username varchar
+  email varchar
+  avatar text
+  role varchar [note: 'USER, ADMIN']
+  status varchar [note: 'ACTIVE, ...']
+  authProvider varchar
+  createdAt timestamp
+  updatedAt timestamp
+}
+
+Table emailIndex {
+  emailKey varchar [pk, note: 'Normalized email document ID']
+  uid varchar [not null]
+}
+
+// 2. ARTICLE MANAGEMENT
+
+Table articleCategories {
+  id varchar [pk]
+  name varchar
+  slug varchar
+  description text
+  color varchar
+  icon varchar
+  displayOrder int
+  isActive boolean
+}
+
+Table articles {
+  id varchar [pk]
+  userId varchar [not null]
+  title varchar
+  authorName varchar
+  categoryId varchar
+  institution varchar
+  digitalObjectIdentifier varchar
+  description text
+  imageUrl text
+  sourceUrl text
+  contentUrl text
+  status varchar [note: 'PENDING, APPROVED, REJECTED, DELETED']
+  reportCount int
+  createdAt timestamp
+  updatedAt timestamp
+  deletedAt timestamp
+}
+
+Table articleApprovals {
+  id varchar [pk]
+  articleId varchar [not null]
+  adminId varchar [not null]
+  action varchar [note: 'APPROVED, REJECTED, DELETED']
+  reason text
+  createdAt timestamp
+}
+
+Table articleReports {
+  id varchar [pk]
+  articleId varchar [not null]
+  userId varchar [not null]
+  articleTitle varchar
+  reason text
+  details text
+  status varchar
+  reviewedBy varchar
+  reviewedAt timestamp
+  reviewReason text
+  createdAt timestamp
+}
+
+// 3. DISCUSSION MANAGEMENT
+
+Table discussions {
+  id varchar [pk]
+  userId varchar [not null]
+  title varchar
+  content text
+  category varchar
+  categoryId varchar
+  articleId varchar
+  imageUrl text
+  authorName varchar
+  authorAvatar text
+  status varchar [note: 'ACTIVE, DELETED']
+  likeCount int
+  commentCount int
+  reportCount int
+  createdAt timestamp
+  updatedAt timestamp
+  deletedAt timestamp
+}
+
+Table comments {
+  id varchar [pk]
+  discussionId varchar [not null]
+  userId varchar [not null]
+  authorName varchar
+  authorAvatar text
+  content text
+  status varchar
+  likeCount int
+  reportCount int
+  createdAt timestamp
+  updatedAt timestamp
+  deletedAt timestamp
+}
+
+Table discussionLikes {
+  id varchar [pk, note: 'Subcollection: discussions/{discussionId}/likes/{userId}']
+  discussionId varchar [not null]
+  userId varchar [not null]
+  createdAt timestamp
+}
+
+Table commentLikes {
+  id varchar [pk]
+  commentId varchar [not null]
+  userId varchar [not null]
+  createdAt timestamp
+}
+
+Table discussionReports {
+  id varchar [pk]
+  discussionId varchar [not null]
+  userId varchar [not null]
+  discussionTitle varchar
+  reason text
+  detailReason text
+  status varchar
+  reviewedBy varchar
+  reviewedAt timestamp
+  reviewReason text
+  createdAt timestamp
+}
+
+Table commentReports {
+  id varchar [pk]
+  commentId varchar [not null]
+  discussionId varchar [not null]
+  userId varchar [not null]
+  reason text
+  detailReason text
+  status varchar
+  reviewedBy varchar
+  reviewedAt timestamp
+  reviewReason text
+  createdAt timestamp
+}
+
+// 4. QUESTION & ANSWER MANAGEMENT
+
+Table questions {
+  id varchar [pk]
+  userId varchar [not null]
+  title varchar
+  content text
+  authorName varchar
+  authorAvatar text
+  category varchar
+  categoryId varchar
+  categories json
+  imageUrl text
+  status varchar [note: 'OPEN, DELETED']
+  voteCount int
+  answerCount int
+  reportCount int
+  createdAt timestamp
+  updatedAt timestamp
+  deletedAt timestamp
+}
+
+Table answers {
+  id varchar [pk]
+  questionId varchar [not null]
+  userId varchar [not null]
+  authorName varchar
+  authorAvatar text
+  content text
+  status varchar
+  voteCount int
+  createdAt timestamp
+  deletedAt timestamp
+}
+
+Table questionVotes {
+  id varchar [pk]
+  questionId varchar [not null]
+  userId varchar [not null]
+  value int [note: 'Vote value']
+  createdAt timestamp
+}
+
+Table answerVotes {
+  id varchar [pk]
+  answerId varchar [not null]
+  userId varchar [not null]
+  value int [note: 'Vote value']
+  createdAt timestamp
+}
+
+Table questionReports {
+  id varchar [pk]
+  questionId varchar [not null]
+  userId varchar [not null]
+  reason text
+  detailReason text
+  status varchar
+  reviewedBy varchar
+  reviewedAt timestamp
+  reviewReason text
+  createdAt timestamp
+}
+
+Table answerReports {
+  id varchar [pk]
+  answerId varchar [not null]
+  userId varchar [not null]
+  reason text
+  detailReason text
+  status varchar
+  reviewedBy varchar
+  reviewedAt timestamp
+  reviewReason text
+  createdAt timestamp
+}
+
+// User relationships
+Ref: users.id < articles.userId
+Ref: users.id < articleApprovals.adminId
+Ref: users.id < articleReports.userId
+Ref: users.id < discussions.userId
+Ref: users.id < comments.userId
+Ref: users.id < discussionLikes.userId
+Ref: users.id < commentLikes.userId
+Ref: users.id < discussionReports.userId
+Ref: users.id < commentReports.userId
+Ref: users.id < questions.userId
+Ref: users.id < answers.userId
+Ref: users.id < questionVotes.userId
+Ref: users.id < answerVotes.userId
+Ref: users.id < questionReports.userId
+Ref: users.id < answerReports.userId
+Ref: users.id < emailIndex.uid
+
+// Article relationships
+Ref: articleCategories.id < articles.categoryId
+Ref: articles.id < articleApprovals.articleId
+Ref: articles.id < articleReports.articleId
+
+// Discussion relationships
+Ref: articles.id < discussions.articleId
+Ref: articleCategories.id < discussions.categoryId
+Ref: discussions.id < comments.discussionId
+Ref: discussions.id < discussionLikes.discussionId
+Ref: discussions.id < commentReports.discussionId
+Ref: discussions.id < discussionReports.discussionId
+Ref: comments.id < commentLikes.commentId
+Ref: comments.id < commentReports.commentId
+
+// Q&A relationships
+Ref: questions.id < answers.questionId
+Ref: questions.id < questionVotes.questionId
+Ref: questions.id < questionReports.questionId
+Ref: answers.id < answerVotes.answerId
+Ref: answers.id < answerReports.answerId
